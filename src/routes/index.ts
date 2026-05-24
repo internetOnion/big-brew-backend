@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db } from "../db/index.ts";
-import { settings } from "../db/schema/index.ts";
+import { settingsTable } from "../db/schema/index.ts";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { AppError } from "../util/AppError.ts";
@@ -25,7 +25,10 @@ router.get("/health", (_req: Request, res: Response) => {
 });
 
 router.get("/settings", async (_req: Request, res: Response) => {
-    const result = await db.select().from(settings).where(eq(settings.id, 1));
+    const result = await db
+        .select()
+        .from(settingsTable)
+        .where(eq(settingsTable.id, 1));
     const data = result[0];
     if (!data) {
         throw AppError.notFound("Settings not found");
@@ -38,9 +41,9 @@ router.patch(
     validateBody(updateSettingsSchema),
     async (req: Request, res: Response) => {
         const updated = await db
-            .update(settings)
+            .update(settingsTable)
             .set({ ...req.body, updatedAt: new Date() })
-            .where(eq(settings.id, 1))
+            .where(eq(settingsTable.id, 1))
             .returning();
 
         return res.json(updated[0]);

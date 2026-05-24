@@ -1,18 +1,29 @@
-import { pgTable, integer, text, timestamp } from "drizzle-orm/pg-core";
-
-export const settings = pgTable("settings", {
-    id: integer().primaryKey().default(1),
-    storeName: text("store_name").notNull().default("My Cafe"),
-    storeAddress: text("store_address"),
-    currencySymbol: text("currency_symbol").notNull().default("$"),
-    receiptHeader: text("receipt_header"),
-    receiptFooter: text("receipt_footer"),
-    taxLabel: text("tax_label").notNull().default("Tax included"),
-    logoUrl: text("logo_url"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-        .notNull()
-        .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .notNull()
-        .defaultNow(),
-});
+export {
+    employeeRoleEnum,
+    ingredientUnitEnum,
+    discountTypeEnum,
+    orderStatusEnum,
+    diningOptionEnum,
+    paymentMethodEnum,
+    paymentStatusEnum,
+    stockReasonEnum,
+    selectionTypeEnum,
+} from "./enums.ts";
+export { employeesTable } from "./employees.ts";
+export { employeePermissionsTable } from "./employee-permissions.ts";
+export { categoriesTable } from "./categories.ts";
+export { menuItemsTable } from "./menu-items.ts";
+export { modifierGroupsTable } from "./modifier-groups.ts";
+export { modifierOptionsTable } from "./modifier-options.ts";
+export { menuItemModifierGroupsTable } from "./menu-item-modifier-groups.ts";
+export { menuItemModifierOptionOverridesTable } from "./menu-item-modifier-option-overrides.ts";
+export { ingredientsTable } from "./ingredients.ts";
+export { itemRecipesTable } from "./item-recipes.ts";
+export { modifierOptionIngredientsTable } from "./modifier-option-ingredients.ts";
+export { discountsTable } from "./discounts.ts";
+export { ordersTable } from "./orders.ts";
+export { orderItemsTable } from "./order-items.ts";
+export { orderItemModifiersTable } from "./order-item-modifiers.ts";
+export { stockMovementsTable } from "./stock-movements.ts";
+export { expensesTable } from "./expenses.ts";
+export { settingsTable } from "./settings.ts";
