@@ -10,7 +10,6 @@ export {
     selectionTypeEnum,
 } from "./enums.ts";
 export { employeesTable } from "./employees.ts";
-export { employeePermissionsTable } from "./employee-permissions.ts";
 export { categoriesTable } from "./categories.ts";
 export { menuItemsTable } from "./menu-items.ts";
 export { modifierGroupsTable } from "./modifier-groups.ts";

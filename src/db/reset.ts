@@ -16,7 +16,6 @@ const reset = async () => {
             menu_item_modifier_option_overrides,
             menu_item_modifier_groups,
             expenses,
-            employee_permissions,
             modifier_options,
             menu_items,
             discounts,

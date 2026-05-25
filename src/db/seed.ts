@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { db } from "./index.ts";
 import {
     employeesTable,
-    employeePermissionsTable,
     categoriesTable,
     ingredientsTable,
     modifierGroupsTable,
@@ -53,74 +52,6 @@ export const seed = async () => {
                 name: "Cindy",
                 pin: "$2a$10$EXAMPLE_HASH_BARISTA2",
                 isActive: true,
-            },
-        ])
-        .onConflictDoNothing();
-
-    // ── Employee Permissions ───────────────────────────────────
-    console.log("  Employee Permissions...");
-    await db
-        .insert(employeePermissionsTable)
-        .values([
-            {
-                employeeId: "00000000-0000-0000-0000-000000000001",
-                canSell: true,
-                canApplyDiscount: true,
-                canVoidRequest: true,
-                canVoidApprove: true,
-                canManageMenu: true,
-                canManageInventory: true,
-                canViewReports: true,
-                canOpenRegister: true,
-                canAdjustStock: true,
-                canManageEmployees: true,
-                maxDiscountPercent: 100,
-                maxDiscountAmount: "999.99",
-            },
-            {
-                employeeId: "00000000-0000-0000-0000-000000000002",
-                canSell: true,
-                canApplyDiscount: true,
-                canVoidRequest: true,
-                canVoidApprove: true,
-                canManageMenu: true,
-                canManageInventory: true,
-                canViewReports: true,
-                canOpenRegister: true,
-                canAdjustStock: true,
-                canManageEmployees: false,
-                maxDiscountPercent: 100,
-                maxDiscountAmount: "999.99",
-            },
-            {
-                employeeId: "00000000-0000-0000-0000-000000000003",
-                canSell: true,
-                canApplyDiscount: true,
-                canVoidRequest: true,
-                canVoidApprove: false,
-                canManageMenu: false,
-                canManageInventory: false,
-                canViewReports: false,
-                canOpenRegister: true,
-                canAdjustStock: false,
-                canManageEmployees: false,
-                maxDiscountPercent: 10,
-                maxDiscountAmount: "5.00",
-            },
-            {
-                employeeId: "00000000-0000-0000-0000-000000000004",
-                canSell: true,
-                canApplyDiscount: true,
-                canVoidRequest: true,
-                canVoidApprove: false,
-                canManageMenu: false,
-                canManageInventory: false,
-                canViewReports: false,
-                canOpenRegister: true,
-                canAdjustStock: false,
-                canManageEmployees: false,
-                maxDiscountPercent: 10,
-                maxDiscountAmount: "5.00",
             },
         ])
         .onConflictDoNothing();
