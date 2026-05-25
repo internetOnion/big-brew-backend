@@ -16,7 +16,7 @@ import {
     menuItemModifierOptionOverridesTable,
 } from "./schema/index.ts";
 
-const seed = async () => {
+export const seed = async () => {
     console.log("Seeding database...");
 
     // ── Employees ──────────────────────────────────────────────
@@ -613,6 +613,11 @@ const seed = async () => {
     console.log("Seed complete.");
 };
 
-seed()
-    .catch(console.error)
-    .finally(() => process.exit());
+import { fileURLToPath } from "url";
+
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+    seed()
+        .catch(console.error)
+        .finally(() => process.exit());
+}
