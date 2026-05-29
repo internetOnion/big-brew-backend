@@ -1,10 +1,12 @@
-import { Router, Request, Response } from "express";
-import { db } from "../db/index.ts";
-import { settingsTable } from "../db/schema/index.ts";
-import { eq } from "drizzle-orm";
+import { Router } from "express";
 import { z } from "zod";
-import { AppError } from "../util/AppError.ts";
-import { validateBody } from "../middleware/index.ts";
+import { eq } from "drizzle-orm";
+import type { Request, Response } from "express";
+
+import { db } from "../models/index.ts";
+import { settingsTable } from "../models/schema/index.ts";
+import { AppError } from "../utils/AppError.ts";
+import { validateBody } from "../middlewares/index.ts";
 
 const router = Router();
 
