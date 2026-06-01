@@ -2,6 +2,7 @@ export {
     EmployeeRepository,
     employeeRepository,
     type InsertEmployee,
+    type UpdateEmployee,
     type Employee,
 } from "./employee.repository.ts";
 export {

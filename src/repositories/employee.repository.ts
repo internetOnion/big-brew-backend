@@ -12,6 +12,11 @@ export interface InsertEmployee {
     supabaseUid: string;
 }
 
+export interface UpdateEmployee {
+    name?: string;
+    pin?: string;
+}
+
 export interface Employee {
     id: string;
     role: EmployeeRole;
@@ -24,6 +29,13 @@ export interface Employee {
 }
 
 export class EmployeeRepository {
+    async findById(id: string): Promise<Employee | null> {
+        const result = await db.query.employeesTable.findFirst({
+            where: eq(employeesTable.id, id),
+        });
+        return result ?? null;
+    }
+
     async findBySupabaseUid(supabaseUid: string): Promise<Employee | null> {
         const result = await db.query.employeesTable.findFirst({
             where: eq(employeesTable.supabaseUid, supabaseUid),
@@ -47,6 +59,15 @@ export class EmployeeRepository {
 
     async insert(data: InsertEmployee): Promise<Employee> {
         const result = await db.insert(employeesTable).values(data).returning();
+        return result[0];
+    }
+
+    async update(id: string, data: UpdateEmployee): Promise<Employee> {
+        const result = await db
+            .update(employeesTable)
+            .set({ ...data, updatedAt: new Date() })
+            .where(eq(employeesTable.id, id))
+            .returning();
         return result[0];
     }
 }

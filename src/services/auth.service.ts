@@ -9,8 +9,11 @@ import {
     employeeRepository,
     refreshTokenRepository,
     type Employee,
+    type UpdateEmployee,
 } from "../repositories/index.ts";
-import { logger } from "../utils/logger.ts";
+import type { employeeRoleEnum } from "../models/schema/enums.ts";
+
+type EmployeeRole = (typeof employeeRoleEnum.enumValues)[number];
 
 const SALT_ROUNDS = 10;
 
@@ -19,6 +22,7 @@ interface SignupInput {
     password: string;
     name: string;
     pin?: string;
+    role?: EmployeeRole;
 }
 
 interface LoginInput {
@@ -28,6 +32,13 @@ interface LoginInput {
 
 interface PinLoginInput {
     pin: string;
+}
+
+interface UpdateEmployeeInput {
+    name?: string;
+    email?: string;
+    pin?: string;
+    password?: string;
 }
 
 interface EmployeePayload {
@@ -99,18 +110,16 @@ const isValidPassword = (password: string): boolean => {
 };
 
 export class AuthService {
-    async signup(input: SignupInput): Promise<{
-        accessToken: string;
-        refreshToken: string;
-        employee: EmployeePayload;
-    }> {
-        const { email, password, name, pin } = input;
+    async signup(
+        input: SignupInput,
+        creatorRole: EmployeeRole,
+    ): Promise<{ employee: EmployeePayload }> {
+        const { email, password, name, pin, role } = input;
+        const assignedRole = role ?? "barista";
 
-        // if (!isValidPassword(password)) {
-        //     throw AppError.badRequest(
-        //         "Password must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers",
-        //     );
-        // }
+        if (assignedRole === "owner" && creatorRole !== "owner") {
+            throw AppError.forbidden("Only owners can create owner accounts");
+        }
 
         let pinHash: string | null = null;
         if (pin) {
@@ -140,19 +149,12 @@ export class AuthService {
         try {
             const employee = await employeeRepository.insert({
                 name,
-                role: "barista",
+                role: assignedRole,
                 pin: pinHash ?? "",
                 supabaseUid,
             });
 
-            const { accessToken, refreshToken } =
-                await createTokenPair(employee);
-
-            return {
-                accessToken,
-                refreshToken,
-                employee: formatEmployee(employee),
-            };
+            return { employee: formatEmployee(employee) };
         } catch (err) {
             await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
             throw err;
@@ -272,6 +274,61 @@ export class AuthService {
 
     async logout(employeeId: string): Promise<void> {
         await refreshTokenRepository.revokeAllForEmployee(employeeId);
+    }
+
+    async updateEmployee(
+        id: string,
+        input: UpdateEmployeeInput,
+    ): Promise<EmployeePayload> {
+        const employee = await employeeRepository.findById(id);
+        if (!employee) {
+            throw AppError.notFound("Employee not found");
+        }
+
+        const { name, email, pin, password } = input;
+
+        if (pin) {
+            const existing = await employeeRepository.findByPin(pin);
+            if (existing && existing.id !== id) {
+                throw AppError.conflict("PIN already in use");
+            }
+        }
+
+        if (email || password) {
+            if (!employee.supabaseUid) {
+                throw AppError.badRequest(
+                    "Employee has no linked auth account",
+                );
+            }
+
+            const updateData: { email?: string; password?: string } = {};
+            if (email) updateData.email = email;
+            if (password) updateData.password = password;
+
+            const { error } = await supabaseAdmin.auth.admin.updateUserById(
+                employee.supabaseUid,
+                updateData,
+            );
+
+            if (error) {
+                if (error.status === 422) {
+                    throw AppError.conflict("Email already registered");
+                }
+                throw AppError.internal("Failed to update auth user");
+            }
+        }
+
+        const dbUpdate: UpdateEmployee = {};
+        if (name !== undefined) dbUpdate.name = name;
+        if (pin !== undefined)
+            dbUpdate.pin = await bcrypt.hash(pin, SALT_ROUNDS);
+
+        if (Object.keys(dbUpdate).length > 0) {
+            const updated = await employeeRepository.update(id, dbUpdate);
+            return formatEmployee(updated);
+        }
+
+        return formatEmployee(employee);
     }
 }
 

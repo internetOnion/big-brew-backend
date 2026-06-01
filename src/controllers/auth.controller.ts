@@ -5,22 +5,15 @@ import { AppError } from "../utils/AppError.ts";
 
 export class AuthController {
     async signup(req: Request, res: Response) {
-        const { email, password, name, pin } = req.body;
+        const { email, password, name, pin, role } = req.body;
 
-        const result = await authService.signup({
-            email,
-            password,
-            name,
-            pin,
-        });
-
-        res.cookie("refresh_token", result.refreshToken, config.cookie);
+        const result = await authService.signup(
+            { email, password, name, pin, role },
+            req.employee!.role,
+        );
 
         return res.status(201).json({
-            data: {
-                accessToken: result.accessToken,
-                employee: result.employee,
-            },
+            data: result,
         });
     }
 
@@ -85,6 +78,22 @@ export class AuthController {
     async me(req: Request, res: Response) {
         return res.json({
             data: req.employee,
+        });
+    }
+
+    async updateEmployee(req: Request, res: Response) {
+        const id = req.params.id as string;
+        const { name, email, pin, password } = req.body;
+
+        const result = await authService.updateEmployee(id, {
+            name,
+            email,
+            pin,
+            password,
+        });
+
+        return res.json({
+            data: result,
         });
     }
 }

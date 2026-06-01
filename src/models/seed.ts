@@ -1,6 +1,8 @@
 import "dotenv/config";
+import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { db } from "./index.ts";
+import { supabaseAdmin } from "../lib/supabase.ts";
 import {
     employeesTable,
     categoriesTable,
@@ -15,48 +17,138 @@ import {
     menuItemModifierOptionOverridesTable,
 } from "./schema/index.ts";
 
+// ── Types ─────────────────────────────────────────────────
+
+interface SeedEmployee {
+    id: string;
+    name: string;
+    role: "barista" | "manager" | "owner";
+    email: string;
+    password: string;
+    pin: string;
+}
+
+// ── Seed Data ─────────────────────────────────────────────
+
+const DEV_EMPLOYEES: SeedEmployee[] = [
+    {
+        id: "00000000-0000-0000-0000-000000000001",
+        name: "Dev Team",
+        role: "owner",
+        email: "dev@bigbrew.local",
+        password: "DevPass123",
+        pin: "000000",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000005",
+        name: "Cafe Owner",
+        role: "owner",
+        email: "owner@bigbrew.local",
+        password: "OwnerPass123",
+        pin: "111111",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000002",
+        name: "Alice (Manager)",
+        role: "manager",
+        email: "alice@bigbrew.local",
+        password: "AlicePass123",
+        pin: "222222",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000003",
+        name: "Bob",
+        role: "barista",
+        email: "bob@bigbrew.local",
+        password: "BobPass123",
+        pin: "333333",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000004",
+        name: "Cindy",
+        role: "barista",
+        email: "cindy@bigbrew.local",
+        password: "CindyPass123",
+        pin: "444444",
+    },
+];
+
+// ── Helpers ───────────────────────────────────────────────
+
+const getSeedEmployees = (): SeedEmployee[] => {
+    if (process.env.SEED_EMPLOYEES) {
+        return JSON.parse(process.env.SEED_EMPLOYEES);
+    }
+    return DEV_EMPLOYEES;
+};
+
+const getOrCreateAuthUser = async (
+    email: string,
+    password: string,
+): Promise<string> => {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+    });
+
+    if (!error) {
+        return data.user.id;
+    }
+
+    if (error.status === 422) {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const existing = usersData.users.find(
+            (u: { email?: string }) => u.email === email,
+        );
+        if (existing) return existing.id;
+    }
+
+    throw new Error(`Failed to create/find auth user for ${email}`);
+};
+
+const SALT_ROUNDS = 10;
+
+// ── Seed Function ─────────────────────────────────────────
+
+const requireEnv = (name: string): string => {
+    const value = process.env[name];
+    if (!value) {
+        console.error(`Missing required environment variable: ${name}`);
+        process.exit(1);
+    }
+    return value;
+};
+
 export const seed = async () => {
+    requireEnv("SUPABASE_DATABASE_URL");
+    requireEnv("SUPABASE_URL");
+    requireEnv("SUPABASE_SECRET_KEY");
+
     console.log("Seeding database...");
 
     // ── Employees ──────────────────────────────────────────────
     console.log("  Employees...");
-    await db
-        .insert(employeesTable)
-        .values([
-            {
-                id: "00000000-0000-0000-0000-000000000001",
-                role: "owner",
-                name: "Cafe Owner",
-                pin: "$2b$10$r5s5u3P3lQSG8wGetteuVuPWZEi4Fv5GtcqrC3smiMgH1M22p5W/a",
-                supabaseUid: "00000000-0000-0000-0000-0000000000aa",
+    const seedEmployees = getSeedEmployees();
+
+    for (const emp of seedEmployees) {
+        const supabaseUid = await getOrCreateAuthUser(emp.email, emp.password);
+        const pinHash = await bcrypt.hash(emp.pin, SALT_ROUNDS);
+
+        await db
+            .insert(employeesTable)
+            .values({
+                id: emp.id,
+                role: emp.role,
+                name: emp.name,
+                pin: pinHash,
+                supabaseUid,
                 isActive: true,
-            },
-            {
-                id: "00000000-0000-0000-0000-000000000002",
-                role: "manager",
-                name: "Alice (Manager)",
-                pin: "$2b$10$yjeKVzobVSKUriEoGVibMerXm44fcgnb1roXtHxJI3VOMtSG.kPiK",
-                supabaseUid: "00000000-0000-0000-0000-0000000000bb",
-                isActive: true,
-            },
-            {
-                id: "00000000-0000-0000-0000-000000000003",
-                role: "barista",
-                name: "Bob",
-                pin: "$2b$10$cnwtex58x9xMRCaFCgjuzeCSDWH8LKP89VBk8nhbri1Y0eUq7edfq",
-                supabaseUid: "00000000-0000-0000-0000-0000000000cc",
-                isActive: true,
-            },
-            {
-                id: "00000000-0000-0000-0000-000000000004",
-                role: "barista",
-                name: "Cindy",
-                pin: "$2b$10$r.ZyZe5HDAy1MDQwVqWAzu55KS8u1Wj/55tyZUY2lMszbteiRjDoO",
-                supabaseUid: "00000000-0000-0000-0000-0000000000dd",
-                isActive: true,
-            },
-        ])
-        .onConflictDoNothing();
+            })
+            .onConflictDoNothing();
+
+        console.log(`    ${emp.name} (${emp.email})`);
+    }
 
     // ── Categories ─────────────────────────────────────────────
     console.log("  Categories...");
