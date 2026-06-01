@@ -26,3 +26,4 @@ export { orderItemModifiersTable } from "./order-item-modifiers.ts";
 export { stockMovementsTable } from "./stock-movements.ts";
 export { expensesTable } from "./expenses.ts";
 export { settingsTable } from "./settings.ts";
+export { refreshTokensTable } from "./refresh-tokens.ts";

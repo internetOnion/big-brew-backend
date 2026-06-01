@@ -15,6 +15,13 @@
       "when": 1779722582928,
       "tag": "0001_young_barracuda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780302820825,
+      "tag": "0002_luxuriant_doctor_octopus",
+      "breakpoints": true
     }
   ]
 }
