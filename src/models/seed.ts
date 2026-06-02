@@ -1,6 +1,8 @@
 import "dotenv/config";
+import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { db } from "./index.ts";
+import { supabaseAdmin } from "../lib/supabase.ts";
 import {
     employeesTable,
     categoriesTable,
@@ -15,48 +17,130 @@ import {
     menuItemModifierOptionOverridesTable,
 } from "./schema/index.ts";
 
+interface SeedEmployee {
+    id: string;
+    name: string;
+    role: "barista" | "manager" | "owner";
+    email: string;
+    password: string;
+    pin: string;
+}
+
+const DEV_EMPLOYEES: SeedEmployee[] = [
+    {
+        id: "00000000-0000-0000-0000-000000000001",
+        name: "Dev Team",
+        role: "owner",
+        email: "dev@bigbrew.local",
+        password: "DevPass123",
+        pin: "000000",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000005",
+        name: "Cafe Owner",
+        role: "owner",
+        email: "owner@bigbrew.local",
+        password: "OwnerPass123",
+        pin: "111111",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000002",
+        name: "Alice (Manager)",
+        role: "manager",
+        email: "alice@bigbrew.local",
+        password: "AlicePass123",
+        pin: "222222",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000003",
+        name: "Bob",
+        role: "barista",
+        email: "bob@bigbrew.local",
+        password: "BobPass123",
+        pin: "333333",
+    },
+    {
+        id: "00000000-0000-0000-0000-000000000004",
+        name: "Cindy",
+        role: "barista",
+        email: "cindy@bigbrew.local",
+        password: "CindyPass123",
+        pin: "444444",
+    },
+];
+
+const getSeedEmployees = (): SeedEmployee[] => {
+    if (process.env.SEED_EMPLOYEES) {
+        return JSON.parse(process.env.SEED_EMPLOYEES);
+    }
+    return DEV_EMPLOYEES;
+};
+
+const getOrCreateAuthUser = async (
+    email: string,
+    password: string,
+): Promise<string> => {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+    });
+
+    if (!error) {
+        return data.user.id;
+    }
+
+    if (error.status === 422) {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const existing = usersData.users.find(
+            (u: { email?: string }) => u.email === email,
+        );
+        if (existing) return existing.id;
+    }
+
+    throw new Error(`Failed to create/find auth user for ${email}`);
+};
+
+const SALT_ROUNDS = 10;
+
+const requireEnv = (name: string): string => {
+    const value = process.env[name];
+    if (!value) {
+        console.error(`Missing required environment variable: ${name}`);
+        process.exit(1);
+    }
+    return value;
+};
+
 export const seed = async () => {
-    console.log("Seeding database...");
+    requireEnv("SUPABASE_DATABASE_URL");
+    requireEnv("SUPABASE_URL");
+    requireEnv("SUPABASE_SECRET_KEY");
 
-    // ── Employees ──────────────────────────────────────────────
+    console.log("Seeding database... (idempotent — safe to re-run)");
+
     console.log("  Employees...");
-    await db
-        .insert(employeesTable)
-        .values([
-            {
-                id: "00000000-0000-0000-0000-000000000001",
-                role: "owner",
-                name: "Cafe Owner",
-                pin: "$2a$10$EXAMPLE_HASH_OWNER",
-                supabaseUid: "00000000-0000-0000-0000-0000000000aa",
-                isActive: true,
-            },
-            {
-                id: "00000000-0000-0000-0000-000000000002",
-                role: "manager",
-                name: "Alice (Manager)",
-                pin: "$2a$10$EXAMPLE_HASH_MANAGER",
-                supabaseUid: "00000000-0000-0000-0000-0000000000bb",
-                isActive: true,
-            },
-            {
-                id: "00000000-0000-0000-0000-000000000003",
-                role: "barista",
-                name: "Bob",
-                pin: "$2a$10$EXAMPLE_HASH_BARISTA1",
-                isActive: true,
-            },
-            {
-                id: "00000000-0000-0000-0000-000000000004",
-                role: "barista",
-                name: "Cindy",
-                pin: "$2a$10$EXAMPLE_HASH_BARISTA2",
-                isActive: true,
-            },
-        ])
-        .onConflictDoNothing();
+    const seedEmployees = getSeedEmployees();
 
-    // ── Categories ─────────────────────────────────────────────
+    for (const emp of seedEmployees) {
+        const supabaseUid = await getOrCreateAuthUser(emp.email, emp.password);
+        const pinHash = await bcrypt.hash(emp.pin, SALT_ROUNDS);
+
+        await db
+            .insert(employeesTable)
+            .values({
+                id: emp.id,
+                role: emp.role,
+                name: emp.name,
+                pin: pinHash,
+                supabaseUid,
+                isActive: true,
+            })
+            .onConflictDoNothing();
+
+        console.log(`    ${emp.name} (${emp.email})`);
+    }
+
     console.log("  Categories...");
     await db
         .insert(categoriesTable)
@@ -84,7 +168,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Ingredients ────────────────────────────────────────────
     console.log("  Ingredients...");
     await db
         .insert(ingredientsTable)
@@ -141,7 +224,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Groups ───────────────────────────────────────
     console.log("  Modifier Groups...");
     await db
         .insert(modifierGroupsTable)
@@ -177,7 +259,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Options ──────────────────────────────────────
     console.log("  Modifier Options...");
     await db
         .insert(modifierOptionsTable)
@@ -273,7 +354,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Group default options ────────────────────────
     console.log("  Modifier Group defaults...");
     await db
         .update(modifierGroupsTable)
@@ -300,7 +380,6 @@ export const seed = async () => {
             eq(modifierGroupsTable.id, "30000000-0000-0000-0000-000000000003"),
         );
 
-    // ── Menu Items ────────────────────────────────────────────
     console.log("  Menu Items...");
     await db
         .insert(menuItemsTable)
@@ -332,7 +411,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Menu Item ↔ Modifier Groups ──────────────────────────
     console.log("  Menu Item Modifier Groups...");
     await db
         .insert(menuItemModifierGroupsTable)
@@ -390,7 +468,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Option Ingredients ───────────────────────────
     console.log("  Modifier Option Ingredients...");
     await db
         .insert(modifierOptionIngredientsTable)
@@ -478,7 +555,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Item Recipes (base recipes, no modifiers) ─────────────
     console.log("  Item Recipes...");
     await db
         .insert(itemRecipesTable)
@@ -491,7 +567,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Discounts ─────────────────────────────────────────────
     console.log("  Discounts...");
     await db
         .insert(discountsTable)
@@ -513,7 +588,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Menu Item Modifier Option Overrides ───────────────────
     console.log("  Modifier Option Overrides...");
     await db
         .insert(menuItemModifierOptionOverridesTable)
@@ -549,6 +623,9 @@ import { fileURLToPath } from "url";
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
     seed()
-        .catch(console.error)
-        .finally(() => process.exit());
+        .then(() => process.exit(0))
+        .catch((err) => {
+            console.error(err);
+            process.exit(1);
+        });
 }

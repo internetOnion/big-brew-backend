@@ -1,20 +1,27 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1779611814998,
-      "tag": "0000_mature_praxagora",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1779722582928,
-      "tag": "0001_young_barracuda",
-      "breakpoints": true
-    }
-  ]
+    "version": "7",
+    "dialect": "postgresql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "7",
+            "when": 1779611814998,
+            "tag": "0000_mature_praxagora",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1779722582928,
+            "tag": "0001_young_barracuda",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1780302820825,
+            "tag": "0002_luxuriant_doctor_octopus",
+            "breakpoints": true
+        }
+    ]
 }

@@ -1,6 +1,18 @@
 {
     "version": 1,
     "skills": {
+        "api-design": {
+            "source": "affaan-m/ECC",
+            "sourceType": "github",
+            "skillPath": "skills/api-design/SKILL.md",
+            "computedHash": "718b7be2b2c0798d4da7f79d860cc2af8ca114f55b5ff508e93c2feb468d20c2"
+        },
+        "backend-patterns": {
+            "source": "affaan-m/ECC",
+            "sourceType": "github",
+            "skillPath": "skills/backend-patterns/SKILL.md",
+            "computedHash": "0f4cb3da46b8ce80176f9dbd241242e3033a999b32e952f2467faba4d38d69c9"
+        },
         "supabase": {
             "source": "supabase/agent-skills",
             "sourceType": "github",

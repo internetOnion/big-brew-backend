@@ -1,6 +1,6 @@
 {
-    "id": "71bfb387-841e-4b4a-a7cc-7f35c0056d98",
-    "prevId": "b3d1fbce-9c79-4249-a2ec-785f19a85ce3",
+    "id": "01fb7571-ff2e-44d4-9844-9ee38ba71d72",
+    "prevId": "71bfb387-841e-4b4a-a7cc-7f35c0056d98",
     "version": "7",
     "dialect": "postgresql",
     "tables": {
@@ -290,6 +290,11 @@
             "foreignKeys": {},
             "compositePrimaryKeys": {},
             "uniqueConstraints": {
+                "employees_pin_unique": {
+                    "name": "employees_pin_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["pin"]
+                },
                 "employees_supabase_uid_unique": {
                     "name": "employees_supabase_uid_unique",
                     "nullsNotDistinct": false,
@@ -1598,6 +1603,106 @@
                     "value": "(\n                (\"orders\".\"void_approved_by\" IS NULL AND \"orders\".\"void_approved_at\" IS NULL) OR\n                (\"orders\".\"void_approved_by\" IS NOT NULL AND \"orders\".\"void_approved_at\" IS NOT NULL)\n            )"
                 }
             },
+            "isRLSEnabled": false
+        },
+        "public.refresh_tokens": {
+            "name": "refresh_tokens",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "employee_id": {
+                    "name": "employee_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "token_hash": {
+                    "name": "token_hash",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "expires_at": {
+                    "name": "expires_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "revoked": {
+                    "name": "revoked",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "idx_refresh_tokens_employee": {
+                    "name": "idx_refresh_tokens_employee",
+                    "columns": [
+                        {
+                            "expression": "employee_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "idx_refresh_tokens_hash": {
+                    "name": "idx_refresh_tokens_hash",
+                    "columns": [
+                        {
+                            "expression": "token_hash",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "where": "\"refresh_tokens\".\"revoked\" = false",
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "refresh_tokens_employee_id_employees_id_fk": {
+                    "name": "refresh_tokens_employee_id_employees_id_fk",
+                    "tableFrom": "refresh_tokens",
+                    "tableTo": "employees",
+                    "columnsFrom": ["employee_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "refresh_tokens_token_hash_unique": {
+                    "name": "refresh_tokens_token_hash_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["token_hash"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
             "isRLSEnabled": false
         },
         "public.settings": {

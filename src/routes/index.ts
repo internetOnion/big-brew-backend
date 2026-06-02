@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 
-import { db } from "../models/index.ts";
-import { settingsTable } from "../models/schema/index.ts";
-import { AppError } from "../utils/AppError.ts";
-import { validateBody } from "../middlewares/index.ts";
+import {
+    validateBody,
+    authenticate,
+    requireRole,
+} from "../middlewares/index.ts";
+import { settingsController } from "../controllers/index.ts";
+import authRoutes from "./auth.ts";
+import employeeRoutes from "./employees.ts";
 
 const router = Router();
 
@@ -22,34 +25,28 @@ const updateSettingsSchema = z
     })
     .strict();
 
+// ── Public ─────────────────────────────────────────────────
+
 router.get("/health", (_req: Request, res: Response) => {
     return res.json({ status: "ok" });
 });
 
-router.get("/settings", async (_req: Request, res: Response) => {
-    const result = await db
-        .select()
-        .from(settingsTable)
-        .where(eq(settingsTable.id, 1));
-    const data = result[0];
-    if (!data) {
-        throw AppError.notFound("Settings not found");
-    }
-    return res.json(data);
-});
+router.use("/auth", authRoutes);
+router.use("/employees", employeeRoutes);
+
+// ── Protected ──────────────────────────────────────────────
+
+router.get("/settings", authenticate, (req: Request, res: Response) =>
+    settingsController.getSettings(req, res),
+);
 
 router.patch(
     "/settings",
+    authenticate,
+    requireRole("owner", "manager"),
     validateBody(updateSettingsSchema),
-    async (req: Request, res: Response) => {
-        const updated = await db
-            .update(settingsTable)
-            .set({ ...req.body, updatedAt: new Date() })
-            .where(eq(settingsTable.id, 1))
-            .returning();
-
-        return res.json(updated[0]);
-    },
+    (req: Request, res: Response) =>
+        settingsController.updateSettings(req, res),
 );
 
 export default router;
