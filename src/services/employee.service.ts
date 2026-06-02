@@ -19,21 +19,43 @@ interface UpdateEmployeeInput {
 }
 
 export class EmployeeService {
+    async getEmployeeById(id: string): Promise<EmployeePayload> {
+        const employee = await employeeRepository.findById(id);
+        if (!employee || !employee.isActive) {
+            throw AppError.notFound("Employee not found");
+        }
+
+        let email: string | undefined;
+        if (employee.supabaseUid) {
+            const { data: userData } =
+                await supabaseAdmin.auth.admin.getUserById(
+                    employee.supabaseUid,
+                );
+            email = userData?.user?.email;
+        }
+
+        return formatEmployee(employee, email);
+    }
+
     async updateEmployee(
         id: string,
         input: UpdateEmployeeInput,
     ): Promise<EmployeePayload> {
         const employee = await employeeRepository.findById(id);
-        if (!employee) {
+        if (!employee || !employee.isActive) {
             throw AppError.notFound("Employee not found");
         }
 
         const { name, email, pin, password } = input;
 
         if (pin) {
-            const existing = await employeeRepository.findByPin(pin);
-            if (existing && existing.id !== id) {
-                throw AppError.conflict("PIN already in use");
+            const employees = await employeeRepository.findActiveEmployees();
+            for (const emp of employees) {
+                if (!emp.pin || emp.id === id) continue;
+                const match = await bcrypt.compare(pin, emp.pin);
+                if (match) {
+                    throw AppError.conflict("PIN already in use");
+                }
             }
         }
 
@@ -75,19 +97,25 @@ export class EmployeeService {
             if (name !== undefined) dbUpdate.name = name;
             if (pin !== undefined) {
                 dbUpdate.pin = await bcrypt.hash(pin, SALT_ROUNDS);
-                const existing = await employeeRepository.findByPin(pin);
-
-                if (existing && existing.id !== id) {
-                    throw AppError.conflict("PIN already in use");
-                }
             }
 
+            let resultEmployee: typeof employee;
             if (Object.keys(dbUpdate).length > 0) {
-                const updated = await employeeRepository.update(id, dbUpdate);
-                return formatEmployee(updated);
+                resultEmployee = await employeeRepository.update(id, dbUpdate);
+            } else {
+                resultEmployee = employee;
             }
 
-            return formatEmployee(employee);
+            let finalEmail = email ?? originalEmail;
+            if (finalEmail === undefined && employee.supabaseUid) {
+                const { data: userData } =
+                    await supabaseAdmin.auth.admin.getUserById(
+                        employee.supabaseUid,
+                    );
+                finalEmail = userData?.user?.email;
+            }
+
+            return formatEmployee(resultEmployee, finalEmail);
         } catch (err) {
             if (email && originalEmail && employee.supabaseUid) {
                 try {
@@ -109,7 +137,7 @@ export class EmployeeService {
 
     async deleteEmployee(id: string): Promise<void> {
         const employee = await employeeRepository.findById(id);
-        if (!employee) {
+        if (!employee || !employee.isActive) {
             throw AppError.notFound("Employee not found");
         }
         await employeeRepository.delete(id);

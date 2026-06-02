@@ -7,6 +7,7 @@ export interface EmployeePayload {
     role: EmployeeRole;
     name: string;
     supabaseUid: string | null;
+    email?: string;
 }
 
 export interface ApiResponse<T> {

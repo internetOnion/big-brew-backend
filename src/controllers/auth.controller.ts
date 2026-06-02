@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { authService } from "../services/index.ts";
+import { authService, employeeService } from "../services/index.ts";
 import { config } from "../config/index.ts";
 import { AppError } from "../utils/AppError.ts";
 
@@ -76,8 +76,10 @@ export class AuthController {
     }
 
     async me(req: Request, res: Response) {
+        const result = await employeeService.getEmployeeById(req.employee!.id);
+
         return res.json({
-            data: req.employee,
+            data: result,
         });
     }
 }

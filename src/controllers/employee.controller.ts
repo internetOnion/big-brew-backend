@@ -2,6 +2,16 @@ import type { Request, Response } from "express";
 import { employeeService } from "../services/index.ts";
 
 export class EmployeeController {
+    async getEmployeeById(req: Request, res: Response) {
+        const id = req.params.id as string;
+
+        const result = await employeeService.getEmployeeById(id);
+
+        return res.json({
+            data: result,
+        });
+    }
+
     async updateEmployee(req: Request, res: Response) {
         const id = req.params.id as string;
         const { name, email, pin, password } = req.body;

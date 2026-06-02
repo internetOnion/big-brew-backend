@@ -78,15 +78,6 @@ const createTokenPair = async (employee: Employee): Promise<TokenPair> => {
     return { accessToken, refreshToken };
 };
 
-const isValidPassword = (password: string): boolean => {
-    return (
-        password.length >= 8 &&
-        /[A-Z]/.test(password) &&
-        /[a-z]/.test(password) &&
-        /\d/.test(password)
-    );
-};
-
 export class AuthService {
     async signup(
         input: SignupInput,
@@ -101,9 +92,13 @@ export class AuthService {
 
         let pinHash: string | null = null;
         if (pin) {
-            const existing = await employeeRepository.findByPin(pin);
-            if (existing) {
-                throw AppError.conflict("PIN already in use");
+            const employees = await employeeRepository.findActiveEmployees();
+            for (const emp of employees) {
+                if (!emp.pin) continue;
+                const match = await bcrypt.compare(pin, emp.pin);
+                if (match) {
+                    throw AppError.conflict("PIN already in use");
+                }
             }
             pinHash = await bcrypt.hash(pin, SALT_ROUNDS);
         }
@@ -132,7 +127,7 @@ export class AuthService {
                 supabaseUid,
             });
 
-            return { employee: formatEmployee(employee) };
+            return { employee: formatEmployee(employee, authData.user.email) };
         } catch (err) {
             try {
                 await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
@@ -179,7 +174,7 @@ export class AuthService {
         return {
             accessToken,
             refreshToken,
-            employee: formatEmployee(employee),
+            employee: formatEmployee(employee, sessionData.user.email),
         };
     }
 
@@ -210,13 +205,22 @@ export class AuthService {
             throw AppError.unauthorized("Employee has no linked auth account");
         }
 
+        let email: string | undefined;
+        const { data: userData, error: userError } =
+            await supabaseAdmin.auth.admin.getUserById(
+                matchedEmployee.supabaseUid,
+            );
+        if (!userError && userData?.user?.email) {
+            email = userData.user.email;
+        }
+
         const { accessToken, refreshToken } =
             await createTokenPair(matchedEmployee);
 
         return {
             accessToken,
             refreshToken,
-            employee: formatEmployee(matchedEmployee),
+            employee: formatEmployee(matchedEmployee, email),
         };
     }
 

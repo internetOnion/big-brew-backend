@@ -33,6 +33,14 @@ const updateEmployeeSchema = z
         message: "At least one field must be provided",
     });
 
+router.get(
+    "/:id",
+    authenticate,
+    requireRole("owner", "manager"),
+    (req: Request, res: Response) =>
+        employeeController.getEmployeeById(req, res),
+);
+
 router.patch(
     "/:id",
     authenticate,
