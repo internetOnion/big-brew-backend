@@ -17,17 +17,7 @@ const reset = async () => {
     requireEnv("SUPABASE_URL");
     requireEnv("SUPABASE_SECRET_KEY");
 
-    // ── Delete Supabase Auth users ────────────────────────────
-    console.log("Deleting Supabase Auth users...");
-    const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-    for (const user of usersData.users) {
-        await supabaseAdmin.auth.admin.deleteUser(user.id);
-    }
-    console.log(`  Deleted ${usersData.users.length} auth users.`);
-
-    // ── Truncate PostgreSQL tables ────────────────────────────
     console.log("Truncating all tables...");
-
     await db.execute(sql`
         TRUNCATE TABLE
             order_item_modifiers,
@@ -51,12 +41,21 @@ const reset = async () => {
         RESTART IDENTITY CASCADE
     `);
 
+    console.log("Deleting Supabase Auth users...");
+    const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+    for (const user of usersData.users) {
+        await supabaseAdmin.auth.admin.deleteUser(user.id);
+    }
+    console.log(`  Deleted ${usersData.users.length} auth users.`);
+
     console.log("Reset complete.");
 };
 
 reset()
-    .catch(console.error)
-    .finally(() => {
-        pool.end();
-        process.exit();
+    .then(() => {
+        pool.end().then(() => process.exit(0));
+    })
+    .catch((err) => {
+        console.error(err);
+        pool.end().then(() => process.exit(1));
     });

@@ -3,10 +3,9 @@ import jwt from "jsonwebtoken";
 import { supabaseAuth } from "../lib/supabase.ts";
 import { AppError } from "../utils/AppError.ts";
 import { config } from "../config/index.ts";
+import { logger } from "../utils/logger.ts";
 import { employeeRepository } from "../repositories/index.ts";
-import type { employeeRoleEnum } from "../models/schema/enums.ts";
-
-type EmployeeRole = (typeof employeeRoleEnum.enumValues)[number];
+import type { EmployeeRole } from "../types/index.ts";
 
 interface LocalJwtPayload {
     sub: string;
@@ -50,6 +49,13 @@ const resolveSupabaseUid = async (token: string): Promise<string | null> => {
         throw AppError.unauthorized("Access token expired", {
             code: "TOKEN_EXPIRED",
         });
+    }
+
+    if (error) {
+        logger.error(
+            { message: error.message, status: error.status },
+            "Supabase getUser returned unexpected error",
+        );
     }
 
     return null;

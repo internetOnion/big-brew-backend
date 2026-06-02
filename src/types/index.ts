@@ -1,3 +1,14 @@
+import type { employeeRoleEnum } from "../models/schema/enums.ts";
+
+export type EmployeeRole = (typeof employeeRoleEnum.enumValues)[number];
+
+export interface EmployeePayload {
+    id: string;
+    role: EmployeeRole;
+    name: string;
+    supabaseUid: string | null;
+}
+
 export interface ApiResponse<T> {
     success: boolean;
     data?: T;

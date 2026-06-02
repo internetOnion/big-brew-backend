@@ -17,8 +17,6 @@ import {
     menuItemModifierOptionOverridesTable,
 } from "./schema/index.ts";
 
-// ── Types ─────────────────────────────────────────────────
-
 interface SeedEmployee {
     id: string;
     name: string;
@@ -27,8 +25,6 @@ interface SeedEmployee {
     password: string;
     pin: string;
 }
-
-// ── Seed Data ─────────────────────────────────────────────
 
 const DEV_EMPLOYEES: SeedEmployee[] = [
     {
@@ -73,8 +69,6 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
     },
 ];
 
-// ── Helpers ───────────────────────────────────────────────
-
 const getSeedEmployees = (): SeedEmployee[] => {
     if (process.env.SEED_EMPLOYEES) {
         return JSON.parse(process.env.SEED_EMPLOYEES);
@@ -109,8 +103,6 @@ const getOrCreateAuthUser = async (
 
 const SALT_ROUNDS = 10;
 
-// ── Seed Function ─────────────────────────────────────────
-
 const requireEnv = (name: string): string => {
     const value = process.env[name];
     if (!value) {
@@ -125,9 +117,8 @@ export const seed = async () => {
     requireEnv("SUPABASE_URL");
     requireEnv("SUPABASE_SECRET_KEY");
 
-    console.log("Seeding database...");
+    console.log("Seeding database... (idempotent — safe to re-run)");
 
-    // ── Employees ──────────────────────────────────────────────
     console.log("  Employees...");
     const seedEmployees = getSeedEmployees();
 
@@ -150,7 +141,6 @@ export const seed = async () => {
         console.log(`    ${emp.name} (${emp.email})`);
     }
 
-    // ── Categories ─────────────────────────────────────────────
     console.log("  Categories...");
     await db
         .insert(categoriesTable)
@@ -178,7 +168,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Ingredients ────────────────────────────────────────────
     console.log("  Ingredients...");
     await db
         .insert(ingredientsTable)
@@ -235,7 +224,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Groups ───────────────────────────────────────
     console.log("  Modifier Groups...");
     await db
         .insert(modifierGroupsTable)
@@ -271,7 +259,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Options ──────────────────────────────────────
     console.log("  Modifier Options...");
     await db
         .insert(modifierOptionsTable)
@@ -367,7 +354,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Group default options ────────────────────────
     console.log("  Modifier Group defaults...");
     await db
         .update(modifierGroupsTable)
@@ -394,7 +380,6 @@ export const seed = async () => {
             eq(modifierGroupsTable.id, "30000000-0000-0000-0000-000000000003"),
         );
 
-    // ── Menu Items ────────────────────────────────────────────
     console.log("  Menu Items...");
     await db
         .insert(menuItemsTable)
@@ -426,7 +411,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Menu Item ↔ Modifier Groups ──────────────────────────
     console.log("  Menu Item Modifier Groups...");
     await db
         .insert(menuItemModifierGroupsTable)
@@ -484,7 +468,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Modifier Option Ingredients ───────────────────────────
     console.log("  Modifier Option Ingredients...");
     await db
         .insert(modifierOptionIngredientsTable)
@@ -572,7 +555,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Item Recipes (base recipes, no modifiers) ─────────────
     console.log("  Item Recipes...");
     await db
         .insert(itemRecipesTable)
@@ -585,7 +567,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Discounts ─────────────────────────────────────────────
     console.log("  Discounts...");
     await db
         .insert(discountsTable)
@@ -607,7 +588,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // ── Menu Item Modifier Option Overrides ───────────────────
     console.log("  Modifier Option Overrides...");
     await db
         .insert(menuItemModifierOptionOverridesTable)
@@ -643,6 +623,9 @@ import { fileURLToPath } from "url";
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
     seed()
-        .catch(console.error)
-        .finally(() => process.exit());
+        .then(() => process.exit(0))
+        .catch((err) => {
+            console.error(err);
+            process.exit(1);
+        });
 }

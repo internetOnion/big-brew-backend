@@ -80,22 +80,6 @@ export class AuthController {
             data: req.employee,
         });
     }
-
-    async updateEmployee(req: Request, res: Response) {
-        const id = req.params.id as string;
-        const { name, email, pin, password } = req.body;
-
-        const result = await authService.updateEmployee(id, {
-            name,
-            email,
-            pin,
-            password,
-        });
-
-        return res.json({
-            data: result,
-        });
-    }
 }
 
 export const authController = new AuthController();

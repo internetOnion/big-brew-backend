@@ -9,6 +9,7 @@ import {
 } from "../middlewares/index.ts";
 import { settingsController } from "../controllers/index.ts";
 import authRoutes from "./auth.ts";
+import employeeRoutes from "./employees.ts";
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.get("/health", (_req: Request, res: Response) => {
 });
 
 router.use("/auth", authRoutes);
+router.use("/employees", employeeRoutes);
 
 // ── Protected ──────────────────────────────────────────────
 

@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import { employeesTable } from "../models/schema/index.ts";
-import type { employeeRoleEnum } from "../models/schema/enums.ts";
-
-type EmployeeRole = (typeof employeeRoleEnum.enumValues)[number];
+import type { EmployeeRole } from "../types/index.ts";
 
 export interface InsertEmployee {
     name: string;
@@ -69,6 +67,13 @@ export class EmployeeRepository {
             .where(eq(employeesTable.id, id))
             .returning();
         return result[0];
+    }
+
+    async delete(id: string): Promise<void> {
+        await db
+            .update(employeesTable)
+            .set({ isActive: false, updatedAt: new Date() })
+            .where(eq(employeesTable.id, id));
     }
 }
 

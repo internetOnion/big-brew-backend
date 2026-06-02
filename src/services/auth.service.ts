@@ -5,15 +5,14 @@ import type { StringValue } from "ms";
 import { supabaseAdmin, supabaseAuth } from "../lib/supabase.ts";
 import { config } from "../config/index.ts";
 import { AppError } from "../utils/AppError.ts";
+import { logger } from "../utils/logger.ts";
+import { formatEmployee } from "../utils/formatEmployee.ts";
 import {
     employeeRepository,
     refreshTokenRepository,
     type Employee,
-    type UpdateEmployee,
 } from "../repositories/index.ts";
-import type { employeeRoleEnum } from "../models/schema/enums.ts";
-
-type EmployeeRole = (typeof employeeRoleEnum.enumValues)[number];
+import type { EmployeeRole, EmployeePayload } from "../types/index.ts";
 
 const SALT_ROUNDS = 10;
 
@@ -34,31 +33,10 @@ interface PinLoginInput {
     pin: string;
 }
 
-interface UpdateEmployeeInput {
-    name?: string;
-    email?: string;
-    pin?: string;
-    password?: string;
-}
-
-interface EmployeePayload {
-    id: string;
-    role: string;
-    name: string;
-    supabaseUid: string | null;
-}
-
 interface TokenPair {
     accessToken: string;
     refreshToken: string;
 }
-
-const formatEmployee = (employee: Employee): EmployeePayload => ({
-    id: employee.id,
-    role: employee.role,
-    name: employee.name,
-    supabaseUid: employee.supabaseUid,
-});
 
 const hashToken = (token: string): string =>
     createHash("sha256").update(token).digest("hex");
@@ -156,7 +134,14 @@ export class AuthService {
 
             return { employee: formatEmployee(employee) };
         } catch (err) {
-            await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
+            try {
+                await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
+            } catch (deleteErr) {
+                logger.error(
+                    deleteErr as Error,
+                    "Failed to rollback Supabase auth user after DB insert failure",
+                );
+            }
             throw err;
         }
     }
@@ -172,6 +157,10 @@ export class AuthService {
             await supabaseAuth.auth.signInWithPassword({ email, password });
 
         if (sessionError) {
+            logger.error(
+                { message: sessionError.message, status: sessionError.status },
+                "Supabase signInWithPassword error",
+            );
             throw AppError.unauthorized("Invalid email or password");
         }
 
@@ -274,61 +263,6 @@ export class AuthService {
 
     async logout(employeeId: string): Promise<void> {
         await refreshTokenRepository.revokeAllForEmployee(employeeId);
-    }
-
-    async updateEmployee(
-        id: string,
-        input: UpdateEmployeeInput,
-    ): Promise<EmployeePayload> {
-        const employee = await employeeRepository.findById(id);
-        if (!employee) {
-            throw AppError.notFound("Employee not found");
-        }
-
-        const { name, email, pin, password } = input;
-
-        if (pin) {
-            const existing = await employeeRepository.findByPin(pin);
-            if (existing && existing.id !== id) {
-                throw AppError.conflict("PIN already in use");
-            }
-        }
-
-        if (email || password) {
-            if (!employee.supabaseUid) {
-                throw AppError.badRequest(
-                    "Employee has no linked auth account",
-                );
-            }
-
-            const updateData: { email?: string; password?: string } = {};
-            if (email) updateData.email = email;
-            if (password) updateData.password = password;
-
-            const { error } = await supabaseAdmin.auth.admin.updateUserById(
-                employee.supabaseUid,
-                updateData,
-            );
-
-            if (error) {
-                if (error.status === 422) {
-                    throw AppError.conflict("Email already registered");
-                }
-                throw AppError.internal("Failed to update auth user");
-            }
-        }
-
-        const dbUpdate: UpdateEmployee = {};
-        if (name !== undefined) dbUpdate.name = name;
-        if (pin !== undefined)
-            dbUpdate.pin = await bcrypt.hash(pin, SALT_ROUNDS);
-
-        if (Object.keys(dbUpdate).length > 0) {
-            const updated = await employeeRepository.update(id, dbUpdate);
-            return formatEmployee(updated);
-        }
-
-        return formatEmployee(employee);
     }
 }
 
