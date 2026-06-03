@@ -3,6 +3,6 @@ dist/
 package-lock.json
 .env
 *.log
-src/db/migrations/
+src/models/migrations/
 AGENTS.md
 .agents/

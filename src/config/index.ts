@@ -14,6 +14,11 @@ export const config = {
     supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || "",
     supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET || "",
     jwtSecret: process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || "",
+    storageBucketName: process.env.STORAGE_BUCKET_NAME || "assets",
+    storageMaxFileSize: parseInt(
+        process.env.STORAGE_MAX_FILE_SIZE || "5242880",
+        10,
+    ),
     accessTokenExpiry: "15m",
     refreshTokenExpiry: "7d",
     cookie: {

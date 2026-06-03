@@ -7,3 +7,4 @@ export {
     SettingsController,
     settingsController,
 } from "./settings.controller.ts";
+export { StorageController, storageController } from "./storage.controller.ts";

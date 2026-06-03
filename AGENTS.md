@@ -41,7 +41,7 @@ There are no tests.
 - **Migrations**: Output to `src/models/migrations/` (auto-generated, ignored by Prettier).
 - **Config**: `src/config/index.ts` — loads `dotenv` and exports typed config object (port, secrets, JWT expiry, cookie options).
 - **Supabase clients**: `src/lib/supabase.ts` — `supabaseAdmin` (service role) and `supabaseAuth` (publishable key). Used by auth middleware and seed/reset.
-- **Auth middleware** (`src/middlewares/auth.ts`): Dual-mode. Tries local JWT (issued by this server) first; if that fails with expiry, falls back to verifying as a Supabase access token. Sets `req.employee` on success. `requireRole()` gates by employee role (`barista`, `manager`, `owner`).
+- **Auth middleware** (`src/middlewares/auth.ts`): Dual-mode. Tries local JWT (issued by this server) first; if that fails with expiry, falls back to verifying as a Supabase access token. Sets `req.employee` on success. `requireRole()` gates by employee role (`barista`, `manager`, `owner`). Refresh tokens use HTTP-only cookies scoped to `path: "/api/auth"` — new auth endpoints must stay under `/api/auth` or the cookie won't be sent.
 - **Error handler** (`src/middlewares/errorHandler.ts`): Catches all thrown errors. `AppError` instances return their status code + JSON body. Unexpected errors log the stack and return 500.
 
 ## Seed and reset

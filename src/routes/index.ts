@@ -10,6 +10,7 @@ import {
 import { settingsController } from "../controllers/index.ts";
 import authRoutes from "./auth.ts";
 import employeeRoutes from "./employees.ts";
+import storageRoutes from "./storage.ts";
 
 const router = Router();
 
@@ -36,8 +37,22 @@ router.use("/employees", employeeRoutes);
 
 // ── Protected ──────────────────────────────────────────────
 
+router.use(
+    "/storage",
+    authenticate,
+    requireRole("owner", "manager"),
+    storageRoutes,
+);
+
 router.get("/settings", authenticate, (req: Request, res: Response) =>
     settingsController.getSettings(req, res),
+);
+
+router.delete(
+    "/settings/logo",
+    authenticate,
+    requireRole("owner", "manager"),
+    (req: Request, res: Response) => settingsController.deleteLogo(req, res),
 );
 
 router.patch(
