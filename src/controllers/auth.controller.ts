@@ -26,8 +26,8 @@ export class AuthController {
 
         return res.json({
             data: {
-                accessToken: result.accessToken,
-                employee: result.employee,
+                access_token: result.accessToken,
+                user: result.employee,
             },
         });
     }
@@ -41,26 +41,24 @@ export class AuthController {
 
         return res.json({
             data: {
-                accessToken: result.accessToken,
-                employee: result.employee,
+                access_token: result.accessToken,
+                user: result.employee,
             },
         });
     }
 
     async refresh(req: Request, res: Response) {
         const refreshToken = req.cookies.refresh_token;
-
         if (!refreshToken) {
             throw AppError.unauthorized("No refresh token provided");
         }
 
         const result = await authService.refresh(refreshToken);
-
         res.cookie("refresh_token", result.refreshToken, config.cookie);
 
         return res.json({
             data: {
-                accessToken: result.accessToken,
+                access_token: result.accessToken,
             },
         });
     }
