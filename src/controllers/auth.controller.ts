@@ -53,12 +53,11 @@ export class AuthController {
             throw AppError.unauthorized("No refresh token provided");
         }
 
-        const result = await authService.refresh(refreshToken);
-        res.cookie("refresh_token", result.refreshToken, config.cookie);
+        const accessToken = await authService.refresh(refreshToken);
 
         return res.json({
             data: {
-                access_token: result.accessToken,
+                access_token: accessToken,
             },
         });
     }
