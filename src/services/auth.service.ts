@@ -224,7 +224,7 @@ export class AuthService {
         };
     }
 
-    async refresh(refreshToken: string): Promise<TokenPair> {
+    async refresh(refreshToken: string): Promise<string> {
         try {
             const payload = jwt.verify(refreshToken, config.jwtSecret) as {
                 sub: string;
@@ -243,8 +243,6 @@ export class AuthService {
                 throw AppError.unauthorized("Refresh token expired");
             }
 
-            await refreshTokenRepository.revoke(storedToken.id);
-
             const employee = await employeeRepository.findBySupabaseUid(
                 payload.sub,
             );
@@ -252,7 +250,7 @@ export class AuthService {
                 throw AppError.unauthorized("Employee not found or inactive");
             }
 
-            return createTokenPair(employee);
+            return generateAccessToken(employee);
         } catch (err) {
             if (err instanceof AppError) throw err;
             if (err instanceof jwt.TokenExpiredError) {
