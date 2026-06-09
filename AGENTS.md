@@ -24,7 +24,8 @@ There are no tests.
 
 - **Runtime**: `tsx` runs TypeScript directly. `tsc` only type-checks (`noEmit: true`). No `dist/` JS output.
 - **ESM**: `"type": "module"` — use `import`/`export`, never `require()`.
-- **Entry point**: `src/index.ts` — starts Express on the configured port.
+- **tsconfig**: `allowImportingTsExtensions: true` and `moduleResolution: "bundler"` enable `.ts` extensions in imports.
+- **Entry point**: `src/index.ts` — starts Express on the configured port. Includes graceful shutdown (SIGTERM/SIGINT) that drains the pg pool.
 - **App setup**: `src/app.ts` — creates Express app, attaches middleware (pino-http, cors, json, cookie-parser), mounts routes at `/api`, attaches `notFound` + `errorHandler`.
 - **Layered architecture**: Routes → Controllers → Services → Repositories → DB (Models)
 
@@ -38,11 +39,13 @@ There are no tests.
 
 - **DB client**: `src/models/index.ts` — exports `db` (Drizzle instance) and `pool` (pg Pool). Connection from `SUPABASE_DATABASE_URL`.
 - **Schema**: `src/models/schema/index.ts` — barrel re-exporting all Drizzle table/enum definitions. Tables are PostgreSQL, hosted on Supabase.
-- **Migrations**: Output to `src/models/migrations/` (auto-generated, ignored by Prettier).
-- **Config**: `src/config/index.ts` — loads `dotenv` and exports typed config object (port, secrets, JWT expiry, cookie options).
-- **Supabase clients**: `src/lib/supabase.ts` — `supabaseAdmin` (service role) and `supabaseAuth` (publishable key). Used by auth middleware and seed/reset.
-- **Auth middleware** (`src/middlewares/auth.ts`): Dual-mode. Tries local JWT (issued by this server) first; if that fails with expiry, falls back to verifying as a Supabase access token. Sets `req.employee` on success. `requireRole()` gates by employee role (`barista`, `manager`, `owner`). Refresh tokens use HTTP-only cookies scoped to `path: "/api/auth"` — new auth endpoints must stay under `/api/auth` or the cookie won't be sent.
-- **Error handler** (`src/middlewares/errorHandler.ts`): Catches all thrown errors. `AppError` instances return their status code + JSON body. Unexpected errors log the stack and return 500.
+- **Migrations**: Output to `src/models/migrations/` (auto-generated, excluded from Prettier via `.prettierignore`).
+- **Config**: `src/config/index.ts` — loads `dotenv` and exports typed config object. Token expiry values are hardcoded (`"15m"` access, `"7d"` refresh), not env-driven. Cookie path is `"/api/auth"`.
+- **Supabase clients**: `src/lib/supabase.ts` — `supabaseAdmin` (service role) and `supabaseAuth` (publishable key). Used by auth middleware, auth service, storage service, and seed/reset.
+- **Auth middleware** (`src/middlewares/auth.ts`): Dual-mode token resolution. Tries local JWT (issued by this server) first. If JWT is expired, throws immediately (no fallback). If JWT fails for any other reason (bad signature, etc.), falls back to verifying as a Supabase access token via `supabaseAuth.auth.getUser(token)`. Sets `req.employee` on success. `requireRole()` gates by employee role (`barista`, `manager`, `owner`).
+- **Refresh tokens**: Stored as SHA-256 hashes in `refresh_tokens` table. HTTP-only cookie set on `/api/auth/login` and `/api/auth/pin-login`. Cookie `path` is `"/api/auth"` — auth endpoints (`/refresh`, `/logout`, `/me`) must stay under that path or the cookie won't be sent by the browser.
+- **File uploads**: `multer` (memory storage) used in storage routes. Files go to Supabase Storage. Allowed: images only (JPEG, PNG, GIF, WebP, SVG, BMP, TIFF), max 5MB.
+- **Error handler** (`src/middlewares/errorHandler.ts`): Catches all thrown errors. `AppError` instances return their status code + JSON body. `MulterError` returns 400. Unexpected errors log the stack and return 500.
 
 ## Seed and reset
 
@@ -112,9 +115,10 @@ When splitting, consumers should **never need to change their imports** — they
 
 - **Arrow functions only** — `const foo = () => {}`, never `function foo() {}`.
 - **Import extensions**: Always use `.ts` extensions in relative imports — e.g. `import { db } from "../models/index.ts"`.
-- **Prettier**: Semicolons on, tab width 4, double quotes, trailing commas (`all`).
+- **Prettier**: Semicolons on, tab width 4, double quotes, trailing commas (`all`). `AGENTS.md` and `src/models/migrations/` are excluded from formatting via `.prettierignore`.
 - **Express 5**: Async route handlers that throw errors are automatically caught by the error handler — no need for `next(err)`.
 - **Singletons**: Controllers, services, and repositories export a named class AND an instantiated singleton (`export const settingsService = new SettingsService()`). Always import the singleton.
+- **Sensitive field stripping**: Use `formatEmployee()` (`src/utils/formatEmployee.ts`) to return employee data — it omits `pin` and other internal fields.
 
 ## Error handling
 
