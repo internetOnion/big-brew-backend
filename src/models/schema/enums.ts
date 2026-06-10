@@ -58,3 +58,4 @@ export const selectionTypeEnum = pgEnum("selection_type", [
 ]);
 
 export const ingredientUnitEnumSchema = createSelectSchema(ingredientUnitEnum);
+export const selectionTypeEnumSchema = createSelectSchema(selectionTypeEnum);

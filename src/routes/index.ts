@@ -13,6 +13,7 @@ import employeeRoutes from "./employees.ts";
 import storageRoutes from "./storage.ts";
 import ingredientRoutes from "./ingredient.ts";
 import categoryRoutes from "./category.ts";
+import modifierGroupRoutes from "./modifierGroup.ts";
 
 const router = Router();
 
@@ -74,6 +75,11 @@ router.use(
 router.use(
     "/categories",
     categoryRoutes,
+)
+
+router.use(
+    "/modifier-groups",
+    modifierGroupRoutes,
 )
 
 export default router;
