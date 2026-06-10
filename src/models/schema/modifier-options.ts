@@ -9,6 +9,7 @@ import {
     index,
 } from "drizzle-orm/pg-core";
 import { modifierGroupsTable } from "./modifier-groups.ts";
+import { createInsertSchema } from "drizzle-zod";
 
 export const modifierOptionsTable = pgTable(
     "modifier_options",
@@ -30,3 +31,11 @@ export const modifierOptionsTable = pgTable(
     },
     (t) => [index("idx_modifier_options_group").on(t.modifierGroupId)],
 );
+
+export const baseModifierOptionSchema = createInsertSchema(modifierOptionsTable, {
+    modifierGroupId: (schema) => schema.nonempty("Modifier group ID is required"),
+    name: (schema) => schema.nonempty("Name is required"),
+    price: (schema) => schema.min(0, "Price must be a non-negative number").default("0"),
+    isAvailable: (schema) => schema.default(true),
+    sortOrder: (schema) => schema.int().min(0, "Sort order must be a non-negative integer").default(0),
+});
