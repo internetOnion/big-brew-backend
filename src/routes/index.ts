@@ -11,6 +11,7 @@ import { settingsController } from "../controllers/index.ts";
 import authRoutes from "./auth.ts";
 import employeeRoutes from "./employees.ts";
 import storageRoutes from "./storage.ts";
+import ingredientRoutes from "./ingredient.ts";
 
 const router = Router();
 
@@ -62,6 +63,11 @@ router.patch(
     validateBody(updateSettingsSchema),
     (req: Request, res: Response) =>
         settingsController.updateSettings(req, res),
+);
+
+router.use(
+    "/ingredients",
+    ingredientRoutes,
 );
 
 export default router;
