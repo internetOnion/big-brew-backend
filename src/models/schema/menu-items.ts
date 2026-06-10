@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { categoriesTable } from "./categories.ts";
+import { createInsertSchema } from "drizzle-zod";
 
 export const menuItemsTable = pgTable(
     "menu_items",
@@ -38,3 +39,12 @@ export const menuItemsTable = pgTable(
         check("chk_base_price_positive", sql`${t.basePrice} >= 0`),
     ],
 );
+
+export const baseMenuItemSchema = createInsertSchema(menuItemsTable, {
+    categoryId: (schema) => schema.nonempty("Category ID is required"),
+    name: (schema) => schema.nonempty("Name is required"),
+    basePrice: (schema) => schema.min(0, "Base price must be a non-negative number"),
+    isAvailable: (schema) => schema.default(true),
+    imageUrl: (schema) => schema.url("Image URL must be a valid URL").nullable(),
+    updatedAt: (schema) => schema.default(() => new Date()),
+});

@@ -14,6 +14,7 @@ import storageRoutes from "./storage.ts";
 import ingredientRoutes from "./ingredient.ts";
 import categoryRoutes from "./category.ts";
 import modifierGroupRoutes from "./modifierGroup.ts";
+import MenuItemRoutes from "./menuItem.ts";
 
 const router = Router();
 
@@ -80,6 +81,11 @@ router.use(
 router.use(
     "/modifier-groups",
     modifierGroupRoutes,
+)
+
+router.use(
+    "/menu-items",
+    MenuItemRoutes,
 )
 
 export default router;

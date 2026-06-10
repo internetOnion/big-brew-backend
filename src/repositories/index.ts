@@ -18,6 +18,13 @@ export {
     type RefreshToken,
 } from "./refresh-token.repository.ts";
 export {
+    CategoryRepository,
+    categoryRepository,
+    type Category,
+    type InsertCategory,
+    type UpdateCategory,
+} from "./category.repository.ts";
+export {
     ModifierGroupRepository,
     modifierGroupRepository,
     type ModifierGroup,
@@ -38,3 +45,10 @@ export {
     type InsertModifierOptionIngredient,
     type UpdateModifierOptionIngredient,
 } from "./modifierOptionIngredient.repository.ts";
+export {
+    MenuItemRepository,
+    menuItemRepository,
+    type MenuItem,
+    type InsertMenuItem,
+    type UpdateMenuItem,
+} from "./menuItem.repository.ts";

@@ -16,6 +16,13 @@ export class CategoryRepository {
         return results;
     }
 
+    async findById(id: string): Promise<Category | null> {
+        const result = await db.query.categoriesTable.findFirst({
+            where: eq(categoriesTable.id, id),
+        });
+        return result || null;
+    }
+    
     async insert(input: InsertCategory): Promise<Category> {
         const result = await db.insert(categoriesTable).values(input).returning();
         return result[0];
