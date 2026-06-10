@@ -6,7 +6,8 @@ import {
     integer,
     timestamp,
 } from "drizzle-orm/pg-core";
-import { selectionTypeEnum } from "./enums.ts";
+import { selectionTypeEnum, selectionTypeEnumSchema } from "./enums.ts";
+import { createInsertSchema } from "drizzle-zod";
 
 export const modifierGroupsTable = pgTable("modifier_groups", {
     id: uuid().primaryKey().defaultRandom(),
@@ -20,3 +21,11 @@ export const modifierGroupsTable = pgTable("modifier_groups", {
         .notNull()
         .defaultNow(),
 });
+
+export const baseModifierGroupSchema = createInsertSchema(modifierGroupsTable, {
+    name: (schema) => schema.nonempty("Name is required"),
+    selectionType: selectionTypeEnumSchema,
+    isRequired: (schema) => schema,
+    defaultOptionId: (schema) => schema.nullable(),
+    sortOrder: (schema) => schema.int().min(0, "Sort order must be a non-negative integer").default(0),
+})
