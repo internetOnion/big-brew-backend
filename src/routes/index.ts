@@ -12,6 +12,7 @@ import authRoutes from "./auth.ts";
 import employeeRoutes from "./employees.ts";
 import storageRoutes from "./storage.ts";
 import ingredientRoutes from "./ingredient.ts";
+import categoryRoutes from "./category.ts";
 
 const router = Router();
 
@@ -69,5 +70,10 @@ router.use(
     "/ingredients",
     ingredientRoutes,
 );
+
+router.use(
+    "/categories",
+    categoryRoutes,
+)
 
 export default router;
