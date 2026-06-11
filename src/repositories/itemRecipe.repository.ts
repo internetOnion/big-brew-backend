@@ -1,4 +1,4 @@
-import { insertItemRecipeValidationSchema } from "../routes/menuItem.ts";
+import { insertItemRecipeValidationSchema } from "../routes/menuItem.routes.ts";
 import { baseItemRecipeSchema } from "../models/schema/item-recipes.ts";
 import { db } from "../models/index.ts";
 import { itemRecipesTable } from "../models/schema/index.ts";
@@ -14,6 +14,27 @@ export class ItemRecipeRepository {
     async findById(id: string): Promise<ItemRecipe | null> {
         const result = await db.query.itemRecipesTable.findFirst({
             where: eq(itemRecipesTable.id, id),
+        });
+        return result || null;
+    }
+
+    async findByItemId(itemId: string): Promise<ItemRecipe[]> {
+        const results = await db.query.itemRecipesTable.findMany({
+            where: eq(itemRecipesTable.itemId, itemId),
+        });
+        return results;
+    }
+
+    async findByItemIdAndIngredientId(
+        itemId: string,
+        ingredientId: string,
+    ): Promise<ItemRecipe | null> {
+        const result = await db.query.itemRecipesTable.findFirst({
+            where: (itemRecipes, { and, eq }) =>
+                and(
+                    eq(itemRecipes.itemId, itemId),
+                    eq(itemRecipes.ingredientId, ingredientId),
+                ),
         });
         return result || null;
     }

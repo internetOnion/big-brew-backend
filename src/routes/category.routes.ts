@@ -1,61 +1,59 @@
 import { Router } from "express";
 import { z } from "zod";
 import type { Request, Response } from "express";
-import { ingredientController } from "../controllers/ingredient.controller";
+import { categoryController } from "../controllers/category.controller";
+import { insertCategorySchema } from "../models/schema/categories.ts";
 import {
     authenticate,
     requireRole,
     validateBody,
+    validateParams,
 } from "../middlewares/index.ts";
-import {
-    authenticate,
-    requireRole,
-    validateBody,
-} from "../middlewares/index.ts";
-import { ingredientUnitEnumSchema } from "../models/schema/enums.ts";
 
 const router = Router();
-const addIngredientSchema = z
-    .object({
-        name: z.string().min(1).max(100),
-        unit: ingredientUnitEnumSchema,
-        stockQuantity: z.number().nonnegative(),
-        lowStockThreshold: z.number().nonnegative(),
+
+const idParamsSchema = z.object({ id: z.uuid() });
+
+router.use(authenticate);
+router.use(requireRole("owner", "manager"));
+
+export const insertCategoryValidationSchema = insertCategorySchema
+    .pick({
+        name: true,
+        sortOrder: true,
     })
     .strict();
 
 /**
  * @openapi
- * /api/ingredients:
+ * /api/categories:
  *   get:
- *     tags: [Ingredients]
- *     summary: List all ingredients
+ *     tags: [Categories]
+ *     summary: List all categories
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of ingredients
+ *         description: List of categories
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: "#/components/schemas/Ingredient"
+ *                 $ref: "#/components/schemas/Category"
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:
  *         $ref: "#/components/responses/Forbidden"
  */
-router.get("/", authenticate, requireRole("owner", "manager"), (req, res) =>
-    ingredientController.getIngredient(req, res),
-);
+router.get("/", (req, res) => categoryController.getCategory(req, res));
 
 /**
  * @openapi
- * /api/ingredients:
+ * /api/categories:
  *   post:
- *     tags: [Ingredients]
- *     summary: Create a new ingredient
+ *     tags: [Categories]
+ *     summary: Create a new category
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -64,28 +62,22 @@ router.get("/", authenticate, requireRole("owner", "manager"), (req, res) =>
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, unit, stockQuantity, lowStockThreshold]
+ *             required: [name]
  *             properties:
  *               name:
  *                 type: string
  *                 minLength: 1
- *                 maxLength: 100
- *               unit:
- *                 type: string
- *                 enum: [g, ml]
- *               stockQuantity:
- *                 type: number
+ *               sortOrder:
+ *                 type: integer
  *                 minimum: 0
- *               lowStockThreshold:
- *                 type: number
- *                 minimum: 0
+ *                 default: 0
  *     responses:
  *       201:
- *         description: Ingredient created
+ *         description: Category created
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Ingredient"
+ *               $ref: "#/components/schemas/Category"
  *       400:
  *         description: Validation error
  *         content:
@@ -97,20 +89,16 @@ router.get("/", authenticate, requireRole("owner", "manager"), (req, res) =>
  *       403:
  *         $ref: "#/components/responses/Forbidden"
  */
-router.post(
-    "/",
-    authenticate,
-    requireRole("owner", "manager"),
-    validateBody(addIngredientSchema),
-    (req, res) => ingredientController.addIngredient(req, res),
+router.post("/", validateBody(insertCategoryValidationSchema), (req, res) =>
+    categoryController.addCategory(req, res),
 );
 
 /**
  * @openapi
- * /api/ingredients/{id}:
+ * /api/categories/{id}:
  *   patch:
- *     tags: [Ingredients]
- *     summary: Update an ingredient
+ *     tags: [Categories]
+ *     summary: Update a category
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -130,23 +118,16 @@ router.post(
  *               name:
  *                 type: string
  *                 minLength: 1
- *                 maxLength: 100
- *               unit:
- *                 type: string
- *                 enum: [g, ml]
- *               stockQuantity:
- *                 type: number
- *                 minimum: 0
- *               lowStockThreshold:
- *                 type: number
+ *               sortOrder:
+ *                 type: integer
  *                 minimum: 0
  *     responses:
  *       200:
- *         description: Ingredient updated
+ *         description: Category updated
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Ingredient"
+ *               $ref: "#/components/schemas/Category"
  *       400:
  *         description: Validation error
  *         content:
@@ -158,7 +139,7 @@ router.post(
  *       403:
  *         $ref: "#/components/responses/Forbidden"
  *       404:
- *         description: Ingredient not found
+ *         description: Category not found
  *         content:
  *           application/json:
  *             schema:
@@ -166,18 +147,17 @@ router.post(
  */
 router.patch(
     "/:id",
-    authenticate,
-    requireRole("owner", "manager"),
-    validateBody(addIngredientSchema.partial()),
-    (req, res) => ingredientController.updateIngredient(req, res),
+    validateParams(idParamsSchema),
+    validateBody(insertCategoryValidationSchema.partial()),
+    (req, res) => categoryController.updateCategory(req, res),
 );
 
 /**
  * @openapi
- * /api/ingredients/{id}:
+ * /api/categories/{id}:
  *   delete:
- *     tags: [Ingredients]
- *     summary: Delete an ingredient
+ *     tags: [Categories]
+ *     summary: Delete a category
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -189,23 +169,20 @@ router.patch(
  *           format: uuid
  *     responses:
  *       200:
- *         description: Ingredient deleted
+ *         description: Category deleted
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:
  *         $ref: "#/components/responses/Forbidden"
  *       404:
- *         description: Ingredient not found
+ *         description: Category not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: "#/components/schemas/Error"
  */
-router.delete(
-    "/:id",
-    authenticate,
-    requireRole("owner", "manager"),
-    (req, res) => ingredientController.deleteIngredient(req, res),
+router.delete("/:id", validateParams(idParamsSchema), (req, res) =>
+    categoryController.deleteCategory(req, res),
 );
 
 export default router;

@@ -3,7 +3,7 @@ import { modifierOptionsTable } from "../models/schema/index.ts";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseModifierOptionSchema } from "../models/schema/modifier-options.ts";
-import { insertModifierOptionValidationSchema } from "../routes/menuItem.ts";
+import { insertModifierOptionValidationSchema } from "../routes/menuItem.routes.ts";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type ModifierOption = z.infer<typeof baseModifierOptionSchema>;

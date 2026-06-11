@@ -8,13 +8,15 @@ import {
     requireRole,
 } from "../middlewares/index.ts";
 import { settingsController } from "../controllers/index.ts";
-import authRoutes from "./auth.ts";
-import employeeRoutes from "./employees.ts";
-import storageRoutes from "./storage.ts";
-import ingredientRoutes from "./ingredient.ts";
-import categoryRoutes from "./category.ts";
-import modifierGroupRoutes from "./modifierGroup.ts";
-import MenuItemRoutes from "./menuItem.ts";
+import authRoutes from "./auth.routes.ts";
+import employeeRoutes from "./employees.routes.ts";
+import storageRoutes from "./storage.routes.ts";
+import ingredientRoutes from "./ingredient.routes.ts";
+import categoryRoutes from "./category.routes.ts";
+import modifierGroupRoutes from "./modifierGroup.routes.ts";
+import MenuItemRoutes from "./menuItem.routes.ts";
+import menuItemRecipeRoutes from "./menuItemRecipe.routes.ts";
+import menuItemModifierGroupRoutes from "./menuItemModifierGroup.routes.ts";
 
 const router = Router();
 
@@ -171,12 +173,16 @@ router.patch(
 );
 
 router.use("/ingredients", ingredientRoutes);
-router.use("/ingredients", ingredientRoutes);
 
 router.use("/categories", categoryRoutes);
 
 router.use("/modifier-groups", modifierGroupRoutes);
 
 router.use("/menu-items", MenuItemRoutes);
+router.use("/menu-items/:menuItemId/recipes", menuItemRecipeRoutes);
+router.use(
+    "/menu-items/:menuItemId/modifier-groups",
+    menuItemModifierGroupRoutes,
+);
 
 export default router;

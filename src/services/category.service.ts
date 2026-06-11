@@ -34,7 +34,9 @@ export class CategoryService {
                     `Category "${input.name}" already exists`,
                 );
             }
+
             const newCategory = await categoryRepository.insert(input);
+
             return formatCategory(newCategory);
         } catch (error) {
             if (error instanceof AppError) {

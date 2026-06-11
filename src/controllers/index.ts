@@ -8,3 +8,15 @@ export {
     settingsController,
 } from "./settings.controller.ts";
 export { StorageController, storageController } from "./storage.controller.ts";
+export {
+    MenuItemController,
+    menuItemController,
+} from "./menuItem.controller.ts";
+export {
+    MenuItemRecipeController,
+    menuItemRecipeController,
+} from "./menuItemRecipe.controller.ts";
+export {
+    MenuItemModifierGroupController,
+    menuItemModifierGroupController,
+} from "./menuItemModifierGroup.controller.ts";

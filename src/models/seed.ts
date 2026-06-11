@@ -10,11 +10,9 @@ import {
     modifierGroupsTable,
     modifierOptionsTable,
     menuItemsTable,
-    menuItemModifierGroupsTable,
     itemRecipesTable,
     modifierOptionIngredientsTable,
     discountsTable,
-    menuItemModifierOptionOverridesTable,
 } from "./schema/index.ts";
 
 interface SeedEmployee {
@@ -411,143 +409,74 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    console.log("  Menu Item Modifier Groups...");
-    await db
-        .insert(menuItemModifierGroupsTable)
-        .values([
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000001",
-                modifierGroupId: "30000000-0000-0000-0000-000000000001",
-                sortOrder: 1,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000001",
-                modifierGroupId: "30000000-0000-0000-0000-000000000002",
-                sortOrder: 2,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000001",
-                modifierGroupId: "30000000-0000-0000-0000-000000000003",
-                sortOrder: 3,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000001",
-                modifierGroupId: "30000000-0000-0000-0000-000000000004",
-                sortOrder: 4,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000002",
-                modifierGroupId: "30000000-0000-0000-0000-000000000001",
-                sortOrder: 1,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000002",
-                modifierGroupId: "30000000-0000-0000-0000-000000000002",
-                sortOrder: 2,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000002",
-                modifierGroupId: "30000000-0000-0000-0000-000000000003",
-                sortOrder: 3,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000002",
-                modifierGroupId: "30000000-0000-0000-0000-000000000004",
-                sortOrder: 4,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000003",
-                modifierGroupId: "30000000-0000-0000-0000-000000000001",
-                sortOrder: 1,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000003",
-                modifierGroupId: "30000000-0000-0000-0000-000000000002",
-                sortOrder: 2,
-            },
-        ])
-        .onConflictDoNothing();
-
     console.log("  Modifier Option Ingredients...");
     await db
         .insert(modifierOptionIngredientsTable)
         .values([
             // Latte → Small
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000001",
                 ingredientId: "20000000-0000-0000-0000-000000000001",
                 quantity: "14",
             },
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000001",
                 ingredientId: "20000000-0000-0000-0000-000000000002",
                 quantity: "200",
             },
             // Latte → Medium
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000002",
                 ingredientId: "20000000-0000-0000-0000-000000000001",
                 quantity: "16",
             },
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000002",
                 ingredientId: "20000000-0000-0000-0000-000000000002",
                 quantity: "250",
             },
             // Latte → Large
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000003",
                 ingredientId: "20000000-0000-0000-0000-000000000001",
                 quantity: "18",
             },
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000003",
                 ingredientId: "20000000-0000-0000-0000-000000000002",
                 quantity: "300",
             },
             // Latte → Oat Milk
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000010",
                 ingredientId: "20000000-0000-0000-0000-000000000003",
                 quantity: "250",
             },
             // Latte → Whipped Cream
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000011",
                 ingredientId: "20000000-0000-0000-0000-000000000005",
                 quantity: "50",
             },
             // Latte → Caramel Drizzle
             {
-                itemId: "50000000-0000-0000-0000-000000000001",
                 modifierOptionId: "40000000-0000-0000-0000-000000000012",
                 ingredientId: "20000000-0000-0000-0000-000000000004",
                 quantity: "20",
             },
             // Iced Latte → Large
             {
-                itemId: "50000000-0000-0000-0000-000000000002",
                 modifierOptionId: "40000000-0000-0000-0000-000000000003",
                 ingredientId: "20000000-0000-0000-0000-000000000001",
                 quantity: "18",
             },
             {
-                itemId: "50000000-0000-0000-0000-000000000002",
                 modifierOptionId: "40000000-0000-0000-0000-000000000003",
                 ingredientId: "20000000-0000-0000-0000-000000000002",
                 quantity: "250",
             },
             // Green Tea → Large
             {
-                itemId: "50000000-0000-0000-0000-000000000003",
                 modifierOptionId: "40000000-0000-0000-0000-000000000003",
                 ingredientId: "20000000-0000-0000-0000-000000000006",
                 quantity: "12",
@@ -584,33 +513,6 @@ export const seed = async () => {
                 type: "bogo",
                 value: null,
                 isActive: true,
-            },
-        ])
-        .onConflictDoNothing();
-
-    console.log("  Modifier Option Overrides...");
-    await db
-        .insert(menuItemModifierOptionOverridesTable)
-        .values([
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000003",
-                modifierOptionId: "40000000-0000-0000-0000-000000000003",
-                priceOverride: "0.50",
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000003",
-                modifierOptionId: "40000000-0000-0000-0000-000000000001",
-                isAvailable: false,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000003",
-                modifierOptionId: "40000000-0000-0000-0000-000000000010",
-                isAvailable: false,
-            },
-            {
-                menuItemId: "50000000-0000-0000-0000-000000000003",
-                modifierOptionId: "40000000-0000-0000-0000-000000000012",
-                isAvailable: false,
             },
         ])
         .onConflictDoNothing();

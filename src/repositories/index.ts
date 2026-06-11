@@ -51,7 +51,6 @@ export {
     type MenuItem,
     type InsertMenuItem,
     type UpdateMenuItem,
-    type MenuItemRequest,
 } from "./menuItem.repository.ts";
 export {
     ItemRecipeRepository,
@@ -60,9 +59,3 @@ export {
     type InsertItemRecipe,
     type UpdateItemRecipe,
 } from "./itemRecipe.repository.ts";
-export {
-    MenuItemModifierGroupRepository,
-    menuItemModifierGroupRepository,
-    type MenuItemModifierGroup,
-    type InsertMenuItemModifierGroup,
-} from "./menuItemModifierGroup.repository.ts";

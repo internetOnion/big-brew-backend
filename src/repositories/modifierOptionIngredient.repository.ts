@@ -3,7 +3,7 @@ import { modifierOptionIngredientsTable } from "../models/schema/index.ts";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseModifierOptionIngredientSchema } from "../models/schema/modifier-option-ingredients.ts";
-import { insertModifierOptionIngredientValidationSchema } from "../routes/menuItem.ts";
+import { insertModifierOptionIngredientValidationSchema } from "../routes/menuItem.routes.ts";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type ModifierOptionIngredient = z.infer<
@@ -38,10 +38,24 @@ export class ModifierOptionIngredientRepository {
         return result || null;
     }
 
+    async findByModifierOptionId(
+        modifierOptionId: string,
+    ): Promise<ModifierOptionIngredient[]> {
+        const results = await db.query.modifierOptionIngredientsTable.findMany({
+            where: eq(
+                modifierOptionIngredientsTable.modifierOptionId,
+                modifierOptionId,
+            ),
+        });
+        return results;
+    }
+
     async insert(
         input: InsertModifierOptionIngredient,
+        tx?: PgTransaction<any, any, any>,
     ): Promise<ModifierOptionIngredient> {
-        const result = await db
+        const client = tx || db;
+        const result = await client
             .insert(modifierOptionIngredientsTable)
             .values(input)
             .returning();
@@ -70,6 +84,12 @@ export class ModifierOptionIngredientRepository {
             .where(eq(modifierOptionIngredientsTable.id, id))
             .returning();
         return result[0];
+    }
+
+    async delete(id: string): Promise<void> {
+        await db
+            .delete(modifierOptionIngredientsTable)
+            .where(eq(modifierOptionIngredientsTable.id, id));
     }
 }
 
