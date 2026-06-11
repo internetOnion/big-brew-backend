@@ -1,7 +1,13 @@
 import { modifierGroupRepository } from "../repositories/modifierGroup.repository.ts";
 import { AppError } from "../utils/AppError.ts";
-import { formatModifierGroup, type ModifierGroupResponse } from "../utils/formatModifierGroup.ts";
-import type { InsertModifierGroup, UpdateModifierGroup } from "../repositories/modifierGroup.repository.ts";
+import {
+    formatModifierGroup,
+    type ModifierGroupResponse,
+} from "../utils/formatModifierGroup.ts";
+import type {
+    InsertModifierGroup,
+    UpdateModifierGroup,
+} from "../repositories/modifierGroup.repository.ts";
 
 export class ModifierGroupService {
     async getModifierGroups(): Promise<ModifierGroupResponse[]> {
@@ -14,22 +20,32 @@ export class ModifierGroupService {
         }
     }
 
-    async addModifierGroup(input: InsertModifierGroup): Promise<ModifierGroupResponse> {
+    async addModifierGroup(
+        input: InsertModifierGroup,
+    ): Promise<ModifierGroupResponse> {
         try {
-            const newModifierGroup = await modifierGroupRepository.insert(input);
+            const newModifierGroup =
+                await modifierGroupRepository.insert(input);
             return formatModifierGroup(newModifierGroup);
         } catch (error) {
             throw AppError.internal("Failed to add modifier group");
         }
     }
 
-    async updateModifierGroup(id: string, input: UpdateModifierGroup): Promise<ModifierGroupResponse> {
+    async updateModifierGroup(
+        id: string,
+        input: UpdateModifierGroup,
+    ): Promise<ModifierGroupResponse> {
         try {
-            const existingModifierGroup = await modifierGroupRepository.findById(id);
+            const existingModifierGroup =
+                await modifierGroupRepository.findById(id);
             if (!existingModifierGroup) {
                 throw AppError.notFound("Modifier group not found");
             }
-            const updatedModifierGroup = await modifierGroupRepository.update(id, input);
+            const updatedModifierGroup = await modifierGroupRepository.update(
+                id,
+                input,
+            );
             return formatModifierGroup(updatedModifierGroup);
         } catch (error) {
             if (error instanceof AppError) {
@@ -41,7 +57,8 @@ export class ModifierGroupService {
 
     async deleteModifierGroup(id: string): Promise<void> {
         try {
-            const existingModifierGroup = await modifierGroupRepository.findById(id);
+            const existingModifierGroup =
+                await modifierGroupRepository.findById(id);
             if (!existingModifierGroup) {
                 throw AppError.notFound("Modifier group not found");
             }

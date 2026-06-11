@@ -15,5 +15,9 @@ export const categoriesTable = pgTable("categories", {
 
 export const insertCategorySchema = createInsertSchema(categoriesTable, {
     name: (schema) => schema.nonempty("Name is required"),
-    sortOrder: (schema) => schema.int().min(0, "Sort order must be a non-negative integer").default(0),
+    sortOrder: (schema) =>
+        schema
+            .int()
+            .min(0, "Sort order must be a non-negative integer")
+            .default(0),
 });

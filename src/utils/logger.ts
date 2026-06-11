@@ -1,7 +1,7 @@
 import pino from "pino";
 import { config } from "../config";
 
-export const logger = pino({
+const logger = pino({
     level: config.logLevel,
     ...(config.nodeEnv !== "production" && {
         transport: {
@@ -10,3 +10,6 @@ export const logger = pino({
         },
     }),
 });
+
+export default logger;
+export { logger };

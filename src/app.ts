@@ -7,6 +7,7 @@ import routes from "./routes/index.ts";
 import { errorHandler, notFound } from "./middlewares/index.ts";
 import { logger } from "./utils/logger.ts";
 import { config } from "./config/index.ts";
+import { swaggerDocs } from "./utils/swagger.ts";
 
 const app = express();
 
@@ -29,6 +30,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api", routes);
+
+swaggerDocs(app, config.port);
 
 app.use(notFound);
 app.use(errorHandler);
