@@ -41,10 +41,9 @@ export const menuItemsTable = pgTable(
 );
 
 export const baseMenuItemSchema = createInsertSchema(menuItemsTable, {
+    id: (schema) => schema.nonempty("ID is required"),
     categoryId: (schema) => schema.nonempty("Category ID is required"),
     name: (schema) => schema.nonempty("Name is required"),
     basePrice: (schema) => schema.min(0, "Base price must be a non-negative number"),
-    isAvailable: (schema) => schema.default(true),
-    imageUrl: (schema) => schema.url("Image URL must be a valid URL").nullable(),
-    updatedAt: (schema) => schema.default(() => new Date()),
+    imageUrl: (schema) => schema.url("Image URL must be a valid URL").optional(),
 });

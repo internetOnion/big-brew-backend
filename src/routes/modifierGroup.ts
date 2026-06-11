@@ -13,7 +13,12 @@ export const insertModifierGroupValidationSchema = baseModifierGroupSchema.pick(
     isRequired: true,
     defaultOptionId: true,
     sortOrder: true,
-}).strict();
+}).partial(
+    {
+        defaultOptionId: true,
+        sortOrder: true,
+    }
+).strict();
 
 router.get("/", 
     authenticate,

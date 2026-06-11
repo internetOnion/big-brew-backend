@@ -2,6 +2,8 @@ import { baseModifierOptionSchema } from "../models/schema/modifier-options.ts";
 import { baseModifierOptionIngredientSchema } from "../models/schema/modifier-option-ingredients.ts";
 import { baseItemRecipeSchema } from "../models/schema/item-recipes.ts";
 import { baseMenuItemSchema } from "../models/schema/menu-items.ts";
+import { baseMenuItemModifierGroupSchema } from "../models/schema/menu-item-modifier-groups.ts";
+import { insertModifierGroupValidationSchema } from "./modifierGroup.ts";
 import { Router } from "express";
 import { z } from "zod";
 import type { Request, Response } from "express";
@@ -12,6 +14,9 @@ export const insertModifierOptionValidationSchema = baseModifierOptionSchema.pic
     modifierGroupId: true,
     name: true,
     price: true,
+    isAvailable: true,
+    sortOrder: true,
+}).partial({
     isAvailable: true,
     sortOrder: true,
 }).strict();
@@ -28,6 +33,13 @@ export const insertItemRecipeValidationSchema = baseItemRecipeSchema.pick({
     quantity: true,
 }).strict();
 
+export const insertMenuItemModifierGroupValidationSchema = baseMenuItemModifierGroupSchema.pick({
+    menuItemId: true,
+    modifierGroupId: true,
+    sortOrder: true,
+}).partial({
+    sortOrder: true,
+}).strict();
 export const insertMenuItemValidationSchema = baseMenuItemSchema.pick({
     categoryId: true,
     name: true,
@@ -35,6 +47,74 @@ export const insertMenuItemValidationSchema = baseMenuItemSchema.pick({
     isAvailable: true,
     imageUrl: true,
 }).strict();
+
+export const requestMenuItemValidationSchema = baseMenuItemSchema.pick({
+    categoryId: true,
+    name: true,
+    basePrice: true,
+    isAvailable: true,
+    imageUrl: true,
+}).strict().extend({
+    ingredients: z.array((insertItemRecipeValidationSchema).pick({
+        ingredientId: true,
+        quantity: true,
+    })).optional(),
+    modifierGroups: z.array(
+        insertModifierGroupValidationSchema.pick({
+            name: true,
+            isRequired: true,
+            selectionType: true,
+        }).extend({
+            modifierOptions: z.array(
+                insertModifierOptionValidationSchema.pick({
+                    name: true,
+                    price: true,
+                }).extend({
+                    insertModifierOptionIngredients: z.array(
+                        insertModifierOptionIngredientValidationSchema.pick({
+                            ingredientId: true,
+                            quantity: true,
+                        }),
+                    ).optional(),
+                }),
+            ),
+        }),
+    ).optional(),
+});
+
+export const updateMenuItemValidationSchema = baseMenuItemSchema.pick({
+    categoryId: true,
+    name: true,
+    basePrice: true,
+    isAvailable: true,
+    imageUrl: true,
+}).strict().partial().extend({
+    ingredients: z.array((insertItemRecipeValidationSchema).pick({
+        ingredientId: true,
+        quantity: true,
+    }).partial()),
+    modifierGroups: z.array(
+        insertModifierGroupValidationSchema.pick({
+            name: true,
+            isRequired: true,
+            selectionType: true,
+        }).partial().extend({
+            modifierOptions: z.array(
+                insertModifierOptionValidationSchema.pick({
+                    name: true,
+                    price: true,
+                }).partial().extend({
+                    insertModifierOptionIngredients: z.array(
+                        insertModifierOptionIngredientValidationSchema.pick({
+                            ingredientId: true,
+                            quantity: true,
+                        }).partial(),
+                    ).optional(),
+                }),
+            ),
+        }),
+    ).optional(),
+});
 
 const router = Router();
 
@@ -82,7 +162,7 @@ req payload for adding manu item:
 router.post("/",
     authenticate,
     requireRole("manager", "owner"),
-    validateBody(insertMenuItemValidationSchema),
+    validateBody(requestMenuItemValidationSchema),
     async (req: Request, res: Response) => {
     await menuItemController.addMenuItem(req, res);
 });

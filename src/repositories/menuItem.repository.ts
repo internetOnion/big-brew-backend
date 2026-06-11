@@ -1,15 +1,18 @@
 import { baseMenuItemSchema } from "../models/schema/menu-items.ts";
 import { menuItemsTable } from "../models/schema/menu-items.ts";
 import { categoriesTable } from "../models/schema/categories.ts";
-import { insertMenuItemValidationSchema } from "../routes/menuItem.ts";
+import { insertMenuItemValidationSchema, updateMenuItemValidationSchema, requestMenuItemValidationSchema } from "../routes/menuItem.ts";
 import { Category } from "./category.repository.ts";
 import { db } from "../models/index.ts";
 import { eq, isNull } from "drizzle-orm";
 import { z } from "zod";
+import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type MenuItem = z.infer<typeof baseMenuItemSchema>;
 export type InsertMenuItem = z.infer<typeof insertMenuItemValidationSchema>;
-export type UpdateMenuItem = Partial<InsertMenuItem>;
+export type UpdateMenuItem = z.infer<typeof updateMenuItemValidationSchema>;
+export type MenuItemRequest = z.infer<typeof requestMenuItemValidationSchema>;
+
 
 export type MenuItemWithCategory = {
     menu_items: MenuItem;
@@ -40,8 +43,9 @@ export class MenuItemRepository {
         return result || null;
     }
 
-    async insert(input: InsertMenuItem): Promise<MenuItem> {
-        const result = await db.insert(menuItemsTable).values(input).returning();
+    async insert(input: InsertMenuItem, tx? : PgTransaction<any, any, any>): Promise<MenuItem> {
+        const client = tx || db;
+        const result = await client.insert(menuItemsTable).values(input).returning();
         return result[0];
     }
 

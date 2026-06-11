@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseModifierOptionIngredientSchema } from "../models/schema/modifier-option-ingredients.ts";
 import { insertModifierOptionIngredientValidationSchema } from "../routes/menuItem.ts";
+import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type ModifierOptionIngredient = z.infer<typeof baseModifierOptionIngredientSchema>;
 export type InsertModifierOptionIngredient = z.infer<typeof insertModifierOptionIngredientValidationSchema>;
@@ -28,6 +29,12 @@ export class ModifierOptionIngredientRepository {
     async insert(input: InsertModifierOptionIngredient): Promise<ModifierOptionIngredient> {
         const result = await db.insert(modifierOptionIngredientsTable).values(input).returning();
         return result[0];
+    }
+
+    async insertMany(inputs: InsertModifierOptionIngredient[], tx? : PgTransaction<any, any, any>): Promise<ModifierOptionIngredient[]> {
+        const client = tx || db;
+        const result = await client.insert(modifierOptionIngredientsTable).values(inputs).returning();
+        return result;
     }
 
     async update(id: string, input: UpdateModifierOptionIngredient): Promise<ModifierOptionIngredient> {

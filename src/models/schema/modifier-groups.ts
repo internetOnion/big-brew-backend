@@ -23,6 +23,7 @@ export const modifierGroupsTable = pgTable("modifier_groups", {
 });
 
 export const baseModifierGroupSchema = createInsertSchema(modifierGroupsTable, {
+    id: (schema) => schema.nonempty("ID is required"),
     name: (schema) => schema.nonempty("Name is required"),
     selectionType: selectionTypeEnumSchema,
     isRequired: (schema) => schema,

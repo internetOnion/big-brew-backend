@@ -33,6 +33,7 @@ export const modifierOptionsTable = pgTable(
 );
 
 export const baseModifierOptionSchema = createInsertSchema(modifierOptionsTable, {
+    id: (schema) => schema.nonempty("ID is required"),
     modifierGroupId: (schema) => schema.nonempty("Modifier group ID is required"),
     name: (schema) => schema.nonempty("Name is required"),
     price: (schema) => schema.min(0, "Price must be a non-negative number").default("0"),

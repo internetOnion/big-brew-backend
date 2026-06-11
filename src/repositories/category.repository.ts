@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { insertCategorySchema } from "../models/schema/categories.ts";
 import { insertCategoryValidationSchema } from "../routes/category.ts";
+import { PgTransaction } from "drizzle-orm/pg-core";
 
 
 export type Category = z.infer<typeof insertCategorySchema>;
@@ -16,14 +17,13 @@ export class CategoryRepository {
         return results;
     }
 
-    async findById(id: string): Promise<Category | null> {
-        const result = await db.query.categoriesTable.findFirst({
-            where: eq(categoriesTable.id, id),
-        });
+    async findById(id: string, tx? : PgTransaction<any, any, any>): Promise<Category | null> {
+        const client = tx || db;
+        const [result] = await client.select().from(categoriesTable).where(eq(categoriesTable.id, id));
         return result || null;
     }
     
-    async insert(input: InsertCategory): Promise<Category> {
+    async insert(input: InsertCategory, tx?: PgTransaction<any, any, any>): Promise<Category> {
         const result = await db.insert(categoriesTable).values(input).returning();
         return result[0];
     }

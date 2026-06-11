@@ -1,9 +1,14 @@
-import { menuItemRepository } from "../repositories/index.ts";
+import { menuItemRepository, ModifierGroup, InsertModifierGroup, InsertModifierOption } from "../repositories/index.ts";
 import { categoryRepository } from "../repositories/index.ts";
+import { modifierGroupRepository, modifierOptionRepository, modifierOptionIngredientRepository, itemRecipeRepository, menuItemModifierGroupRepository} from "../repositories/index.ts";
+
+import { itemRecipeService } from "./itemRecipe.service.ts";
+import { MenuItem } from "../repositories/menuItem.repository.ts";
 import { AppError } from "../utils/AppError.ts";
 import { formatMenuItem, type MenuItemResponse } from "../utils/formatMenuItem.ts";
-import type { InsertMenuItem, UpdateMenuItem } from "../repositories/menuItem.repository.ts";
+import type { InsertMenuItem, UpdateMenuItem, MenuItemRequest} from "../repositories/menuItem.repository.ts";
 import { Category } from "../repositories/category.repository.ts";
+import { db } from "../models/index.ts";
 
 
 export class MenuItemService {
@@ -13,22 +18,80 @@ export class MenuItemService {
     }
 
 
-    async addMenuItem(input: InsertMenuItem): Promise<MenuItemResponse> {
+async addMenuItem(input: MenuItemRequest): Promise<MenuItemResponse> {
+    return await db.transaction(async (tx) => {
         try {
-            const category = await categoryRepository.findById(input.categoryId);
+            const category = await categoryRepository.findById(input.categoryId, tx);
             if (!category) {
                 throw AppError.badRequest("Invalid category ID");
             }
-            const newMenuItem = await menuItemRepository.insert(input);
+
+            const menuItemData: InsertMenuItem = {
+                name: input.name,
+                basePrice: input.basePrice,
+                categoryId: input.categoryId,
+                imageUrl: input.imageUrl || null,
+            };
+            const newMenuItem = await menuItemRepository.insert(menuItemData, tx);
+
+            if (input.ingredients && input.ingredients.length > 0) {
+                const itemRecipe = input.ingredients.map(ingredient => ({
+                    itemId: newMenuItem.id,
+                    ingredientId: ingredient.ingredientId,
+                    quantity: ingredient.quantity,
+                }));
+                await itemRecipeRepository.insertMany(itemRecipe, tx);
+            }
+
+            if (input.modifierGroups && input.modifierGroups.length > 0) {
+                for (const group of input.modifierGroups) {
+                    const modifierGroupData: InsertModifierGroup = {
+                        name: group.name,
+                        selectionType: group.selectionType,
+                        isRequired: group.isRequired,
+                    };
+                    const newModifierGroup = await modifierGroupRepository.insert(modifierGroupData, tx);
+
+                    const menuItemModifierGroupData = {
+                        menuItemId: newMenuItem.id,
+                        modifierGroupId: newModifierGroup.id,
+                    };
+                    await menuItemModifierGroupRepository.insert(menuItemModifierGroupData, tx);
+
+                    for (const option of group.modifierOptions) {
+                        const modifierOptionData: InsertModifierOption = {
+                            modifierGroupId: newModifierGroup.id,
+                            name: option.name,
+                            price: option.price,
+                        };
+                        const newModifierOption = await modifierOptionRepository.insert(modifierOptionData, tx);
+
+                        if (option.insertModifierOptionIngredients && option.insertModifierOptionIngredients.length > 0) {
+                            const modifierOptionIngredientData = option.insertModifierOptionIngredients.map(ingredient => ({
+                                modifierOptionId: newModifierOption.id,
+                                ingredientId: ingredient.ingredientId,
+                                quantity: ingredient.quantity,
+                            }));
+                            await modifierOptionIngredientRepository.insertMany(modifierOptionIngredientData, tx);
+                        }
+                    }
+                }
+            }
+
             const menuItemWithCategory = {
                 menu_items: newMenuItem,
                 categories: category
-            }
+            };
             return formatMenuItem(menuItemWithCategory);
+
         } catch (error) {
-            throw AppError.internal("Failed to add menu item");
+            if (error instanceof AppError) {
+                throw error;
+            }
+            throw AppError.internal("Failed to create the menu item layout structure.");
         }
-    }
+    });
+}
 
     async updateMenuItem(id: string, input: UpdateMenuItem): Promise<MenuItemResponse> {
         try {

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { menuItemService } from "../services/menuItem.service";
+import type { MenuItemRequest } from "../repositories/menuItem.repository.ts";
 
 export class MenuItemController {
     async getMenuItems(req: Request, res: Response) {
@@ -8,16 +9,17 @@ export class MenuItemController {
     }
 
     async addMenuItem(req: Request, res: Response) {
-        const { categoryId, name, basePrice, isAvailable, imageUrl } = req.body;
-        const newMenuItem = await menuItemService.addMenuItem({ categoryId, name, basePrice, isAvailable, imageUrl });
+        const input: MenuItemRequest = req.body;
+        const newMenuItem = await menuItemService.addMenuItem(input);
         res.status(201).json({data: newMenuItem});
     }
 
     async updateMenuItem(req: Request, res: Response) {
-        const id = req.params.id as string;
-        const { categoryId, name, basePrice, isAvailable, imageUrl } = req.body;
-        const updatedMenuItem = await menuItemService.updateMenuItem(id, { categoryId, name, basePrice, isAvailable, imageUrl });
-        res.json({ data: updatedMenuItem });
+        res.status(200).send("Update menu item endpoint is under construction");
+        // const id = req.params.id as string;
+        // const { categoryId, name, basePrice, isAvailable, imageUrl } = req.body;
+        // const updatedMenuItem = await menuItemService.updateMenuItem(id, { categoryId, name, basePrice, isAvailable, imageUrl });
+        // res.json({ data: updatedMenuItem });
     }
 
     async deleteMenuItem(req: Request, res: Response) {

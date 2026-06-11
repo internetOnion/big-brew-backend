@@ -4,6 +4,7 @@ import { db } from "../models/index.ts";
 import { itemRecipesTable } from "../models/schema/index.ts";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type ItemRecipe = z.infer<typeof baseItemRecipeSchema>;
 export type InsertItemRecipe = z.infer<typeof insertItemRecipeValidationSchema>;
@@ -21,6 +22,12 @@ export class ItemRecipeRepository {
     async insert(input: InsertItemRecipe): Promise<ItemRecipe> {
         const result = await db.insert(itemRecipesTable).values(input).returning();
         return result[0];
+    }
+
+    async insertMany(inputs: InsertItemRecipe[], tx?: PgTransaction<any, any, any>): Promise<ItemRecipe[]> {
+        const client = tx || db;
+        const result = await client.insert(itemRecipesTable).values(inputs).returning();
+        return result;
     }
 
     async update(id: string, input: UpdateItemRecipe): Promise<ItemRecipe> {

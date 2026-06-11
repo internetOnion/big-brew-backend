@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseModifierGroupSchema } from "../models/schema/modifier-groups.ts";
 import { insertModifierGroupValidationSchema } from "../routes/modifierGroup.ts";
+import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type ModifierGroup = z.infer<typeof baseModifierGroupSchema>;
 export type InsertModifierGroup = z.infer<typeof insertModifierGroupValidationSchema>;
@@ -22,8 +23,9 @@ export class ModifierGroupRepository {
         return result || null;
     }
 
-    async insert(input: InsertModifierGroup): Promise<ModifierGroup> {
-        const result = await db.insert(modifierGroupsTable).values(input).returning();
+    async insert(input: InsertModifierGroup, tx?: PgTransaction<any, any, any>): Promise<ModifierGroup> {
+        const client = tx || db;
+        const result = await client.insert(modifierGroupsTable).values(input).returning();
         return result[0];
     }
 
