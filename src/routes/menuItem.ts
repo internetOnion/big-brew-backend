@@ -1,5 +1,6 @@
 import { baseModifierOptionSchema } from "../models/schema/modifier-options.ts";
 import { baseModifierOptionIngredientSchema } from "../models/schema/modifier-option-ingredients.ts";
+import { baseItemRecipeSchema } from "../models/schema/item-recipes.ts";
 import { baseMenuItemSchema } from "../models/schema/menu-items.ts";
 import { Router } from "express";
 import { z } from "zod";
@@ -21,6 +22,12 @@ export const insertModifierOptionIngredientValidationSchema = baseModifierOption
     quantity: true,
 }).strict();
 
+export const insertItemRecipeValidationSchema = baseItemRecipeSchema.pick({
+    itemId: true,
+    ingredientId: true,
+    quantity: true,
+}).strict();
+
 export const insertMenuItemValidationSchema = baseMenuItemSchema.pick({
     categoryId: true,
     name: true,
@@ -37,6 +44,41 @@ router.get("/",
     await menuItemController.getMenuItems(req, res);
 });
 
+/*
+req payload for adding manu item:
+{
+    "name": "Cappuccino",
+    "basePrice": 3.5,
+    "isAvailable": true,
+    "imageUrl": "https://example.com/cappuccino.jpg",
+    "categoryId": "123e4567-e89b-12d3-a456-426614174000"
+    "ingredients": [
+        {
+            "ingredientId": "123e4567-e89b-12d3-a456-426614174000",
+            "quantity": 250
+        }
+    ],
+    "modifierGroups": [
+        {
+            "name": "Milk Options",
+            "isRequired": false,
+            "selectionType": "single",
+            "modifierOptions": [
+                {
+                    "name": "Whole Milk",
+                    "price": 0.5,
+                    "ingredients": [
+                        {
+                            "ingredientId": "123e4567-e89b-12d3-a456-426614174001",
+                            "quantity": 200
+                        }
+                    ]
+                },
+            ],
+        },     
+    ]
+}
+*/
 router.post("/",
     authenticate,
     requireRole("manager", "owner"),

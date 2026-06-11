@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from './../models/index.ts';
+import { db } from '../models/index.ts';
 import { ingredientsTable } from "../models/schema/index.ts";
 import type { IngredientUnit } from "../types/index.ts";
 

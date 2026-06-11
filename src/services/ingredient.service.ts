@@ -1,6 +1,6 @@
-import { ingredientRepository, type Ingredient } from "../repositories/ingredient.respositoy";
+import { ingredientRepository, type Ingredient } from "../repositories/ingredient.respository.ts";
 import { formatIngredient } from "../utils/formatIngredient.ts";
-import type { InsertIngredient, UpdateIngredient } from "../repositories/ingredient.respositoy";
+import type { InsertIngredient, UpdateIngredient } from "../repositories/ingredient.respository.ts";
 import { AppError } from "../utils/AppError.ts";
 
 type IngredientResponse = Omit<Ingredient, "createdAt" | "updatedAt">;

@@ -1,0 +1,36 @@
+import { insertItemRecipeValidationSchema } from "../routes/menuItem.ts";
+import { baseItemRecipeSchema } from "../models/schema/item-recipes.ts";
+import { db } from "../models/index.ts";
+import { itemRecipesTable } from "../models/schema/index.ts";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+
+export type ItemRecipe = z.infer<typeof baseItemRecipeSchema>;
+export type InsertItemRecipe = z.infer<typeof insertItemRecipeValidationSchema>;
+export type UpdateItemRecipe = Partial<InsertItemRecipe>;
+
+export class ItemRecipeRepository {
+
+    async findById(id: string): Promise<ItemRecipe | null> {
+        const result = await db.query.itemRecipesTable.findFirst({
+            where: eq(itemRecipesTable.id, id),
+        });
+        return result || null;
+    }
+
+    async insert(input: InsertItemRecipe): Promise<ItemRecipe> {
+        const result = await db.insert(itemRecipesTable).values(input).returning();
+        return result[0];
+    }
+
+    async update(id: string, input: UpdateItemRecipe): Promise<ItemRecipe> {
+        const result = await db.update(itemRecipesTable).set(input).where(eq(itemRecipesTable.id, id)).returning();
+        return result[0];
+    }
+
+    async delete(id: string): Promise<void> {
+        await db.delete(itemRecipesTable).where(eq(itemRecipesTable.id, id));
+    }
+}
+
+export const itemRecipeRepository = new ItemRecipeRepository();
