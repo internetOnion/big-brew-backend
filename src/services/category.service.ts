@@ -1,7 +1,16 @@
-import { categoryRepository, type Category } from "../repositories/category.repository";
-import type { InsertCategory, UpdateCategory } from "../repositories/category.repository";
+import {
+    categoryRepository,
+    type Category,
+} from "../repositories/category.repository";
+import type {
+    InsertCategory,
+    UpdateCategory,
+} from "../repositories/category.repository";
 import { AppError } from "../utils/AppError.ts";
-import { formatCategory, type CategoryResponse } from "../utils/fotmatCategory.ts";
+import {
+    formatCategory,
+    type CategoryResponse,
+} from "../utils/fotmatCategory.ts";
 
 export class CategoryService {
     async getCategories(): Promise<CategoryResponse[]> {
@@ -23,9 +32,14 @@ export class CategoryService {
         }
     }
 
-    async updateCategory(id: string, input: UpdateCategory): Promise<CategoryResponse> {
+    async updateCategory(
+        id: string,
+        input: UpdateCategory,
+    ): Promise<CategoryResponse> {
         try {
-            const existingCategory = await categoryRepository.findAll().then(categories => categories.find(cat => cat.id === id));
+            const existingCategory = await categoryRepository
+                .findAll()
+                .then((categories) => categories.find((cat) => cat.id === id));
             if (!existingCategory) {
                 throw AppError.notFound("Category not found");
             }
@@ -41,7 +55,9 @@ export class CategoryService {
 
     async deleteCategory(id: string): Promise<void> {
         try {
-            const existingCategory = await categoryRepository.findAll().then(categories => categories.find(cat => cat.id === id));
+            const existingCategory = await categoryRepository
+                .findAll()
+                .then((categories) => categories.find((cat) => cat.id === id));
             if (!existingCategory) {
                 throw AppError.notFound("Category not found");
             }

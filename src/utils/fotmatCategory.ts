@@ -6,4 +6,4 @@ export const formatCategory = (category: Category): CategoryResponse => ({
     id: category.id,
     name: category.name,
     sortOrder: category.sortOrder,
-})
+});

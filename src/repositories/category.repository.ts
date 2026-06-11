@@ -5,7 +5,6 @@ import { z } from "zod";
 import { insertCategorySchema } from "../models/schema/categories.ts";
 import { insertCategoryValidationSchema } from "../routes/category.ts";
 
-
 export type Category = z.infer<typeof insertCategorySchema>;
 export type InsertCategory = z.infer<typeof insertCategoryValidationSchema>;
 export type UpdateCategory = Partial<InsertCategory>;
@@ -17,12 +16,19 @@ export class CategoryRepository {
     }
 
     async insert(input: InsertCategory): Promise<Category> {
-        const result = await db.insert(categoriesTable).values(input).returning();
+        const result = await db
+            .insert(categoriesTable)
+            .values(input)
+            .returning();
         return result[0];
     }
 
     async update(id: string, input: UpdateCategory): Promise<Category> {
-        const result = await db.update(categoriesTable).set(input).where(eq(categoriesTable.id, id)).returning();
+        const result = await db
+            .update(categoriesTable)
+            .set(input)
+            .where(eq(categoriesTable.id, id))
+            .returning();
         return result[0];
     }
 
