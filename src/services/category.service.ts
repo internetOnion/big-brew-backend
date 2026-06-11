@@ -6,14 +6,6 @@ import type {
     InsertCategory,
     UpdateCategory,
 } from "../repositories/category.repository";
-import {
-    categoryRepository,
-    type Category,
-} from "../repositories/category.repository";
-import type {
-    InsertCategory,
-    UpdateCategory,
-} from "../repositories/category.repository";
 import { AppError } from "../utils/AppError.ts";
 import {
     formatCategory,
@@ -56,10 +48,6 @@ export class CategoryService {
         id: string,
         input: UpdateCategory,
     ): Promise<CategoryResponse> {
-    async updateCategory(
-        id: string,
-        input: UpdateCategory,
-    ): Promise<CategoryResponse> {
         try {
             const existingCategory = await categoryRepository.findById(id);
             if (!existingCategory) {
@@ -92,4 +80,3 @@ export class CategoryService {
 }
 
 export const categoryService = new CategoryService();
-
