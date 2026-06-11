@@ -8,119 +8,172 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Request, Response } from "express";
 import { menuItemController } from "../controllers/menuItem.controller.ts";
-import { authenticate, requireRole, validateBody } from "../middlewares/index.ts";
+import {
+    authenticate,
+    requireRole,
+    validateBody,
+} from "../middlewares/index.ts";
 
-export const insertModifierOptionValidationSchema = baseModifierOptionSchema.pick({
-    modifierGroupId: true,
-    name: true,
-    price: true,
-    isAvailable: true,
-    sortOrder: true,
-}).partial({
-    isAvailable: true,
-    sortOrder: true,
-}).strict();
+export const insertModifierOptionValidationSchema = baseModifierOptionSchema
+    .pick({
+        modifierGroupId: true,
+        name: true,
+        price: true,
+        isAvailable: true,
+        sortOrder: true,
+    })
+    .partial({
+        isAvailable: true,
+        sortOrder: true,
+    })
+    .strict();
 
-export const insertModifierOptionIngredientValidationSchema = baseModifierOptionIngredientSchema.pick({
-    modifierOptionId: true,
-    ingredientId: true,
-    quantity: true,
-}).strict();
+export const insertModifierOptionIngredientValidationSchema =
+    baseModifierOptionIngredientSchema
+        .pick({
+            modifierOptionId: true,
+            ingredientId: true,
+            quantity: true,
+        })
+        .strict();
 
-export const insertItemRecipeValidationSchema = baseItemRecipeSchema.pick({
-    itemId: true,
-    ingredientId: true,
-    quantity: true,
-}).strict();
-
-export const insertMenuItemModifierGroupValidationSchema = baseMenuItemModifierGroupSchema.pick({
-    menuItemId: true,
-    modifierGroupId: true,
-    sortOrder: true,
-}).partial({
-    sortOrder: true,
-}).strict();
-export const insertMenuItemValidationSchema = baseMenuItemSchema.pick({
-    categoryId: true,
-    name: true,
-    basePrice: true,
-    isAvailable: true,
-    imageUrl: true,
-}).strict();
-
-export const requestMenuItemValidationSchema = baseMenuItemSchema.pick({
-    categoryId: true,
-    name: true,
-    basePrice: true,
-    isAvailable: true,
-    imageUrl: true,
-}).strict().extend({
-    ingredients: z.array((insertItemRecipeValidationSchema).pick({
+export const insertItemRecipeValidationSchema = baseItemRecipeSchema
+    .pick({
+        itemId: true,
         ingredientId: true,
         quantity: true,
-    })).optional(),
-    modifierGroups: z.array(
-        insertModifierGroupValidationSchema.pick({
-            name: true,
-            isRequired: true,
-            selectionType: true,
-        }).extend({
-            modifierOptions: z.array(
-                insertModifierOptionValidationSchema.pick({
-                    name: true,
-                    price: true,
-                }).extend({
-                    insertModifierOptionIngredients: z.array(
-                        insertModifierOptionIngredientValidationSchema.pick({
-                            ingredientId: true,
-                            quantity: true,
-                        }),
-                    ).optional(),
-                }),
-            ),
-        }),
-    ).optional(),
-});
+    })
+    .strict();
 
-export const updateMenuItemValidationSchema = baseMenuItemSchema.pick({
-    categoryId: true,
-    name: true,
-    basePrice: true,
-    isAvailable: true,
-    imageUrl: true,
-}).strict().partial().extend({
-    ingredients: z.array((insertItemRecipeValidationSchema).pick({
-        ingredientId: true,
-        quantity: true,
-    }).partial()),
-    modifierGroups: z.array(
-        insertModifierGroupValidationSchema.pick({
-            name: true,
-            isRequired: true,
-            selectionType: true,
-        }).partial().extend({
-            modifierOptions: z.array(
-                insertModifierOptionValidationSchema.pick({
-                    name: true,
-                    price: true,
-                }).partial().extend({
-                    insertModifierOptionIngredients: z.array(
-                        insertModifierOptionIngredientValidationSchema.pick({
-                            ingredientId: true,
-                            quantity: true,
-                        }).partial(),
-                    ).optional(),
+export const insertMenuItemModifierGroupValidationSchema =
+    baseMenuItemModifierGroupSchema
+        .pick({
+            menuItemId: true,
+            modifierGroupId: true,
+            sortOrder: true,
+        })
+        .partial({
+            sortOrder: true,
+        })
+        .strict();
+export const insertMenuItemValidationSchema = baseMenuItemSchema
+    .pick({
+        categoryId: true,
+        name: true,
+        basePrice: true,
+        isAvailable: true,
+        imageUrl: true,
+    })
+    .strict();
+
+export const requestMenuItemValidationSchema = baseMenuItemSchema
+    .pick({
+        categoryId: true,
+        name: true,
+        basePrice: true,
+        isAvailable: true,
+        imageUrl: true,
+    })
+    .strict()
+    .extend({
+        ingredients: z
+            .array(
+                insertItemRecipeValidationSchema.pick({
+                    ingredientId: true,
+                    quantity: true,
                 }),
-            ),
-        }),
-    ).optional(),
-});
+            )
+            .optional(),
+        modifierGroups: z
+            .array(
+                insertModifierGroupValidationSchema
+                    .pick({
+                        name: true,
+                        isRequired: true,
+                        selectionType: true,
+                    })
+                    .extend({
+                        modifierOptions: z.array(
+                            insertModifierOptionValidationSchema
+                                .pick({
+                                    name: true,
+                                    price: true,
+                                })
+                                .extend({
+                                    insertModifierOptionIngredients: z
+                                        .array(
+                                            insertModifierOptionIngredientValidationSchema.pick(
+                                                {
+                                                    ingredientId: true,
+                                                    quantity: true,
+                                                },
+                                            ),
+                                        )
+                                        .optional(),
+                                }),
+                        ),
+                    }),
+            )
+            .optional(),
+    });
+
+export const updateMenuItemValidationSchema = baseMenuItemSchema
+    .pick({
+        categoryId: true,
+        name: true,
+        basePrice: true,
+        isAvailable: true,
+        imageUrl: true,
+    })
+    .strict()
+    .partial()
+    .extend({
+        ingredients: z.array(
+            insertItemRecipeValidationSchema
+                .pick({
+                    ingredientId: true,
+                    quantity: true,
+                })
+                .partial(),
+        ),
+        modifierGroups: z
+            .array(
+                insertModifierGroupValidationSchema
+                    .pick({
+                        name: true,
+                        isRequired: true,
+                        selectionType: true,
+                    })
+                    .partial()
+                    .extend({
+                        modifierOptions: z.array(
+                            insertModifierOptionValidationSchema
+                                .pick({
+                                    name: true,
+                                    price: true,
+                                })
+                                .partial()
+                                .extend({
+                                    insertModifierOptionIngredients: z
+                                        .array(
+                                            insertModifierOptionIngredientValidationSchema
+                                                .pick({
+                                                    ingredientId: true,
+                                                    quantity: true,
+                                                })
+                                                .partial(),
+                                        )
+                                        .optional(),
+                                }),
+                        ),
+                    }),
+            )
+            .optional(),
+    });
 
 const router = Router();
 
-router.get("/",
-    authenticate,
-    async (req: Request, res: Response) => {
+router.get("/", authenticate, async (req: Request, res: Response) => {
     await menuItemController.getMenuItems(req, res);
 });
 
@@ -159,27 +212,33 @@ req payload for adding manu item:
     ]
 }
 */
-router.post("/",
+router.post(
+    "/",
     authenticate,
     requireRole("manager", "owner"),
     validateBody(requestMenuItemValidationSchema),
     async (req: Request, res: Response) => {
-    await menuItemController.addMenuItem(req, res);
-});
+        await menuItemController.addMenuItem(req, res);
+    },
+);
 
-router.put("/:id",
+router.put(
+    "/:id",
     authenticate,
     requireRole("manager", "owner"),
     validateBody(insertMenuItemValidationSchema.partial()),
     async (req: Request, res: Response) => {
-    await menuItemController.updateMenuItem(req, res);
-});
+        await menuItemController.updateMenuItem(req, res);
+    },
+);
 
-router.delete("/:id",
+router.delete(
+    "/:id",
     authenticate,
     requireRole("manager", "owner"),
     async (req: Request, res: Response) => {
-    await menuItemController.deleteMenuItem(req, res);
-});
+        await menuItemController.deleteMenuItem(req, res);
+    },
+);
 
 export default router;

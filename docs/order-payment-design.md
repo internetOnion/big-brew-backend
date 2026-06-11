@@ -10,11 +10,11 @@ Two-step order/payment flow: create order (pending, unpaid) → pay (confirmed, 
 
 Migration required — change `orders` table:
 
-| Change | Detail |
-|--------|--------|
-| `receiptNumber` | `serial` → `integer` (nullable, defaults NULL) |
-| `receiptDate` | new `date` column (nullable) |
-| Constraint | Both set together at payment, both NULL before payment |
+| Change          | Detail                                                 |
+| --------------- | ------------------------------------------------------ |
+| `receiptNumber` | `serial` → `integer` (nullable, defaults NULL)         |
+| `receiptDate`   | new `date` column (nullable)                           |
+| Constraint      | Both set together at payment, both NULL before payment |
 
 ---
 
@@ -47,16 +47,16 @@ Migration required — change `orders` table:
 
 ## Authorization
 
-| Action | Minimum Role |
-|--------|-------------|
-| Create order | barista |
-| Pay order | barista |
-| Update order | barista |
-| Cancel order | barista |
-| View orders | barista (all employees see all orders) |
-| Void request | barista |
-| Void approve | manager |
-| Void reject | manager |
+| Action       | Minimum Role                           |
+| ------------ | -------------------------------------- |
+| Create order | barista                                |
+| Pay order    | barista                                |
+| Update order | barista                                |
+| Cancel order | barista                                |
+| View orders  | barista (all employees see all orders) |
+| Void request | barista                                |
+| Void approve | manager                                |
+| Void reject  | manager                                |
 
 ---
 
@@ -67,6 +67,7 @@ Migration required — change `orders` table:
 **Auth:** barista+
 
 **Request:**
+
 ```ts
 {
   diningOption: "dine_in" | "take_away",
@@ -84,12 +85,14 @@ Migration required — change `orders` table:
 ```
 
 **Validation:**
+
 - Items array must be non-empty
 - `menuItemId` must reference an existing, available menu item
 - `modifierOptionId` must be valid for the given menu item
 - `discountId` (if provided) must be an active, valid discount
 
 **Server processing:**
+
 - Look up menu item `basePrice` → set `order_items.unitPrice`
 - Look up modifier option `price` → set `order_item_modifiers.price`
 - If BOGO discount: identify applicable items, zero out `unitPrice` on the cheapest free item
@@ -137,6 +140,7 @@ Migration required — change `orders` table:
 **Request:** Same shape as `POST /api/orders` (full replacement — complete items array)
 
 **Server processing:**
+
 - Delete existing `order_items` and `order_item_modifiers` (cascade)
 - Re-insert items and modifiers with current prices
 - Full recalculation of subtotal, discount (re-evaluate against new items), total
@@ -165,6 +169,7 @@ Sets `status: "cancelled"`.
 **Constraint:** Only allowed when `paymentStatus: "pending"` and `status: "pending"`
 
 **Request (discriminated union):**
+
 ```ts
 // Cash
 { paymentMethod: "cash", amountReceived: number }
@@ -173,6 +178,7 @@ Sets `status: "cancelled"`.
 ```
 
 **Cash processing:**
+
 - Validate `amountReceived >= total` → reject if insufficient
 - `changeAmount = amountReceived - total`
 - Assign `receiptNumber` (daily contiguous, `SELECT MAX + 1` for today)
@@ -182,10 +188,12 @@ Sets `status: "cancelled"`.
 - Response: receipt (see Payment Receipt Response)
 
 **QR processing (future):**
+
 - No stock deduction (manual verification by cashier)
 - Flip `paymentMethod`, `paymentStatus`, `status` — no money calculation
 
 **Idempotency:**
+
 - `SELECT ... FOR UPDATE` row lock on the order row
 - If already paid, return 200 with existing receipt — no error
 
@@ -198,8 +206,11 @@ Sets `status: "cancelled"`.
 **Constraint:** Order must be paid (`paymentStatus: "paid"`) and not already voided/cancelled
 
 **Request:**
+
 ```ts
-{ reason: string }
+{
+    reason: string;
+}
 ```
 
 Sets `status: "void_pending"`, `voidRequestedBy`, `voidRequestedAt`, `voidReason`.
@@ -213,6 +224,7 @@ Sets `status: "void_pending"`, `voidRequestedBy`, `voidRequestedAt`, `voidReason
 **Constraint:** Order must be in `status: "void_pending"`
 
 **Processing:**
+
 - Set `status: "voided"`, `voidApprovedBy`, `voidApprovedAt`
 - Set `paymentStatus: "refunded"` (auto-refund)
 - Reverse stock (insert `stock_movements` with `reason: "order_voided"`, increment ingredient quantities)
@@ -233,11 +245,11 @@ Sets `status` back to the prior status (e.g., `confirmed`), records `voidRejecte
 
 Three types, all calculated server-side:
 
-| Type | Logic |
-|------|-------|
-| `percentage` | `discountAmount = subtotal × (value / 100)` |
-| `fixed_amount` | `discountAmount = min(value, subtotal)` |
-| `bogo` | Find items matching `buyItemId` and `freeItemId` → zero out `unitPrice` on cheapest free item. `discountAmount = freeItem.basePrice` |
+| Type           | Logic                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `percentage`   | `discountAmount = subtotal × (value / 100)`                                                                                          |
+| `fixed_amount` | `discountAmount = min(value, subtotal)`                                                                                              |
+| `bogo`         | Find items matching `buyItemId` and `freeItemId` → zero out `unitPrice` on cheapest free item. `discountAmount = freeItem.basePrice` |
 
 - Discounts recalculated on every `PUT` (full recalculation against current items)
 - `total = subtotal - discountAmount`
@@ -254,9 +266,9 @@ Fired at payment time, inside the same transaction as the pay update.
 3. Sum per ingredient, multiply by item quantity
 4. Decrement `ingredients.stock_quantity`
 5. Insert `stock_movements` rows:
-   - `reason: "order_placed"`
-   - `quantity_change: -totalConsumed`
-   - `referenceOrderId`
+    - `reason: "order_placed"`
+    - `quantity_change: -totalConsumed`
+    - `referenceOrderId`
 6. Void approval reverses: `reason: "order_voided"`, positive `quantity_change`
 
 ---

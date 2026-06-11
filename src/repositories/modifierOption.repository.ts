@@ -7,7 +7,9 @@ import { insertModifierOptionValidationSchema } from "../routes/menuItem.ts";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type ModifierOption = z.infer<typeof baseModifierOptionSchema>;
-export type InsertModifierOption = z.infer<typeof insertModifierOptionValidationSchema>;
+export type InsertModifierOption = z.infer<
+    typeof insertModifierOptionValidationSchema
+>;
 export type UpdateModifierOption = Partial<InsertModifierOption>;
 
 export class ModifierOptionRepository {
@@ -23,26 +25,43 @@ export class ModifierOptionRepository {
         return result || null;
     }
 
-    async findByModifierGroupId(modifierGroupId: string): Promise<ModifierOption[]> {
+    async findByModifierGroupId(
+        modifierGroupId: string,
+    ): Promise<ModifierOption[]> {
         const results = await db.query.modifierOptionsTable.findMany({
             where: eq(modifierOptionsTable.modifierGroupId, modifierGroupId),
         });
         return results;
     }
 
-    async insert(input: InsertModifierOption, tx? : PgTransaction<any, any, any>): Promise<ModifierOption> {
+    async insert(
+        input: InsertModifierOption,
+        tx?: PgTransaction<any, any, any>,
+    ): Promise<ModifierOption> {
         const client = tx || db;
-        const result = await client.insert(modifierOptionsTable).values(input).returning();
+        const result = await client
+            .insert(modifierOptionsTable)
+            .values(input)
+            .returning();
         return result[0];
     }
 
-    async update(id: string, input: UpdateModifierOption): Promise<ModifierOption> {
-        const result = await db.update(modifierOptionsTable).set(input).where(eq(modifierOptionsTable.id, id)).returning();
+    async update(
+        id: string,
+        input: UpdateModifierOption,
+    ): Promise<ModifierOption> {
+        const result = await db
+            .update(modifierOptionsTable)
+            .set(input)
+            .where(eq(modifierOptionsTable.id, id))
+            .returning();
         return result[0];
     }
 
     async delete(id: string): Promise<void> {
-        await db.delete(modifierOptionsTable).where(eq(modifierOptionsTable.id, id));
+        await db
+            .delete(modifierOptionsTable)
+            .where(eq(modifierOptionsTable.id, id));
     }
 }
 

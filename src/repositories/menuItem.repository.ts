@@ -1,7 +1,11 @@
 import { baseMenuItemSchema } from "../models/schema/menu-items.ts";
 import { menuItemsTable } from "../models/schema/menu-items.ts";
 import { categoriesTable } from "../models/schema/categories.ts";
-import { insertMenuItemValidationSchema, updateMenuItemValidationSchema, requestMenuItemValidationSchema } from "../routes/menuItem.ts";
+import {
+    insertMenuItemValidationSchema,
+    updateMenuItemValidationSchema,
+    requestMenuItemValidationSchema,
+} from "../routes/menuItem.ts";
 import { Category } from "./category.repository.ts";
 import { db } from "../models/index.ts";
 import { eq, isNull } from "drizzle-orm";
@@ -12,7 +16,6 @@ export type MenuItem = z.infer<typeof baseMenuItemSchema>;
 export type InsertMenuItem = z.infer<typeof insertMenuItemValidationSchema>;
 export type UpdateMenuItem = z.infer<typeof updateMenuItemValidationSchema>;
 export type MenuItemRequest = z.infer<typeof requestMenuItemValidationSchema>;
-
 
 export type MenuItemWithCategory = {
     menu_items: MenuItem;
@@ -27,12 +30,15 @@ export class MenuItemRepository {
         return results;
     }
 
-    async findAllWithCategory(): Promise<(MenuItemWithCategory)[]> {
+    async findAllWithCategory(): Promise<MenuItemWithCategory[]> {
         const menuItems = await db
-        .select()
-        .from(menuItemsTable)
-        .innerJoin(categoriesTable, eq(menuItemsTable.categoryId, categoriesTable.id))
-        .where(isNull(menuItemsTable.deletedAt));
+            .select()
+            .from(menuItemsTable)
+            .innerJoin(
+                categoriesTable,
+                eq(menuItemsTable.categoryId, categoriesTable.id),
+            )
+            .where(isNull(menuItemsTable.deletedAt));
         return menuItems;
     }
 
@@ -43,14 +49,24 @@ export class MenuItemRepository {
         return result || null;
     }
 
-    async insert(input: InsertMenuItem, tx? : PgTransaction<any, any, any>): Promise<MenuItem> {
+    async insert(
+        input: InsertMenuItem,
+        tx?: PgTransaction<any, any, any>,
+    ): Promise<MenuItem> {
         const client = tx || db;
-        const result = await client.insert(menuItemsTable).values(input).returning();
+        const result = await client
+            .insert(menuItemsTable)
+            .values(input)
+            .returning();
         return result[0];
     }
 
     async update(id: string, input: UpdateMenuItem): Promise<MenuItem> {
-        const result = await db.update(menuItemsTable).set(input).where(eq(menuItemsTable.id, id)).returning();
+        const result = await db
+            .update(menuItemsTable)
+            .set(input)
+            .where(eq(menuItemsTable.id, id))
+            .returning();
         return result[0];
     }
 

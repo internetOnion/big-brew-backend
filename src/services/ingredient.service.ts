@@ -1,6 +1,12 @@
-import { ingredientRepository, type Ingredient } from "../repositories/ingredient.respository.ts";
+import {
+    ingredientRepository,
+    type Ingredient,
+} from "../repositories/ingredient.respository.ts";
 import { formatIngredient } from "../utils/formatIngredient.ts";
-import type { InsertIngredient, UpdateIngredient } from "../repositories/ingredient.respository.ts";
+import type {
+    InsertIngredient,
+    UpdateIngredient,
+} from "../repositories/ingredient.respository.ts";
 import { AppError } from "../utils/AppError.ts";
 
 type IngredientResponse = Omit<Ingredient, "createdAt" | "updatedAt">;
@@ -10,7 +16,7 @@ export class IngredientService {
         try {
             const ingredients = await ingredientRepository.findAll();
             return ingredients.map(formatIngredient);
-        }  catch (error) {
+        } catch (error) {
             throw AppError.internal("Failed to fetch ingredients");
         }
     }
@@ -24,14 +30,20 @@ export class IngredientService {
         }
     }
 
-    async updateIngredient(id: string, input: UpdateIngredient): Promise<IngredientResponse> {
+    async updateIngredient(
+        id: string,
+        input: UpdateIngredient,
+    ): Promise<IngredientResponse> {
         try {
             const existingIngredient = await ingredientRepository.findById(id);
             if (!existingIngredient) {
                 throw AppError.notFound("Ingredient not found");
             }
 
-            const updatedIngredient = await ingredientRepository.update(id, input);
+            const updatedIngredient = await ingredientRepository.update(
+                id,
+                input,
+            );
             return formatIngredient(updatedIngredient);
         } catch (error) {
             if (error instanceof AppError) {

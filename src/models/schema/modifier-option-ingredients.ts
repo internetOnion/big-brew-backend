@@ -32,8 +32,13 @@ export const modifierOptionIngredientsTable = pgTable(
     ],
 );
 
-export const baseModifierOptionIngredientSchema = createInsertSchema(modifierOptionIngredientsTable, {
-    modifierOptionId: (schema) => schema.nonempty("Modifier option ID is required"),
-    ingredientId: (schema) => schema.nonempty("Ingredient ID is required"),
-    quantity: (schema) => schema.min(0.01, "Quantity must be greater than 0"),
-});
+export const baseModifierOptionIngredientSchema = createInsertSchema(
+    modifierOptionIngredientsTable,
+    {
+        modifierOptionId: (schema) =>
+            schema.nonempty("Modifier option ID is required"),
+        ingredientId: (schema) => schema.nonempty("Ingredient ID is required"),
+        quantity: (schema) =>
+            schema.min(0.01, "Quantity must be greater than 0"),
+    },
+);

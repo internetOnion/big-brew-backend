@@ -40,7 +40,7 @@ There are no tests.
 - **DB client**: `src/models/index.ts` — exports `db` (Drizzle instance) and `pool` (pg Pool). Connection from `SUPABASE_DATABASE_URL`.
 - **Schema**: `src/models/schema/index.ts` — barrel re-exporting all Drizzle table/enum definitions. Tables are PostgreSQL, hosted on Supabase.
 - **Migrations**: Output to `src/models/migrations/` (auto-generated, excluded from Prettier via `.prettierignore`).
-- **Config**: `src/config/index.ts` — loads `dotenv` and exports typed config object. Token expiry values are hardcoded (`"15m"` access, `"7d"` refresh), not env-driven. Cookie path is `"/api/auth"`.
+- **Config**: `src/config/index.ts` — loads `dotenv` and exports typed config object. Token expiry values are hardcoded (`"15m"` access, `"7d"` refresh), not env-driven. Cookie path is `"/api/auth"`. `CORS_ORIGIN` is a comma-separated string, not a single URL.
 - **Supabase clients**: `src/lib/supabase.ts` — `supabaseAdmin` (service role) and `supabaseAuth` (publishable key). Used by auth middleware, auth service, storage service, and seed/reset.
 - **Auth middleware** (`src/middlewares/auth.ts`): Dual-mode token resolution. Tries local JWT (issued by this server) first. If JWT is expired, throws immediately (no fallback). If JWT fails for any other reason (bad signature, etc.), falls back to verifying as a Supabase access token via `supabaseAuth.auth.getUser(token)`. Sets `req.employee` on success. `requireRole()` gates by employee role (`barista`, `manager`, `owner`).
 - **Refresh tokens**: Stored as SHA-256 hashes in `refresh_tokens` table. HTTP-only cookie set on `/api/auth/login` and `/api/auth/pin-login`. Cookie `path` is `"/api/auth"` — auth endpoints (`/refresh`, `/logout`, `/me`) must stay under that path or the cookie won't be sent by the browser.
@@ -100,16 +100,11 @@ Drizzle tracks applied migrations in a `__drizzle_migrations` table.
 
 Every folder's `index.ts` is a **public barrel** — it re-exports everything consumers outside the folder should use. Imports always point at the barrel path, never at individual files.
 
-When a folder grows past these thresholds, extract to separate files and turn the `index.ts` into a pure re-export barrel:
-
-| Folder                 | Keep inline until    | Split strategy                                                       |
-| ---------------------- | -------------------- | -------------------------------------------------------------------- |
-| `src/routes/`          | ~4 route groups      | One file per domain (`routes/settings.ts`), merge in `index.ts`      |
-| `src/models/schema/`   | ~5 tables            | One file per table (`schema/settings.ts`), re-export from `index.ts` |
-| `src/middlewares/`     | Related logic fits   | One file per unrelated middleware                                    |
-| `src/utils/`           | _Never_ — each file is its own utility                                |
-
-When splitting, consumers should **never need to change their imports** — they continue importing from the barrel.
+When adding new code, follow the split strategy:
+- `src/routes/` — one file per domain, merge in `index.ts`
+- `src/models/schema/` — one file per table, re-export from `index.ts`
+- `src/middlewares/` — one file per unrelated middleware
+- `src/utils/` — each file is its own utility (re-export as needed)
 
 ## Conventions
 
@@ -119,6 +114,8 @@ When splitting, consumers should **never need to change their imports** — they
 - **Express 5**: Async route handlers that throw errors are automatically caught by the error handler — no need for `next(err)`.
 - **Singletons**: Controllers, services, and repositories export a named class AND an instantiated singleton (`export const settingsService = new SettingsService()`). Always import the singleton.
 - **Sensitive field stripping**: Use `formatEmployee()` (`src/utils/formatEmployee.ts`) to return employee data — it omits `pin` and other internal fields.
+- **Shared types**: `src/types/index.ts` defines `EmployeeRole` (derived from Drizzle's `pgEnum` enum values, not a hand-written union), `EmployeePayload`, `ApiResponse<T>`, and `PaginatedResponse<T>`.
+- **Skills**: The `.agents/` directory contains bundled skills (Supabase, backend patterns) used by OpenCode. Excluded from Prettier formatting.
 
 ## Error handling
 
@@ -138,3 +135,4 @@ When splitting, consumers should **never need to change their imports** — they
 - Use `validateBody(schema)`, `validateParams(schema)`, `validateQuery(schema)` from `src/middlewares/index.ts`.
 - They return parsed data (with Zod coercion/defaults applied) via `req.body` / `req.params` / `req.query`.
 - Define Zod schemas in route files, not inline in `safeParse` calls.
+- Always chain `.strict()` on Zod schemas to reject unknown properties.

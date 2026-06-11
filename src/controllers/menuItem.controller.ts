@@ -11,7 +11,7 @@ export class MenuItemController {
     async addMenuItem(req: Request, res: Response) {
         const input: MenuItemRequest = req.body;
         const newMenuItem = await menuItemService.addMenuItem(input);
-        res.status(201).json({data: newMenuItem});
+        res.status(201).json({ data: newMenuItem });
     }
 
     async updateMenuItem(req: Request, res: Response) {

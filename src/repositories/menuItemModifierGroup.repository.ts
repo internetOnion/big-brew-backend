@@ -6,22 +6,39 @@ import { z } from "zod";
 import { insertMenuItemModifierGroupValidationSchema } from "../routes/menuItem.ts";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
-export type MenuItemModifierGroup = z.infer<typeof baseMenuItemModifierGroupSchema>;
-export type InsertMenuItemModifierGroup = z.infer<typeof insertMenuItemModifierGroupValidationSchema>;
+export type MenuItemModifierGroup = z.infer<
+    typeof baseMenuItemModifierGroupSchema
+>;
+export type InsertMenuItemModifierGroup = z.infer<
+    typeof insertMenuItemModifierGroupValidationSchema
+>;
 export type UpdateMenuItemModifierGroup = Partial<InsertMenuItemModifierGroup>;
 
 export class MenuItemModifierGroupRepository {
-    async insert(input: InsertMenuItemModifierGroup, tx? : PgTransaction<any, any, any>): Promise<MenuItemModifierGroup> {
+    async insert(
+        input: InsertMenuItemModifierGroup,
+        tx?: PgTransaction<any, any, any>,
+    ): Promise<MenuItemModifierGroup> {
         const client = tx || db;
-        const result = await client.insert(menuItemModifierGroupsTable).values(input).returning();
+        const result = await client
+            .insert(menuItemModifierGroupsTable)
+            .values(input)
+            .returning();
         return result[0];
     }
 
-    async insertMany(inputs: InsertMenuItemModifierGroup[], tx?: PgTransaction<any, any, any>): Promise<MenuItemModifierGroup[]> {
+    async insertMany(
+        inputs: InsertMenuItemModifierGroup[],
+        tx?: PgTransaction<any, any, any>,
+    ): Promise<MenuItemModifierGroup[]> {
         const client = tx || db;
-        const result = await client.insert(menuItemModifierGroupsTable).values(inputs).returning();
+        const result = await client
+            .insert(menuItemModifierGroupsTable)
+            .values(inputs)
+            .returning();
         return result;
     }
 }
 
-export const menuItemModifierGroupRepository = new MenuItemModifierGroupRepository();
+export const menuItemModifierGroupRepository =
+    new MenuItemModifierGroupRepository();

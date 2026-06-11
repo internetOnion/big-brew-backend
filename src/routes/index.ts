@@ -68,24 +68,12 @@ router.patch(
         settingsController.updateSettings(req, res),
 );
 
-router.use(
-    "/ingredients",
-    ingredientRoutes,
-);
+router.use("/ingredients", ingredientRoutes);
 
-router.use(
-    "/categories",
-    categoryRoutes,
-)
+router.use("/categories", categoryRoutes);
 
-router.use(
-    "/modifier-groups",
-    modifierGroupRoutes,
-)
+router.use("/modifier-groups", modifierGroupRoutes);
 
-router.use(
-    "/menu-items",
-    MenuItemRoutes,
-)
+router.use("/menu-items", MenuItemRoutes);
 
 export default router;

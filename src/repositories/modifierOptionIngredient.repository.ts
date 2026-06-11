@@ -6,12 +6,16 @@ import { baseModifierOptionIngredientSchema } from "../models/schema/modifier-op
 import { insertModifierOptionIngredientValidationSchema } from "../routes/menuItem.ts";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
-export type ModifierOptionIngredient = z.infer<typeof baseModifierOptionIngredientSchema>;
-export type InsertModifierOptionIngredient = z.infer<typeof insertModifierOptionIngredientValidationSchema>;
-export type UpdateModifierOptionIngredient = Partial<InsertModifierOptionIngredient>;
+export type ModifierOptionIngredient = z.infer<
+    typeof baseModifierOptionIngredientSchema
+>;
+export type InsertModifierOptionIngredient = z.infer<
+    typeof insertModifierOptionIngredientValidationSchema
+>;
+export type UpdateModifierOptionIngredient =
+    Partial<InsertModifierOptionIngredient>;
 
 export class ModifierOptionIngredientRepository {
-
     async findById(id: string): Promise<ModifierOptionIngredient | null> {
         const result = await db.query.modifierOptionIngredientsTable.findFirst({
             where: eq(modifierOptionIngredientsTable.id, id),
@@ -19,28 +23,55 @@ export class ModifierOptionIngredientRepository {
         return result || null;
     }
 
-    async findByModifierOptionIdAndIngredientId(modifierOptionId: string, ingredientId: string): Promise<ModifierOptionIngredient | null> {
+    async findByModifierOptionIdAndIngredientId(
+        modifierOptionId: string,
+        ingredientId: string,
+    ): Promise<ModifierOptionIngredient | null> {
         const result = await db.query.modifierOptionIngredientsTable.findFirst({
-            where: eq(modifierOptionIngredientsTable.modifierOptionId, modifierOptionId) && eq(modifierOptionIngredientsTable.ingredientId, ingredientId),
+            where:
+                eq(
+                    modifierOptionIngredientsTable.modifierOptionId,
+                    modifierOptionId,
+                ) &&
+                eq(modifierOptionIngredientsTable.ingredientId, ingredientId),
         });
         return result || null;
     }
 
-    async insert(input: InsertModifierOptionIngredient): Promise<ModifierOptionIngredient> {
-        const result = await db.insert(modifierOptionIngredientsTable).values(input).returning();
+    async insert(
+        input: InsertModifierOptionIngredient,
+    ): Promise<ModifierOptionIngredient> {
+        const result = await db
+            .insert(modifierOptionIngredientsTable)
+            .values(input)
+            .returning();
         return result[0];
     }
 
-    async insertMany(inputs: InsertModifierOptionIngredient[], tx? : PgTransaction<any, any, any>): Promise<ModifierOptionIngredient[]> {
+    async insertMany(
+        inputs: InsertModifierOptionIngredient[],
+        tx?: PgTransaction<any, any, any>,
+    ): Promise<ModifierOptionIngredient[]> {
         const client = tx || db;
-        const result = await client.insert(modifierOptionIngredientsTable).values(inputs).returning();
+        const result = await client
+            .insert(modifierOptionIngredientsTable)
+            .values(inputs)
+            .returning();
         return result;
     }
 
-    async update(id: string, input: UpdateModifierOptionIngredient): Promise<ModifierOptionIngredient> {
-        const result = await db.update(modifierOptionIngredientsTable).set(input).where(eq(modifierOptionIngredientsTable.id, id)).returning();
+    async update(
+        id: string,
+        input: UpdateModifierOptionIngredient,
+    ): Promise<ModifierOptionIngredient> {
+        const result = await db
+            .update(modifierOptionIngredientsTable)
+            .set(input)
+            .where(eq(modifierOptionIngredientsTable.id, id))
+            .returning();
         return result[0];
     }
 }
 
-export const modifierOptionIngredientRepository = new ModifierOptionIngredientRepository();
+export const modifierOptionIngredientRepository =
+    new ModifierOptionIngredientRepository();

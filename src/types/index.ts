@@ -1,4 +1,7 @@
-import type { employeeRoleEnum, ingredientUnitEnum } from "../models/schema/enums.ts";
+import type {
+    employeeRoleEnum,
+    ingredientUnitEnum,
+} from "../models/schema/enums.ts";
 
 export type EmployeeRole = (typeof employeeRoleEnum.enumValues)[number];
 export type IngredientUnit = (typeof ingredientUnitEnum.enumValues)[number];

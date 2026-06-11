@@ -1,7 +1,9 @@
-import { itemRecipeRepository, type ItemRecipe } from "../repositories/itemRecipe.repository.ts";
+import {
+    itemRecipeRepository,
+    type ItemRecipe,
+} from "../repositories/itemRecipe.repository.ts";
 import type { InsertItemRecipe } from "../repositories/itemRecipe.repository.ts";
 import { AppError } from "../utils/AppError.ts";
-
 
 export class ItemRecipeService {
     async addItemRecipe(itemRecipe: InsertItemRecipe): Promise<ItemRecipe> {

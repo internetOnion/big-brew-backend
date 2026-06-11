@@ -1,8 +1,25 @@
-import { modifierGroupRepository, modifierOptionRepository, modifierOptionIngredientRepository } from "../repositories/index.ts";
-import type { InsertModifierGroup, UpdateModifierGroup, InsertModifierOption, UpdateModifierOption, InsertModifierOptionIngredient, UpdateModifierOptionIngredient } from "../repositories/index.ts";
+import {
+    modifierGroupRepository,
+    modifierOptionRepository,
+    modifierOptionIngredientRepository,
+} from "../repositories/index.ts";
+import type {
+    InsertModifierGroup,
+    UpdateModifierGroup,
+    InsertModifierOption,
+    UpdateModifierOption,
+    InsertModifierOptionIngredient,
+    UpdateModifierOptionIngredient,
+} from "../repositories/index.ts";
 import { AppError } from "../utils/AppError.ts";
-import { formatModifierGroup, type ModifierGroupResponse } from "../utils/formatModifierGroup.ts";
-import { formatModifierOption, type ModifierOptionResponse } from "../utils/formatModifierOption.ts";
+import {
+    formatModifierGroup,
+    type ModifierGroupResponse,
+} from "../utils/formatModifierGroup.ts";
+import {
+    formatModifierOption,
+    type ModifierOptionResponse,
+} from "../utils/formatModifierOption.ts";
 
 export class ModifierGroupService {
     async getModifierGroups(): Promise<ModifierGroupResponse[]> {
@@ -15,22 +32,32 @@ export class ModifierGroupService {
         }
     }
 
-    async addModifierGroup(input: InsertModifierGroup): Promise<ModifierGroupResponse> {
+    async addModifierGroup(
+        input: InsertModifierGroup,
+    ): Promise<ModifierGroupResponse> {
         try {
-            const newModifierGroup = await modifierGroupRepository.insert(input);
+            const newModifierGroup =
+                await modifierGroupRepository.insert(input);
             return formatModifierGroup(newModifierGroup);
         } catch (error) {
             throw AppError.internal("Failed to add modifier group");
         }
     }
 
-    async updateModifierGroup(id: string, input: UpdateModifierGroup): Promise<ModifierGroupResponse> {
+    async updateModifierGroup(
+        id: string,
+        input: UpdateModifierGroup,
+    ): Promise<ModifierGroupResponse> {
         try {
-            const existingModifierGroup = await modifierGroupRepository.findById(id);
+            const existingModifierGroup =
+                await modifierGroupRepository.findById(id);
             if (!existingModifierGroup) {
                 throw AppError.notFound("Modifier group not found");
             }
-            const updatedModifierGroup = await modifierGroupRepository.update(id, input);
+            const updatedModifierGroup = await modifierGroupRepository.update(
+                id,
+                input,
+            );
             return formatModifierGroup(updatedModifierGroup);
         } catch (error) {
             if (error instanceof AppError) {
@@ -42,7 +69,8 @@ export class ModifierGroupService {
 
     async deleteModifierGroup(id: string): Promise<void> {
         try {
-            const existingModifierGroup = await modifierGroupRepository.findById(id);
+            const existingModifierGroup =
+                await modifierGroupRepository.findById(id);
             if (!existingModifierGroup) {
                 throw AppError.notFound("Modifier group not found");
             }
@@ -54,9 +82,14 @@ export class ModifierGroupService {
 }
 
 export class ModifierOptionService {
-    async getModifierOptionsByGroupId(modifierGroupId: string): Promise<ModifierOptionResponse[]> {
+    async getModifierOptionsByGroupId(
+        modifierGroupId: string,
+    ): Promise<ModifierOptionResponse[]> {
         try {
-            const modifierOptions = await modifierOptionRepository.findByModifierGroupId(modifierGroupId);
+            const modifierOptions =
+                await modifierOptionRepository.findByModifierGroupId(
+                    modifierGroupId,
+                );
             modifierOptions.sort((a, b) => a.sortOrder - b.sortOrder);
             return modifierOptions.map(formatModifierOption);
         } catch (error) {
@@ -64,22 +97,32 @@ export class ModifierOptionService {
         }
     }
 
-    async addModifierOption(input: InsertModifierOption): Promise<ModifierOptionResponse> {
+    async addModifierOption(
+        input: InsertModifierOption,
+    ): Promise<ModifierOptionResponse> {
         try {
-            const newModifierOption = await modifierOptionRepository.insert(input);
+            const newModifierOption =
+                await modifierOptionRepository.insert(input);
             return formatModifierOption(newModifierOption);
         } catch (error) {
             throw AppError.internal("Failed to add modifier option");
         }
     }
 
-    async updateModifierOption(id: string, input: UpdateModifierOption): Promise<ModifierOptionResponse> {
+    async updateModifierOption(
+        id: string,
+        input: UpdateModifierOption,
+    ): Promise<ModifierOptionResponse> {
         try {
-            const existingModifierOption = await modifierOptionRepository.findById(id);
+            const existingModifierOption =
+                await modifierOptionRepository.findById(id);
             if (!existingModifierOption) {
                 throw AppError.notFound("Modifier option not found");
             }
-            const updatedModifierOption = await modifierOptionRepository.update(id, input);
+            const updatedModifierOption = await modifierOptionRepository.update(
+                id,
+                input,
+            );
             return formatModifierOption(updatedModifierOption);
         } catch (error) {
             if (error instanceof AppError) {
@@ -91,7 +134,8 @@ export class ModifierOptionService {
 
     async deleteModifierOption(id: string): Promise<void> {
         try {
-            const existingModifierOption = await modifierOptionRepository.findById(id);
+            const existingModifierOption =
+                await modifierOptionRepository.findById(id);
             if (!existingModifierOption) {
                 throw AppError.notFound("Modifier option not found");
             }
@@ -105,36 +149,45 @@ export class ModifierOptionService {
 export class ModifierOptionIngredientService {
     async addModifierOptionIngredient(input: InsertModifierOptionIngredient) {
         try {
-            const newModifierOptionIngredient = await modifierOptionIngredientRepository.insert(input);
+            const newModifierOptionIngredient =
+                await modifierOptionIngredientRepository.insert(input);
             return newModifierOptionIngredient;
         } catch (error) {
             throw AppError.internal("Failed to add modifier option ingredient");
-        }   
+        }
     }
 
-    async updateModifierOptionIngredient(id: string, input: UpdateModifierOptionIngredient) {
+    async updateModifierOptionIngredient(
+        id: string,
+        input: UpdateModifierOptionIngredient,
+    ) {
         try {
-            const existingModifierOptionIngredient = await modifierOptionIngredientRepository.findById(id);
+            const existingModifierOptionIngredient =
+                await modifierOptionIngredientRepository.findById(id);
             if (!existingModifierOptionIngredient) {
                 throw AppError.notFound("Modifier option ingredient not found");
-            }   
+            }
         } catch (error) {
             if (error instanceof AppError) {
                 throw error;
             }
-            throw AppError.internal("Failed to update modifier option ingredient");
+            throw AppError.internal(
+                "Failed to update modifier option ingredient",
+            );
         }
         try {
-            const updatedModifierOptionIngredient = await modifierOptionIngredientRepository.update(id, input);
+            const updatedModifierOptionIngredient =
+                await modifierOptionIngredientRepository.update(id, input);
             return updatedModifierOptionIngredient;
         } catch (error) {
-            throw AppError.internal("Failed to update modifier option ingredient");
+            throw AppError.internal(
+                "Failed to update modifier option ingredient",
+            );
         }
     }
 }
 
-
-
 export const modifierGroupService = new ModifierGroupService();
 export const modifierOptionService = new ModifierOptionService();
-export const modifierOptionIngredientService = new ModifierOptionIngredientService();
+export const modifierOptionIngredientService =
+    new ModifierOptionIngredientService();

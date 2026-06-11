@@ -20,9 +20,17 @@ export const menuItemModifierGroupsTable = pgTable(
     (t) => [unique().on(t.menuItemId, t.modifierGroupId)],
 );
 
-export const baseMenuItemModifierGroupSchema = createInsertSchema(menuItemModifierGroupsTable, {
-    id: (schema) => schema.nonempty("ID is required"),
-    menuItemId: (schema) => schema.nonempty("Menu item ID is required"),
-    modifierGroupId: (schema) => schema.nonempty("Modifier group ID is required"),
-    sortOrder: (schema) => schema.int().min(0, "Sort order must be a non-negative integer").default(0),
-});
+export const baseMenuItemModifierGroupSchema = createInsertSchema(
+    menuItemModifierGroupsTable,
+    {
+        id: (schema) => schema.nonempty("ID is required"),
+        menuItemId: (schema) => schema.nonempty("Menu item ID is required"),
+        modifierGroupId: (schema) =>
+            schema.nonempty("Modifier group ID is required"),
+        sortOrder: (schema) =>
+            schema
+                .int()
+                .min(0, "Sort order must be a non-negative integer")
+                .default(0),
+    },
+);

@@ -28,5 +28,9 @@ export const baseModifierGroupSchema = createInsertSchema(modifierGroupsTable, {
     selectionType: selectionTypeEnumSchema,
     isRequired: (schema) => schema,
     defaultOptionId: (schema) => schema.nullable(),
-    sortOrder: (schema) => schema.int().min(0, "Sort order must be a non-negative integer").default(0),
-})
+    sortOrder: (schema) =>
+        schema
+            .int()
+            .min(0, "Sort order must be a non-negative integer")
+            .default(0),
+});
