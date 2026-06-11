@@ -10,6 +10,9 @@ export type ModifierGroup = z.infer<typeof baseModifierGroupSchema>;
 export type InsertModifierGroup = z.infer<
     typeof insertModifierGroupValidationSchema
 >;
+export type InsertModifierGroup = z.infer<
+    typeof insertModifierGroupValidationSchema
+>;
 export type UpdateModifierGroup = Partial<InsertModifierGroup>;
 
 export class ModifierGroupRepository {
@@ -46,6 +49,15 @@ export class ModifierGroupRepository {
             .set(input)
             .where(eq(modifierGroupsTable.id, id))
             .returning();
+    async update(
+        id: string,
+        input: UpdateModifierGroup,
+    ): Promise<ModifierGroup> {
+        const result = await db
+            .update(modifierGroupsTable)
+            .set(input)
+            .where(eq(modifierGroupsTable.id, id))
+            .returning();
         return result[0];
     }
 
@@ -53,7 +65,11 @@ export class ModifierGroupRepository {
         await db
             .delete(modifierGroupsTable)
             .where(eq(modifierGroupsTable.id, id));
+        await db
+            .delete(modifierGroupsTable)
+            .where(eq(modifierGroupsTable.id, id));
     }
 }
 
 export const modifierGroupRepository = new ModifierGroupRepository();
+

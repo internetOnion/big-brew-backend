@@ -57,6 +57,11 @@ export class CategoryRepository {
             .set(input)
             .where(eq(categoriesTable.id, id))
             .returning();
+        const result = await db
+            .update(categoriesTable)
+            .set(input)
+            .where(eq(categoriesTable.id, id))
+            .returning();
         return result[0];
     }
 
@@ -66,3 +71,4 @@ export class CategoryRepository {
 }
 
 export const categoryRepository = new CategoryRepository();
+

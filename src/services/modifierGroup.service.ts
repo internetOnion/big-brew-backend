@@ -35,6 +35,9 @@ export class ModifierGroupService {
     async addModifierGroup(
         input: InsertModifierGroup,
     ): Promise<ModifierGroupResponse> {
+    async addModifierGroup(
+        input: InsertModifierGroup,
+    ): Promise<ModifierGroupResponse> {
         try {
             const newModifierGroup =
                 await modifierGroupRepository.insert(input);
@@ -48,12 +51,22 @@ export class ModifierGroupService {
         id: string,
         input: UpdateModifierGroup,
     ): Promise<ModifierGroupResponse> {
+    async updateModifierGroup(
+        id: string,
+        input: UpdateModifierGroup,
+    ): Promise<ModifierGroupResponse> {
         try {
+            const existingModifierGroup =
+                await modifierGroupRepository.findById(id);
             const existingModifierGroup =
                 await modifierGroupRepository.findById(id);
             if (!existingModifierGroup) {
                 throw AppError.notFound("Modifier group not found");
             }
+            const updatedModifierGroup = await modifierGroupRepository.update(
+                id,
+                input,
+            );
             const updatedModifierGroup = await modifierGroupRepository.update(
                 id,
                 input,
@@ -69,6 +82,8 @@ export class ModifierGroupService {
 
     async deleteModifierGroup(id: string): Promise<void> {
         try {
+            const existingModifierGroup =
+                await modifierGroupRepository.findById(id);
             const existingModifierGroup =
                 await modifierGroupRepository.findById(id);
             if (!existingModifierGroup) {

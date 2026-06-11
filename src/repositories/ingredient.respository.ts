@@ -16,6 +16,10 @@ export type InsertIngredient = Omit<
     Ingredient,
     "id" | "createdAt" | "updatedAt"
 >;
+export type InsertIngredient = Omit<
+    Ingredient,
+    "id" | "createdAt" | "updatedAt"
+>;
 export type UpdateIngredient = Partial<InsertIngredient>;
 
 export class IngredientRepository {
@@ -36,10 +40,19 @@ export class IngredientRepository {
             .insert(ingredientsTable)
             .values(input)
             .returning();
+        const result = await db
+            .insert(ingredientsTable)
+            .values(input)
+            .returning();
         return result[0];
     }
 
     async update(id: string, input: UpdateIngredient): Promise<Ingredient> {
+        const result = await db
+            .update(ingredientsTable)
+            .set(input)
+            .where(eq(ingredientsTable.id, id))
+            .returning();
         const result = await db
             .update(ingredientsTable)
             .set(input)
@@ -54,3 +67,4 @@ export class IngredientRepository {
 }
 
 export const ingredientRepository = new IngredientRepository();
+

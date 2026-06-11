@@ -17,6 +17,7 @@ export class IngredientService {
             const ingredients = await ingredientRepository.findAll();
             return ingredients.map(formatIngredient);
         } catch (error) {
+        } catch (error) {
             throw AppError.internal("Failed to fetch ingredients");
         }
     }
@@ -34,12 +35,20 @@ export class IngredientService {
         id: string,
         input: UpdateIngredient,
     ): Promise<IngredientResponse> {
+    async updateIngredient(
+        id: string,
+        input: UpdateIngredient,
+    ): Promise<IngredientResponse> {
         try {
             const existingIngredient = await ingredientRepository.findById(id);
             if (!existingIngredient) {
                 throw AppError.notFound("Ingredient not found");
             }
 
+            const updatedIngredient = await ingredientRepository.update(
+                id,
+                input,
+            );
             const updatedIngredient = await ingredientRepository.update(
                 id,
                 input,
@@ -67,3 +76,4 @@ export class IngredientService {
 }
 
 export const ingredientService = new IngredientService();
+
