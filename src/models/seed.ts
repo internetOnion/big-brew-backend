@@ -222,12 +222,44 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
+    console.log("  Menu Items...");
+    await db
+        .insert(menuItemsTable)
+        .values([
+            {
+                id: "50000000-0000-0000-0000-000000000001",
+                categoryId: "10000000-0000-0000-0000-000000000001",
+                name: "Latte",
+                basePrice: "3.50",
+            },
+            {
+                id: "50000000-0000-0000-0000-000000000002",
+                categoryId: "10000000-0000-0000-0000-000000000001",
+                name: "Iced Latte",
+                basePrice: "4.00",
+            },
+            {
+                id: "50000000-0000-0000-0000-000000000003",
+                categoryId: "10000000-0000-0000-0000-000000000002",
+                name: "Green Tea",
+                basePrice: "3.00",
+            },
+            {
+                id: "50000000-0000-0000-0000-000000000004",
+                categoryId: "10000000-0000-0000-0000-000000000003",
+                name: "Croissant",
+                basePrice: "3.00",
+            },
+        ])
+        .onConflictDoNothing();
+
     console.log("  Modifier Groups...");
     await db
         .insert(modifierGroupsTable)
         .values([
             {
                 id: "30000000-0000-0000-0000-000000000001",
+                menuItemId: "50000000-0000-0000-0000-000000000001",
                 name: "Cup Size",
                 selectionType: "single",
                 isRequired: true,
@@ -235,6 +267,7 @@ export const seed = async () => {
             },
             {
                 id: "30000000-0000-0000-0000-000000000002",
+                menuItemId: "50000000-0000-0000-0000-000000000001",
                 name: "Sugar Level",
                 selectionType: "single",
                 isRequired: true,
@@ -242,6 +275,7 @@ export const seed = async () => {
             },
             {
                 id: "30000000-0000-0000-0000-000000000003",
+                menuItemId: "50000000-0000-0000-0000-000000000001",
                 name: "Milk Type",
                 selectionType: "single",
                 isRequired: true,
@@ -249,6 +283,7 @@ export const seed = async () => {
             },
             {
                 id: "30000000-0000-0000-0000-000000000004",
+                menuItemId: "50000000-0000-0000-0000-000000000002",
                 name: "Toppings",
                 selectionType: "multiple",
                 isRequired: false,
@@ -377,38 +412,6 @@ export const seed = async () => {
         .where(
             eq(modifierGroupsTable.id, "30000000-0000-0000-0000-000000000003"),
         );
-
-    console.log("  Menu Items...");
-    await db
-        .insert(menuItemsTable)
-        .values([
-            {
-                id: "50000000-0000-0000-0000-000000000001",
-                categoryId: "10000000-0000-0000-0000-000000000001",
-                name: "Latte",
-                basePrice: "3.50",
-            },
-            {
-                id: "50000000-0000-0000-0000-000000000002",
-                categoryId: "10000000-0000-0000-0000-000000000001",
-                name: "Iced Latte",
-                basePrice: "4.00",
-            },
-            {
-                id: "50000000-0000-0000-0000-000000000003",
-                categoryId: "10000000-0000-0000-0000-000000000002",
-                name: "Green Tea",
-                basePrice: "3.00",
-            },
-            {
-                id: "50000000-0000-0000-0000-000000000004",
-                categoryId: "10000000-0000-0000-0000-000000000003",
-                name: "Croissant",
-                basePrice: "3.00",
-            },
-        ])
-        .onConflictDoNothing();
-
     console.log("  Modifier Option Ingredients...");
     await db
         .insert(modifierOptionIngredientsTable)

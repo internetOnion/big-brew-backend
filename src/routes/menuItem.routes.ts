@@ -3,6 +3,7 @@ import { baseModifierOptionIngredientSchema } from "../models/schema/modifier-op
 import { baseItemRecipeSchema } from "../models/schema/item-recipes.ts";
 import { baseMenuItemSchema } from "../models/schema/menu-items.ts";
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import type { Request, Response } from "express";
 import { menuItemController } from "../controllers/menuItem.controller.ts";
@@ -12,6 +13,8 @@ import {
     validateBody,
     validateParams,
 } from "../middlewares/index.ts";
+import { AppError } from "../utils/AppError.ts";
+import { config } from "../config/index.ts";
 
 export const insertModifierOptionValidationSchema = baseModifierOptionSchema
     .pick({
@@ -258,6 +261,133 @@ router.delete(
     validateParams(idParamsSchema),
     async (req: Request, res: Response) => {
         await menuItemController.deleteMenuItem(req, res);
+    },
+);
+
+// ── Image upload ────────────────────────────────────────────
+
+const imageUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: config.storageMaxFileSize },
+    fileFilter: (_req, file, cb) => {
+        const allowed = /^image\/(jpeg|png|gif|webp|svg\+xml|bmp|tiff)$/i;
+        if (allowed.test(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(
+                AppError.badRequest(
+                    "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, SVG, BMP, TIFF",
+                ),
+            );
+        }
+    },
+});
+
+/**
+ * @openapi
+ * /api/menu-items/{id}/image:
+ *   put:
+ *     tags: [Menu Items]
+ *     summary: Upload or replace a menu item image
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                     imagePath:
+ *                       type: string
+ *       400:
+ *         description: Invalid file type or size
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Error"
+ *       401:
+ *         $ref: "#/components/responses/Unauthorized"
+ *       403:
+ *         $ref: "#/components/responses/Forbidden"
+ *       404:
+ *         description: Menu item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Error"
+ */
+router.put(
+    "/:id/image",
+    authenticate,
+    requireRole("manager", "owner"),
+    validateParams(idParamsSchema),
+    imageUpload.single("file"),
+    async (req: Request, res: Response) => {
+        await menuItemController.uploadImage(req, res);
+    },
+);
+
+/**
+ * @openapi
+ * /api/menu-items/{id}/image:
+ *   delete:
+ *     tags: [Menu Items]
+ *     summary: Remove a menu item image
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Image deleted
+ *       401:
+ *         $ref: "#/components/responses/Unauthorized"
+ *       403:
+ *         $ref: "#/components/responses/Forbidden"
+ *       404:
+ *         description: Menu item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Error"
+ */
+router.delete(
+    "/:id/image",
+    authenticate,
+    requireRole("manager", "owner"),
+    validateParams(idParamsSchema),
+    async (req: Request, res: Response) => {
+        await menuItemController.deleteImage(req, res);
     },
 );
 

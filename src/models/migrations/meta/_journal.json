@@ -29,6 +29,13 @@
       "when": 1781194978735,
       "tag": "0003_elite_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781228072838,
+      "tag": "0004_useful_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

@@ -23,6 +23,7 @@ export const menuItemsTable = pgTable(
         basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
         isAvailable: boolean("is_available").notNull().default(true),
         imageUrl: text("image_url"),
+        imagePath: text("image_path"),
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
@@ -48,4 +49,5 @@ export const baseMenuItemSchema = createInsertSchema(menuItemsTable, {
         schema.min(0, "Base price must be a non-negative number"),
     imageUrl: (schema) =>
         schema.url("Image URL must be a valid URL").optional(),
+    imagePath: (schema) => schema.optional(),
 });

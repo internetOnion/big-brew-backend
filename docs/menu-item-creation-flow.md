@@ -45,6 +45,7 @@ Response: 201
         "basePrice": 0,
         "isAvailable": true,
         "imageUrl": "string | null",
+        "imagePath": "string | null",
         "category": { "id": "uuid", "name": "string" }
     }
 }
@@ -189,6 +190,40 @@ Response: 201
 
 ---
 
+### Image upload
+
+Menu item images are managed through a dedicated sub-resource endpoint. The backend handles Supabase Storage upload and old-file cleanup automatically.
+
+**Upload / replace image:**
+
+```
+PUT /api/menu-items/:id/image
+Content-Type: multipart/form-data
+Body: file (binary, image only, max 5 MB)
+
+Response: 200
+{
+    "data": {
+        "imageUrl": "https://<project>.supabase.co/storage/v1/object/public/assets/uploads/uuid.jpg",
+        "imagePath": "uploads/uuid.jpg"
+    }
+}
+```
+
+The old image (if any) is automatically deleted from Supabase Storage. The `imageUrl` and `imagePath` are stored on the menu item and returned in `GET /api/menu-items`.
+
+**Remove image:**
+
+```
+DELETE /api/menu-items/:id/image
+
+Response: 204
+```
+
+Deletes the file from Supabase Storage and clears both `imageUrl` and `imagePath` on the menu item.
+
+---
+
 ## Complete example: Creating a "Cappuccino"
 
 ```bash
@@ -197,6 +232,12 @@ curl -X POST /api/menu-items \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"name":"Cappuccino","basePrice":3.50,"categoryId":"<category-uuid>"}'
 # → { "data": { "id": "item-1", ... } }
+
+# 1.5. Upload an image for the item
+curl -X PUT /api/menu-items/item-1/image \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@cappuccino.jpg"
+# → { "data": { "imageUrl": "https://...", "imagePath": "uploads/..." } }
 
 # 2. Add base recipe (espresso + milk)
 curl -X POST /api/menu-items/item-1/recipes \
@@ -231,5 +272,6 @@ All sub-resources support full CRUD:
 | `/api/menu-items/:id/modifier-groups`  | ✓          | ✓             | ✓ `/:groupId`      | ✓ `/:groupId`      |
 | `.../modifier-groups/:groupId/options` | ✓          | ✓             | ✓ `/:optionId`     | ✓ `/:optionId`     |
 | `.../options/:optionId/ingredients`    | ✓          | ✓             | ✓ `/:ingredientId` | ✓ `/:ingredientId` |
+| `/api/menu-items/:id/image`            | —          | ✓ (PUT)       | —                  | ✓                  |
 
 The main menu item itself can be updated with `PUT /api/menu-items/:id` (scalar fields only) and soft-deleted with `DELETE /api/menu-items/:id` (sets `deletedAt`).

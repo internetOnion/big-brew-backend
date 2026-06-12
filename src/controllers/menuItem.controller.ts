@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { menuItemService } from "../services/menuItem.service";
+import { AppError } from "../utils/AppError.ts";
 
 export class MenuItemController {
     async getMenuItems(req: Request, res: Response) {
@@ -24,6 +25,22 @@ export class MenuItemController {
     async deleteMenuItem(req: Request, res: Response) {
         const id = req.params.id as string;
         await menuItemService.deleteMenuItem(id);
+        return res.status(204).send();
+    }
+
+    async uploadImage(req: Request, res: Response) {
+        if (!req.file) {
+            throw AppError.badRequest("No file provided");
+        }
+
+        const id = req.params.id as string;
+        const result = await menuItemService.updateImage(id, req.file);
+        return res.json({ data: result });
+    }
+
+    async deleteImage(req: Request, res: Response) {
+        const id = req.params.id as string;
+        await menuItemService.deleteImage(id);
         return res.status(204).send();
     }
 }

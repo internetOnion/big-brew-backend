@@ -201,6 +201,10 @@ const options: swaggerJsdoc.Options = {
                             format: "uri",
                             nullable: true,
                         },
+                        imagePath: {
+                            type: "string",
+                            nullable: true,
+                        },
                         category: {
                             type: "object",
                             properties: {
@@ -208,6 +212,18 @@ const options: swaggerJsdoc.Options = {
                                 name: { type: "string" },
                             },
                             required: ["id", "name"],
+                        },
+                        modifierGroups: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/ModifierGroupWithOptions",
+                            },
+                        },
+                        recipes: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/ItemRecipeWithIngredient",
+                            },
                         },
                     },
                     required: [
@@ -217,7 +233,108 @@ const options: swaggerJsdoc.Options = {
                         "isAvailable",
                         "imageUrl",
                         "category",
+                        "modifierGroups",
+                        "recipes",
                     ],
+                },
+                ModifierGroupWithOptions: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        selectionType: {
+                            type: "string",
+                            enum: ["single", "multiple"],
+                        },
+                        isRequired: { type: "boolean" },
+                        sortOrder: { type: "integer", minimum: 0 },
+                        options: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/ModifierOptionWithIngredients",
+                            },
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "selectionType",
+                        "isRequired",
+                        "sortOrder",
+                        "options",
+                    ],
+                },
+                ModifierOptionWithIngredients: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        price: { type: "number" },
+                        isAvailable: { type: "boolean" },
+                        sortOrder: { type: "integer", minimum: 0 },
+                        ingredients: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/OptionIngredientWithIngredient",
+                            },
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "price",
+                        "isAvailable",
+                        "sortOrder",
+                        "ingredients",
+                    ],
+                },
+                OptionIngredientWithIngredient: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        ingredientId: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        quantity: { type: "number" },
+                        ingredient: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string", format: "uuid" },
+                                name: { type: "string" },
+                                unit: {
+                                    type: "string",
+                                    enum: ["g", "ml"],
+                                },
+                            },
+                            required: ["id", "name", "unit"],
+                        },
+                    },
+                    required: ["id", "ingredientId", "quantity", "ingredient"],
+                },
+                ItemRecipeWithIngredient: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        ingredientId: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        quantity: { type: "number" },
+                        ingredient: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string", format: "uuid" },
+                                name: { type: "string" },
+                                unit: {
+                                    type: "string",
+                                    enum: ["g", "ml"],
+                                },
+                            },
+                            required: ["id", "name", "unit"],
+                        },
+                    },
+                    required: ["id", "ingredientId", "quantity", "ingredient"],
                 },
                 LoginResponse: {
                     type: "object",
