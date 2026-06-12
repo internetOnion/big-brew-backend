@@ -2,6 +2,7 @@ import { baseModifierOptionSchema } from "../models/schema/modifier-options.ts";
 import { baseModifierOptionIngredientSchema } from "../models/schema/modifier-option-ingredients.ts";
 import { baseItemRecipeSchema } from "../models/schema/item-recipes.ts";
 import { baseMenuItemSchema } from "../models/schema/menu-items.ts";
+import { selectionTypeEnumSchema } from "../models/schema/enums.ts";
 import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
@@ -61,6 +62,66 @@ export const updateMenuItemValidationSchema = insertMenuItemValidationSchema
     .partial()
     .strict();
 
+export const insertMenuItemBatchSchema = z
+    .object({
+        name: z.string().min(1),
+        basePrice: z.number().min(0),
+        categoryId: z.uuid(),
+        isAvailable: z.boolean().optional(),
+        imageUrl: z.url().optional().nullable(),
+        recipes: z
+            .array(
+                z
+                    .object({
+                        ingredientId: z.uuid(),
+                        quantity: z.number().min(0.01),
+                    })
+                    .strict(),
+            )
+            .optional(),
+        modifierGroups: z
+            .array(
+                z
+                    .object({
+                        name: z.string().min(1),
+                        selectionType: selectionTypeEnumSchema,
+                        isRequired: z.boolean(),
+                        sortOrder: z.number().int().min(0).optional(),
+                        options: z
+                            .array(
+                                z
+                                    .object({
+                                        name: z.string().min(1),
+                                        price: z.number().min(0),
+                                        isAvailable: z.boolean().optional(),
+                                        sortOrder: z
+                                            .number()
+                                            .int()
+                                            .min(0)
+                                            .optional(),
+                                        ingredients: z
+                                            .array(
+                                                z
+                                                    .object({
+                                                        ingredientId: z.uuid(),
+                                                        quantity: z
+                                                            .number()
+                                                            .min(0.01),
+                                                    })
+                                                    .strict(),
+                                            )
+                                            .optional(),
+                                    })
+                                    .strict(),
+                            )
+                            .optional(),
+                    })
+                    .strict(),
+            )
+            .optional(),
+    })
+    .strict();
+
 const router = Router();
 
 const idParamsSchema = z.object({ id: z.uuid() });
@@ -84,7 +145,7 @@ const idParamsSchema = z.object({ id: z.uuid() });
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: "#/components/schemas/MenuItem"
+ *                     $ref: "#/components/schemas/MenuItemBasic"
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  */
@@ -97,7 +158,7 @@ router.get("/", authenticate, async (req: Request, res: Response) => {
  * /api/menu-items:
  *   post:
  *     tags: [Menu Items]
- *     summary: Create a new menu item (basic info only)
+ *     summary: Create a new menu item (optionally with recipes, modifier groups, options, and ingredients in a single atomic transaction)
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -121,9 +182,65 @@ router.get("/", authenticate, async (req: Request, res: Response) => {
  *               categoryId:
  *                 type: string
  *                 format: uuid
+ *               recipes:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [ingredientId, quantity]
+ *                   properties:
+ *                     ingredientId:
+ *                       type: string
+ *                       format: uuid
+ *                     quantity:
+ *                       type: number
+ *                       minimum: 0.01
+ *               modifierGroups:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [name, selectionType, isRequired]
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     selectionType:
+ *                       type: string
+ *                       enum: [single, multiple]
+ *                     isRequired:
+ *                       type: boolean
+ *                     sortOrder:
+ *                       type: integer
+ *                       minimum: 0
+ *                     options:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         required: [name, price]
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                             minimum: 0
+ *                           isAvailable:
+ *                             type: boolean
+ *                           sortOrder:
+ *                             type: integer
+ *                             minimum: 0
+ *                           ingredients:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               required: [ingredientId, quantity]
+ *                               properties:
+ *                                 ingredientId:
+ *                                   type: string
+ *                                   format: uuid
+ *                                 quantity:
+ *                                   type: number
+ *                                   minimum: 0.01
  *     responses:
  *       201:
- *         description: Menu item created
+ *         description: Menu item created (full response when nested data provided; basic otherwise)
  *         content:
  *           application/json:
  *             schema:
@@ -132,7 +249,7 @@ router.get("/", authenticate, async (req: Request, res: Response) => {
  *                 data:
  *                   $ref: "#/components/schemas/MenuItem"
  *       400:
- *         description: Validation error or invalid category
+ *         description: Validation error, invalid category, or ingredient not found
  *         content:
  *           application/json:
  *             schema:
@@ -146,9 +263,52 @@ router.post(
     "/",
     authenticate,
     requireRole("manager", "owner"),
-    validateBody(insertMenuItemValidationSchema),
+    validateBody(insertMenuItemBatchSchema),
     async (req: Request, res: Response) => {
         await menuItemController.addMenuItem(req, res);
+    },
+);
+
+/**
+ * @openapi
+ * /api/menu-items/{id}:
+ *   get:
+ *     tags: [Menu Items]
+ *     summary: Get a single menu item with full details
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Menu item with modifier groups, options, ingredients, and recipes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: "#/components/schemas/MenuItem"
+ *       401:
+ *         $ref: "#/components/responses/Unauthorized"
+ *       404:
+ *         description: Menu item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Error"
+ */
+router.get(
+    "/:id",
+    authenticate,
+    validateParams(idParamsSchema),
+    async (req: Request, res: Response) => {
+        await menuItemController.getMenuItem(req, res);
     },
 );
 

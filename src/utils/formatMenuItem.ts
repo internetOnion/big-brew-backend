@@ -28,7 +28,6 @@ export type MenuItemResponse = {
             sortOrder: number | null;
             ingredients: {
                 id: string;
-                ingredientId: string;
                 quantity: string;
                 ingredient: {
                     id: string;
@@ -40,7 +39,6 @@ export type MenuItemResponse = {
     }[];
     recipes: {
         id: string;
-        ingredientId: string;
         quantity: string;
         ingredient: {
             id: string;
@@ -53,12 +51,12 @@ export type MenuItemResponse = {
 export const formatMenuItem = (
     item: MenuItemWithRelations,
 ): MenuItemResponse => ({
-    id: item.menu_items.id!,
-    name: item.menu_items.name!,
-    basePrice: item.menu_items.basePrice!,
-    isAvailable: item.menu_items.isAvailable ?? null,
-    imageUrl: item.menu_items.imageUrl ?? null,
-    imagePath: item.menu_items.imagePath ?? null,
+    id: item.menuItems.id!,
+    name: item.menuItems.name!,
+    basePrice: item.menuItems.basePrice!,
+    isAvailable: item.menuItems.isAvailable ?? null,
+    imageUrl: item.menuItems.imageUrl ?? null,
+    imagePath: item.menuItems.imagePath ?? null,
     category: {
         id: item.categories.id!,
         name: item.categories.name!,
@@ -77,7 +75,6 @@ export const formatMenuItem = (
             sortOrder: option.sortOrder ?? null,
             ingredients: option.ingredients.map((moi) => ({
                 id: moi.id!,
-                ingredientId: moi.ingredientId!,
                 quantity: moi.quantity!,
                 ingredient: {
                     id: moi.ingredient.id,
@@ -89,7 +86,6 @@ export const formatMenuItem = (
     })),
     recipes: item.recipes.map((recipe) => ({
         id: recipe.id!,
-        ingredientId: recipe.ingredientId!,
         quantity: recipe.quantity!,
         ingredient: {
             id: recipe.ingredient.id,

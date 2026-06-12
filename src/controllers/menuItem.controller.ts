@@ -8,7 +8,22 @@ export class MenuItemController {
         return res.json({ data: menuItems });
     }
 
+    async getMenuItem(req: Request, res: Response) {
+        const id = req.params.id as string;
+        const menuItem = await menuItemService.getMenuItem(id);
+        return res.json({ data: menuItem });
+    }
+
     async addMenuItem(req: Request, res: Response) {
+        const hasNestedData = req.body.recipes || req.body.modifierGroups;
+
+        if (hasNestedData) {
+            const result = await menuItemService.addMenuItemWithRelations(
+                req.body,
+            );
+            return res.status(201).json({ data: result });
+        }
+
         const newMenuItem = await menuItemService.addMenuItem(req.body);
         return res.status(201).json({ data: newMenuItem });
     }

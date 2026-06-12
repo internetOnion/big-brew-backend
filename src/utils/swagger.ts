@@ -232,9 +232,45 @@ const options: swaggerJsdoc.Options = {
                         "basePrice",
                         "isAvailable",
                         "imageUrl",
+                        "imagePath",
                         "category",
                         "modifierGroups",
                         "recipes",
+                    ],
+                },
+                MenuItemBasic: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        basePrice: { type: "number" },
+                        isAvailable: { type: "boolean" },
+                        imageUrl: {
+                            type: "string",
+                            format: "uri",
+                            nullable: true,
+                        },
+                        imagePath: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        category: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string", format: "uuid" },
+                                name: { type: "string" },
+                            },
+                            required: ["id", "name"],
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "basePrice",
+                        "isAvailable",
+                        "imageUrl",
+                        "imagePath",
+                        "category",
                     ],
                 },
                 ModifierGroupWithOptions: {
@@ -292,10 +328,6 @@ const options: swaggerJsdoc.Options = {
                     type: "object",
                     properties: {
                         id: { type: "string", format: "uuid" },
-                        ingredientId: {
-                            type: "string",
-                            format: "uuid",
-                        },
                         quantity: { type: "number" },
                         ingredient: {
                             type: "object",
@@ -310,16 +342,12 @@ const options: swaggerJsdoc.Options = {
                             required: ["id", "name", "unit"],
                         },
                     },
-                    required: ["id", "ingredientId", "quantity", "ingredient"],
+                    required: ["id", "quantity", "ingredient"],
                 },
                 ItemRecipeWithIngredient: {
                     type: "object",
                     properties: {
                         id: { type: "string", format: "uuid" },
-                        ingredientId: {
-                            type: "string",
-                            format: "uuid",
-                        },
                         quantity: { type: "number" },
                         ingredient: {
                             type: "object",
@@ -334,7 +362,7 @@ const options: swaggerJsdoc.Options = {
                             required: ["id", "name", "unit"],
                         },
                     },
-                    required: ["id", "ingredientId", "quantity", "ingredient"],
+                    required: ["id", "quantity", "ingredient"],
                 },
                 LoginResponse: {
                     type: "object",
