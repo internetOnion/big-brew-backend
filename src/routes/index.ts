@@ -32,6 +32,7 @@ const updateSettingsSchema = z
         taxLabel: z.string().optional(),
         logoUrl: z.string().nullable().optional(),
         qrCodeUrl: z.string().nullable().optional(),
+        khrRate: z.number().int().min(0).nullable().optional(),
     })
     .strict();
 
@@ -103,7 +104,11 @@ router.get("/settings", authenticate, (req: Request, res: Response) =>
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Logo deleted
+ *         description: Logo deleted, returns updated settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Settings"
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:
@@ -147,6 +152,13 @@ router.delete(
  *                 type: string
  *               logoUrl:
  *                 type: string
+ *                 nullable: true
+ *               qrCodeUrl:
+ *                 type: string
+ *                 nullable: true
+ *               khrRate:
+ *                 type: integer
+ *                 minimum: 0
  *                 nullable: true
  *     responses:
  *       200:

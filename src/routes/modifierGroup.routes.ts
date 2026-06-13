@@ -202,7 +202,7 @@ router.put(
  *           type: string
  *           format: uuid
  *     responses:
- *       200:
+ *       204:
  *         description: Modifier group deleted
  *       401:
  *         $ref: "#/components/responses/Unauthorized"

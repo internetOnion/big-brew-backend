@@ -91,11 +91,6 @@ const options: swaggerJsdoc.Options = {
                     type: "object",
                     properties: {
                         id: { type: "string", format: "uuid" },
-                        menuItemId: {
-                            type: "string",
-                            format: "uuid",
-                            nullable: true,
-                        },
                         name: { type: "string" },
                         selectionType: {
                             type: "string",
@@ -111,7 +106,6 @@ const options: swaggerJsdoc.Options = {
                     },
                     required: [
                         "id",
-                        "menuItemId",
                         "name",
                         "selectionType",
                         "isRequired",
@@ -190,6 +184,11 @@ const options: swaggerJsdoc.Options = {
                         },
                         qrCodeUrl: {
                             type: "string",
+                            nullable: true,
+                        },
+                        khrRate: {
+                            type: "integer",
+                            minimum: 0,
                             nullable: true,
                         },
                         createdAt: { type: "string", format: "date-time" },
@@ -382,17 +381,31 @@ const options: swaggerJsdoc.Options = {
                 LoginResponse: {
                     type: "object",
                     properties: {
-                        employee: {
-                            $ref: "#/components/schemas/Employee",
+                        data: {
+                            type: "object",
+                            properties: {
+                                access_token: { type: "string" },
+                                user: {
+                                    $ref: "#/components/schemas/Employee",
+                                },
+                            },
+                            required: ["access_token", "user"],
                         },
-                        accessToken: { type: "string" },
                     },
+                    required: ["data"],
                 },
                 RefreshResponse: {
                     type: "object",
                     properties: {
-                        accessToken: { type: "string" },
+                        data: {
+                            type: "object",
+                            properties: {
+                                access_token: { type: "string" },
+                            },
+                            required: ["access_token"],
+                        },
                     },
+                    required: ["data"],
                 },
                 OrderEmployee: {
                     type: "object",
@@ -410,10 +423,22 @@ const options: swaggerJsdoc.Options = {
                             type: "string",
                             format: "uuid",
                         },
+                        modifierGroupId: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        groupName: { type: "string" },
                         name: { type: "string" },
                         price: { type: "string" },
                     },
-                    required: ["id", "modifierOptionId", "name", "price"],
+                    required: [
+                        "id",
+                        "modifierOptionId",
+                        "modifierGroupId",
+                        "groupName",
+                        "name",
+                        "price",
+                    ],
                 },
                 OrderItem: {
                     type: "object",
@@ -618,6 +643,9 @@ const options: swaggerJsdoc.Options = {
                             type: "number",
                             description: "Required for cash payments",
                         },
+                        notes: {
+                            type: "string",
+                        },
                     },
                 },
                 UpdateOrderStatusRequest: {
@@ -713,10 +741,6 @@ const options: swaggerJsdoc.Options = {
                         status: {
                             type: "string",
                             enum: ["pending", "completed", "refunded"],
-                        },
-                        notes: {
-                            type: "string",
-                            nullable: true,
                         },
                         createdBy: {
                             $ref: "#/components/schemas/OrderEmployee",

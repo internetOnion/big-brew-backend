@@ -12,6 +12,7 @@ export interface Settings {
     taxLabel: string;
     logoUrl: string | null;
     qrCodeUrl: string | null;
+    khrRate: number | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -25,6 +26,7 @@ export interface UpdateSettings {
     taxLabel?: string;
     logoUrl?: string | null;
     qrCodeUrl?: string | null;
+    khrRate?: number | null;
 }
 
 export class SettingsRepository {

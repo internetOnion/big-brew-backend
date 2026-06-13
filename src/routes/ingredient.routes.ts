@@ -186,7 +186,7 @@ router.patch(
  *           type: string
  *           format: uuid
  *     responses:
- *       200:
+ *       204:
  *         description: Ingredient deleted
  *       401:
  *         $ref: "#/components/responses/Unauthorized"

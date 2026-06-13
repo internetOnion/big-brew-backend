@@ -90,7 +90,10 @@ const pinLoginSchema = z
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Employee"
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: "#/components/schemas/Employee"
  *       400:
  *         description: Validation error
  *         content:
@@ -239,7 +242,7 @@ router.post("/refresh", (req: Request, res: Response) =>
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
+ *       204:
  *         description: Logged out successfully
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
@@ -262,7 +265,10 @@ router.post("/logout", authenticate, (req: Request, res: Response) =>
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Employee"
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: "#/components/schemas/Employee"
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  */

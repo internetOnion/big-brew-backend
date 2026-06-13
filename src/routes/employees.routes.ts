@@ -57,7 +57,10 @@ const updateEmployeeSchema = z
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Employee"
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: "#/components/schemas/Employee"
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:
@@ -123,7 +126,10 @@ router.get(
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/Employee"
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: "#/components/schemas/Employee"
  *       400:
  *         description: Validation error
  *         content:
@@ -173,7 +179,7 @@ router.patch(
  *           type: string
  *           format: uuid
  *     responses:
- *       200:
+ *       204:
  *         description: Employee deactivated
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
