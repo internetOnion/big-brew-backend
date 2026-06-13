@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
-import { db } from "./../models/index.ts";
+import { eq, inArray } from "drizzle-orm";
+import { db } from "../models/index.ts";
 import { ingredientsTable } from "../models/schema/index.ts";
 import type { IngredientUnit } from "../types/index.ts";
 
@@ -16,6 +16,7 @@ export type InsertIngredient = Omit<
     Ingredient,
     "id" | "createdAt" | "updatedAt"
 >;
+
 export type UpdateIngredient = Partial<InsertIngredient>;
 
 export class IngredientRepository {
@@ -29,6 +30,14 @@ export class IngredientRepository {
             where: eq(ingredientsTable.id, id),
         });
         return result ?? null;
+    }
+
+    async findByIds(ids: string[]): Promise<Ingredient[]> {
+        if (ids.length === 0) return [];
+        const results = await db.query.ingredientsTable.findMany({
+            where: inArray(ingredientsTable.id, ids),
+        });
+        return results;
     }
 
     async insert(input: InsertIngredient): Promise<Ingredient> {

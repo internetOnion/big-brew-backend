@@ -7,15 +7,24 @@ import {
     authenticate,
     requireRole,
     validateBody,
+    validateParams,
 } from "../middlewares/index.ts";
 
 const router = Router();
 
+const idParamsSchema = z.object({ id: z.uuid() });
+
 export const insertModifierGroupValidationSchema = baseModifierGroupSchema
     .pick({
+        menuItemId: true,
         name: true,
         selectionType: true,
         isRequired: true,
+        defaultOptionId: true,
+        sortOrder: true,
+    })
+    .partial({
+        menuItemId: true,
         defaultOptionId: true,
         sortOrder: true,
     })
@@ -170,6 +179,7 @@ router.put(
     "/:id",
     authenticate,
     requireRole("manager", "owner"),
+    validateParams(idParamsSchema),
     validateBody(insertModifierGroupValidationSchema.partial()),
     async (req: Request, res: Response) => {
         await modifierGroupController.updateModifierGroup(req, res);
@@ -209,6 +219,7 @@ router.delete(
     "/:id",
     authenticate,
     requireRole("manager", "owner"),
+    validateParams(idParamsSchema),
     async (req: Request, res: Response) => {
         await modifierGroupController.deleteModifierGroup(req, res);
     },

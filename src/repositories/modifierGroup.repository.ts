@@ -3,7 +3,8 @@ import { modifierGroupsTable } from "../models/schema/index.ts";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseModifierGroupSchema } from "../models/schema/modifier-groups.ts";
-import { insertModifierGroupValidationSchema } from "../routes/modifierGroup.ts";
+import { insertModifierGroupValidationSchema } from "../routes/modifierGroup.routes.ts";
+import { PgTransaction } from "drizzle-orm/pg-core";
 
 export type ModifierGroup = z.infer<typeof baseModifierGroupSchema>;
 export type InsertModifierGroup = z.infer<
@@ -13,7 +14,17 @@ export type UpdateModifierGroup = Partial<InsertModifierGroup>;
 
 export class ModifierGroupRepository {
     async findAll(): Promise<ModifierGroup[]> {
-        const results = await db.query.modifierGroupsTable.findMany();
+        const results = await db.query.modifierGroupsTable.findMany({
+            where: (modifierGroups, { isNull }) =>
+                isNull(modifierGroups.menuItemId),
+        });
+        return results;
+    }
+
+    async findByMenuItemId(menuItemId: string): Promise<ModifierGroup[]> {
+        const results = await db.query.modifierGroupsTable.findMany({
+            where: eq(modifierGroupsTable.menuItemId, menuItemId),
+        });
         return results;
     }
 
@@ -24,8 +35,12 @@ export class ModifierGroupRepository {
         return result || null;
     }
 
-    async insert(input: InsertModifierGroup): Promise<ModifierGroup> {
-        const result = await db
+    async insert(
+        input: InsertModifierGroup,
+        tx?: PgTransaction<any, any, any>,
+    ): Promise<ModifierGroup> {
+        const client = tx || db;
+        const result = await client
             .insert(modifierGroupsTable)
             .values(input)
             .returning();

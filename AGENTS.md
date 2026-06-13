@@ -20,13 +20,19 @@ Before committing, run: `npm run format && npm run build`
 
 There are no tests.
 
+## Setup
+
+Copy `.env.example` and fill in real Supabase credentials. See the file for all env vars; the critical two are `SUPABASE_DATABASE_URL` and `SUPABASE_URL`.
+
+Cookie `secure` defaults to `true`. For local HTTP dev, explicitly set `COOKIE_SECURE=false` in `.env`.
+
 ## Architecture
 
 - **Runtime**: `tsx` runs TypeScript directly. `tsc` only type-checks (`noEmit: true`). No `dist/` JS output.
 - **ESM**: `"type": "module"` — use `import`/`export`, never `require()`.
 - **tsconfig**: `allowImportingTsExtensions: true` and `moduleResolution: "bundler"` enable `.ts` extensions in imports.
-- **Entry point**: `src/index.ts` — starts Express on the configured port. Includes graceful shutdown (SIGTERM/SIGINT) that drains the pg pool.
-- **App setup**: `src/app.ts` — creates Express app, attaches middleware (pino-http, cors, json, cookie-parser), mounts routes at `/api`, attaches `notFound` + `errorHandler`.
+- **Entry point**: `src/index.ts` — starts Express on the configured port. Includes graceful shutdown (SIGTERM/SIGINT, uncaughtException, unhandledRejection) that drains the pg pool with a 10-second forced timeout.
+- **App setup**: `src/app.ts` — creates Express app, attaches middleware (pino-http, cors, json, cookie-parser), mounts routes at `/api`, serves Swagger UI at `/api-docs` and `/api-docs.json`, attaches `notFound` + `errorHandler`.
 - **Layered architecture**: Routes → Controllers → Services → Repositories → DB (Models)
 
 | Layer            | Directory              | Responsibility                         |
@@ -39,13 +45,16 @@ There are no tests.
 
 - **DB client**: `src/models/index.ts` — exports `db` (Drizzle instance) and `pool` (pg Pool). Connection from `SUPABASE_DATABASE_URL`.
 - **Schema**: `src/models/schema/index.ts` — barrel re-exporting all Drizzle table/enum definitions. Tables are PostgreSQL, hosted on Supabase.
-- **Migrations**: Output to `src/models/migrations/` (auto-generated, excluded from Prettier via `.prettierignore`).
-- **Config**: `src/config/index.ts` — loads `dotenv` and exports typed config object. Token expiry values are hardcoded (`"15m"` access, `"7d"` refresh), not env-driven. Cookie path is `"/api/auth"`.
+- **Migrations**: Output to `src/models/migrations/` (auto-generated, excluded from Prettier via `.prettierignore`). `drizzle.config.ts` lives at the repo root (not in `src/models/`).
+- **Config**: `src/config/index.ts` — loads `dotenv` and exports typed config object. Token expiry values are hardcoded (`"15m"` access, `"7d"` refresh), not env-driven. Cookie `path` is `"/api/auth"`. `CORS_ORIGIN` is a comma-separated string, not a single URL.
 - **Supabase clients**: `src/lib/supabase.ts` — `supabaseAdmin` (service role) and `supabaseAuth` (publishable key). Used by auth middleware, auth service, storage service, and seed/reset.
 - **Auth middleware** (`src/middlewares/auth.ts`): Dual-mode token resolution. Tries local JWT (issued by this server) first. If JWT is expired, throws immediately (no fallback). If JWT fails for any other reason (bad signature, etc.), falls back to verifying as a Supabase access token via `supabaseAuth.auth.getUser(token)`. Sets `req.employee` on success. `requireRole()` gates by employee role (`barista`, `manager`, `owner`).
 - **Refresh tokens**: Stored as SHA-256 hashes in `refresh_tokens` table. HTTP-only cookie set on `/api/auth/login` and `/api/auth/pin-login`. Cookie `path` is `"/api/auth"` — auth endpoints (`/refresh`, `/logout`, `/me`) must stay under that path or the cookie won't be sent by the browser.
 - **File uploads**: `multer` (memory storage) used in storage routes. Files go to Supabase Storage. Allowed: images only (JPEG, PNG, GIF, WebP, SVG, BMP, TIFF), max 5MB.
 - **Error handler** (`src/middlewares/errorHandler.ts`): Catches all thrown errors. `AppError` instances return their status code + JSON body. `MulterError` returns 400. Unexpected errors log the stack and return 500.
+- **Logging**: Pino via `src/utils/logger.ts` (singleton). In non-production, uses `pino-pretty` for colored output. Log level controlled by `LOG_LEVEL` env (defaults to `"info"`). Import as `import { logger } from "../utils/logger.ts"`.
+- **Swagger/OpenAPI**: Routes are documented with `@openapi` JSDoc annotations (consumed by `swagger-jsdoc`). Swagger UI served at `/api-docs`, raw spec at `/api-docs.json`. Shared schemas and responses defined in `src/utils/swagger.ts`. New routes **must** include `@openapi` blocks following the existing pattern.
+- **Menu items + modifier groups**: `modifier_groups` has a `menu_item_id` FK directly — no junction table. Modifier groups are **per-item** (not shared). The old `menu_item_modifier_groups` and `menu_item_modifier_option_overrides` tables are removed. See `docs/menu-item-creation-flow.md` for the full multi-step creation flow (5+ API calls to build a complete menu item with recipes, groups, options, and option ingredients).
 
 ## Seed and reset
 
@@ -100,25 +109,23 @@ Drizzle tracks applied migrations in a `__drizzle_migrations` table.
 
 Every folder's `index.ts` is a **public barrel** — it re-exports everything consumers outside the folder should use. Imports always point at the barrel path, never at individual files.
 
-When a folder grows past these thresholds, extract to separate files and turn the `index.ts` into a pure re-export barrel:
-
-| Folder                 | Keep inline until    | Split strategy                                                       |
-| ---------------------- | -------------------- | -------------------------------------------------------------------- |
-| `src/routes/`          | ~4 route groups      | One file per domain (`routes/settings.ts`), merge in `index.ts`      |
-| `src/models/schema/`   | ~5 tables            | One file per table (`schema/settings.ts`), re-export from `index.ts` |
-| `src/middlewares/`     | Related logic fits   | One file per unrelated middleware                                    |
-| `src/utils/`           | _Never_ — each file is its own utility                                |
-
-When splitting, consumers should **never need to change their imports** — they continue importing from the barrel.
+When adding new code, follow the split strategy:
+- `src/routes/` — one file per domain, merge in `index.ts`
+- `src/models/schema/` — one file per table, re-export from `index.ts`
+- `src/middlewares/` — one file per unrelated middleware
+- `src/utils/` — each file is its own utility (re-export as needed)
 
 ## Conventions
 
 - **Arrow functions only** — `const foo = () => {}`, never `function foo() {}`.
 - **Import extensions**: Always use `.ts` extensions in relative imports — e.g. `import { db } from "../models/index.ts"`.
-- **Prettier**: Semicolons on, tab width 4, double quotes, trailing commas (`all`). `AGENTS.md` and `src/models/migrations/` are excluded from formatting via `.prettierignore`.
+- **Prettier**: Semicolons on, tab width 4, double quotes, trailing commas (`all`). `AGENTS.md`, `.agents/`, and `src/models/migrations/` are excluded from formatting via `.prettierignore`.
+- **Route filenames**: Use the `.routes.ts` suffix — e.g. `category.routes.ts`, not `category.ts`. Matches the convention used by controllers (`.controller.ts`), services (`.service.ts`), and repositories (`.repository.ts`).
 - **Express 5**: Async route handlers that throw errors are automatically caught by the error handler — no need for `next(err)`.
 - **Singletons**: Controllers, services, and repositories export a named class AND an instantiated singleton (`export const settingsService = new SettingsService()`). Always import the singleton.
 - **Sensitive field stripping**: Use `formatEmployee()` (`src/utils/formatEmployee.ts`) to return employee data — it omits `pin` and other internal fields.
+- **Shared types**: `src/types/index.ts` defines `EmployeeRole` (derived from Drizzle's `pgEnum` enum values, not a hand-written union), `EmployeePayload`, `ApiResponse<T>`, and `PaginatedResponse<T>`.
+- **Skills**: The `.agents/` directory contains bundled skills (Supabase, backend patterns, etc.) used by OpenCode.
 
 ## Error handling
 
@@ -137,4 +144,6 @@ When splitting, consumers should **never need to change their imports** — they
 
 - Use `validateBody(schema)`, `validateParams(schema)`, `validateQuery(schema)` from `src/middlewares/index.ts`.
 - They return parsed data (with Zod coercion/defaults applied) via `req.body` / `req.params` / `req.query`.
+- **Every route with path parameters must use `validateParams`.** Define a schema with `z.uuid()` for each param — e.g. `z.object({ id: z.uuid() })` or `z.object({ menuItemId: z.uuid(), groupId: z.uuid() })`. Zod 4.x uses `z.uuid()`, not `z.string().uuid()`.
 - Define Zod schemas in route files, not inline in `safeParse` calls.
+- Always chain `.strict()` on Zod schemas to reject unknown properties.

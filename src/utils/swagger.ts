@@ -91,6 +91,11 @@ const options: swaggerJsdoc.Options = {
                     type: "object",
                     properties: {
                         id: { type: "string", format: "uuid" },
+                        menuItemId: {
+                            type: "string",
+                            format: "uuid",
+                            nullable: true,
+                        },
                         name: { type: "string" },
                         selectionType: {
                             type: "string",
@@ -106,11 +111,59 @@ const options: swaggerJsdoc.Options = {
                     },
                     required: [
                         "id",
+                        "menuItemId",
                         "name",
                         "selectionType",
                         "isRequired",
                         "sortOrder",
                     ],
+                },
+                ModifierOption: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        modifierGroupId: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        price: { type: "number" },
+                        isAvailable: { type: "boolean" },
+                        sortOrder: { type: "integer", minimum: 0 },
+                    },
+                    required: [
+                        "id",
+                        "modifierGroupId",
+                        "name",
+                        "price",
+                        "isAvailable",
+                        "sortOrder",
+                    ],
+                },
+                OptionIngredient: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        modifierOptionId: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        ingredientId: { type: "string", format: "uuid" },
+                        quantity: { type: "number" },
+                    },
+                    required: [
+                        "id",
+                        "modifierOptionId",
+                        "ingredientId",
+                        "quantity",
+                    ],
+                },
+                ItemRecipe: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        itemId: { type: "string", format: "uuid" },
+                        ingredientId: { type: "string", format: "uuid" },
+                        quantity: { type: "number" },
+                    },
+                    required: ["id", "itemId", "ingredientId", "quantity"],
                 },
                 Settings: {
                     type: "object",
@@ -135,6 +188,181 @@ const options: swaggerJsdoc.Options = {
                             nullable: true,
                         },
                     },
+                },
+                MenuItem: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        basePrice: { type: "number" },
+                        isAvailable: { type: "boolean" },
+                        imageUrl: {
+                            type: "string",
+                            format: "uri",
+                            nullable: true,
+                        },
+                        imagePath: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        category: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string", format: "uuid" },
+                                name: { type: "string" },
+                            },
+                            required: ["id", "name"],
+                        },
+                        modifierGroups: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/ModifierGroupWithOptions",
+                            },
+                        },
+                        recipes: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/ItemRecipeWithIngredient",
+                            },
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "basePrice",
+                        "isAvailable",
+                        "imageUrl",
+                        "imagePath",
+                        "category",
+                        "modifierGroups",
+                        "recipes",
+                    ],
+                },
+                MenuItemBasic: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        basePrice: { type: "number" },
+                        isAvailable: { type: "boolean" },
+                        imageUrl: {
+                            type: "string",
+                            format: "uri",
+                            nullable: true,
+                        },
+                        imagePath: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        category: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string", format: "uuid" },
+                                name: { type: "string" },
+                            },
+                            required: ["id", "name"],
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "basePrice",
+                        "isAvailable",
+                        "imageUrl",
+                        "imagePath",
+                        "category",
+                    ],
+                },
+                ModifierGroupWithOptions: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        selectionType: {
+                            type: "string",
+                            enum: ["single", "multiple"],
+                        },
+                        isRequired: { type: "boolean" },
+                        sortOrder: { type: "integer", minimum: 0 },
+                        options: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/ModifierOptionWithIngredients",
+                            },
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "selectionType",
+                        "isRequired",
+                        "sortOrder",
+                        "options",
+                    ],
+                },
+                ModifierOptionWithIngredients: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        price: { type: "number" },
+                        isAvailable: { type: "boolean" },
+                        sortOrder: { type: "integer", minimum: 0 },
+                        ingredients: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/OptionIngredientWithIngredient",
+                            },
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "price",
+                        "isAvailable",
+                        "sortOrder",
+                        "ingredients",
+                    ],
+                },
+                OptionIngredientWithIngredient: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        quantity: { type: "number" },
+                        ingredient: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string", format: "uuid" },
+                                name: { type: "string" },
+                                unit: {
+                                    type: "string",
+                                    enum: ["g", "ml"],
+                                },
+                            },
+                            required: ["id", "name", "unit"],
+                        },
+                    },
+                    required: ["id", "quantity", "ingredient"],
+                },
+                ItemRecipeWithIngredient: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        quantity: { type: "number" },
+                        ingredient: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string", format: "uuid" },
+                                name: { type: "string" },
+                                unit: {
+                                    type: "string",
+                                    enum: ["g", "ml"],
+                                },
+                            },
+                            required: ["id", "name", "unit"],
+                        },
+                    },
+                    required: ["id", "quantity", "ingredient"],
                 },
                 LoginResponse: {
                     type: "object",

@@ -1,12 +1,12 @@
 import {
     ingredientRepository,
     type Ingredient,
-} from "../repositories/ingredient.respositoy";
+} from "../repositories/ingredient.respository.ts";
 import { formatIngredient } from "../utils/formatIngredient.ts";
 import type {
     InsertIngredient,
     UpdateIngredient,
-} from "../repositories/ingredient.respositoy";
+} from "../repositories/ingredient.respository.ts";
 import { AppError } from "../utils/AppError.ts";
 
 type IngredientResponse = Omit<Ingredient, "createdAt" | "updatedAt">;
@@ -44,6 +44,7 @@ export class IngredientService {
                 id,
                 input,
             );
+
             return formatIngredient(updatedIngredient);
         } catch (error) {
             if (error instanceof AppError) {

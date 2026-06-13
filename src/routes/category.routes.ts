@@ -7,9 +7,12 @@ import {
     authenticate,
     requireRole,
     validateBody,
+    validateParams,
 } from "../middlewares/index.ts";
 
 const router = Router();
+
+const idParamsSchema = z.object({ id: z.uuid() });
 
 router.use(authenticate);
 router.use(requireRole("owner", "manager"));
@@ -144,6 +147,7 @@ router.post("/", validateBody(insertCategoryValidationSchema), (req, res) =>
  */
 router.patch(
     "/:id",
+    validateParams(idParamsSchema),
     validateBody(insertCategoryValidationSchema.partial()),
     (req, res) => categoryController.updateCategory(req, res),
 );
@@ -177,7 +181,7 @@ router.patch(
  *             schema:
  *               $ref: "#/components/schemas/Error"
  */
-router.delete("/:id", (req, res) =>
+router.delete("/:id", validateParams(idParamsSchema), (req, res) =>
     categoryController.deleteCategory(req, res),
 );
 

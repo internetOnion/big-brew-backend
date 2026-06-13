@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { categoriesTable } from "./categories.ts";
+import { createInsertSchema } from "drizzle-zod";
 
 export const menuItemsTable = pgTable(
     "menu_items",
@@ -22,6 +23,7 @@ export const menuItemsTable = pgTable(
         basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
         isAvailable: boolean("is_available").notNull().default(true),
         imageUrl: text("image_url"),
+        imagePath: text("image_path"),
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
@@ -38,3 +40,14 @@ export const menuItemsTable = pgTable(
         check("chk_base_price_positive", sql`${t.basePrice} >= 0`),
     ],
 );
+
+export const baseMenuItemSchema = createInsertSchema(menuItemsTable, {
+    id: (schema) => schema.nonempty("ID is required"),
+    categoryId: (schema) => schema.nonempty("Category ID is required"),
+    name: (schema) => schema.nonempty("Name is required"),
+    basePrice: (schema) =>
+        schema.min(0, "Base price must be a non-negative number"),
+    imageUrl: (schema) =>
+        schema.url("Image URL must be a valid URL").optional(),
+    imagePath: (schema) => schema.optional(),
+});

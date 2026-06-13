@@ -14,8 +14,7 @@ export { categoriesTable } from "./categories.ts";
 export { menuItemsTable } from "./menu-items.ts";
 export { modifierGroupsTable } from "./modifier-groups.ts";
 export { modifierOptionsTable } from "./modifier-options.ts";
-export { menuItemModifierGroupsTable } from "./menu-item-modifier-groups.ts";
-export { menuItemModifierOptionOverridesTable } from "./menu-item-modifier-option-overrides.ts";
+
 export { ingredientsTable } from "./ingredients.ts";
 export { itemRecipesTable } from "./item-recipes.ts";
 export { modifierOptionIngredientsTable } from "./modifier-option-ingredients.ts";

@@ -4,7 +4,7 @@ import { Request, Response } from "express";
 export class CategoryController {
     async getCategory(req: Request, res: Response) {
         const categories = await categoryService.getCategories();
-        res.json(categories);
+        return res.json(categories);
     }
 
     async addCategory(req: Request, res: Response) {
@@ -13,7 +13,7 @@ export class CategoryController {
             name,
             sortOrder,
         });
-        res.status(201).json(newCategory);
+        return res.status(201).json(newCategory);
     }
 
     async updateCategory(req: Request, res: Response) {
@@ -23,13 +23,13 @@ export class CategoryController {
             name,
             sortOrder,
         });
-        res.json(updatedCategory);
+        return res.json(updatedCategory);
     }
 
     async deleteCategory(req: Request, res: Response) {
         const id = req.params.id as string;
         await categoryService.deleteCategory(id);
-        res.status(204).send();
+        return res.status(204).send();
     }
 }
 

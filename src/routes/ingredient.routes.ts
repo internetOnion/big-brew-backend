@@ -6,10 +6,12 @@ import {
     authenticate,
     requireRole,
     validateBody,
+    validateParams,
 } from "../middlewares/index.ts";
 import { ingredientUnitEnumSchema } from "../models/schema/enums.ts";
 
 const router = Router();
+const idParamsSchema = z.object({ id: z.uuid() });
 const addIngredientSchema = z
     .object({
         name: z.string().min(1).max(100),
@@ -163,6 +165,7 @@ router.patch(
     "/:id",
     authenticate,
     requireRole("owner", "manager"),
+    validateParams(idParamsSchema),
     validateBody(addIngredientSchema.partial()),
     (req, res) => ingredientController.updateIngredient(req, res),
 );
@@ -200,6 +203,7 @@ router.delete(
     "/:id",
     authenticate,
     requireRole("owner", "manager"),
+    validateParams(idParamsSchema),
     (req, res) => ingredientController.deleteIngredient(req, res),
 );
 

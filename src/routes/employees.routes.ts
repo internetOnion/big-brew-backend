@@ -4,12 +4,15 @@ import type { Request, Response } from "express";
 
 import {
     validateBody,
+    validateParams,
     authenticate,
     requireRole,
 } from "../middlewares/index.ts";
 import { employeeController } from "../controllers/index.ts";
 
 const router = Router();
+
+const idParamsSchema = z.object({ id: z.uuid() });
 
 const updateEmployeeSchema = z
     .object({
@@ -70,6 +73,7 @@ router.get(
     "/:id",
     authenticate,
     requireRole("owner", "manager"),
+    validateParams(idParamsSchema),
     (req: Request, res: Response) =>
         employeeController.getEmployeeById(req, res),
 );
@@ -147,6 +151,7 @@ router.patch(
     "/:id",
     authenticate,
     requireRole("owner", "manager"),
+    validateParams(idParamsSchema),
     validateBody(updateEmployeeSchema),
     (req: Request, res: Response) =>
         employeeController.updateEmployee(req, res),
@@ -185,6 +190,7 @@ router.delete(
     "/:id",
     authenticate,
     requireRole("owner", "manager"),
+    validateParams(idParamsSchema),
     (req: Request, res: Response) =>
         employeeController.deleteEmployee(req, res),
 );
