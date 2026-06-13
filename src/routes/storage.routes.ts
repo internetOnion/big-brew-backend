@@ -98,7 +98,7 @@ router.post("/upload", upload.single("file"), (req: Request, res: Response) =>
  *                 type: string
  *                 minLength: 1
  *     responses:
- *       200:
+ *       204:
  *         description: File deleted
  *       400:
  *         description: Validation error

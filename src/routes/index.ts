@@ -17,6 +17,8 @@ import modifierGroupRoutes from "./modifierGroup.routes.ts";
 import MenuItemRoutes from "./menuItem.routes.ts";
 import menuItemRecipeRoutes from "./menuItemRecipe.routes.ts";
 import menuItemModifierGroupRoutes from "./menuItemModifierGroup.routes.ts";
+import orderRoutes from "./order.routes.ts";
+import discountRoutes from "./discount.routes.ts";
 
 const router = Router();
 
@@ -29,6 +31,8 @@ const updateSettingsSchema = z
         receiptFooter: z.string().nullable().optional(),
         taxLabel: z.string().optional(),
         logoUrl: z.string().nullable().optional(),
+        qrCodeUrl: z.string().nullable().optional(),
+        khrRate: z.number().int().min(0).nullable().optional(),
     })
     .strict();
 
@@ -100,7 +104,11 @@ router.get("/settings", authenticate, (req: Request, res: Response) =>
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Logo deleted
+ *         description: Logo deleted, returns updated settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Settings"
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:
@@ -145,6 +153,13 @@ router.delete(
  *               logoUrl:
  *                 type: string
  *                 nullable: true
+ *               qrCodeUrl:
+ *                 type: string
+ *                 nullable: true
+ *               khrRate:
+ *                 type: integer
+ *                 minimum: 0
+ *                 nullable: true
  *     responses:
  *       200:
  *         description: Settings updated
@@ -184,5 +199,8 @@ router.use(
     "/menu-items/:menuItemId/modifier-groups",
     menuItemModifierGroupRoutes,
 );
+
+router.use("/orders", orderRoutes);
+router.use("/discounts", discountRoutes);
 
 export default router;

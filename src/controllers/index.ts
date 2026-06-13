@@ -20,3 +20,8 @@ export {
     MenuItemModifierGroupController,
     menuItemModifierGroupController,
 } from "./menuItemModifierGroup.controller.ts";
+export { OrderController, orderController } from "./order.controller.ts";
+export {
+    DiscountController,
+    discountController,
+} from "./discount.controller.ts";

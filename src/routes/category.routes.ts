@@ -168,7 +168,7 @@ router.patch(
  *           type: string
  *           format: uuid
  *     responses:
- *       200:
+ *       204:
  *         description: Category deleted
  *       401:
  *         $ref: "#/components/responses/Unauthorized"

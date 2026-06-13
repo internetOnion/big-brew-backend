@@ -12,6 +12,8 @@ export const settingsTable = pgTable(
         receiptFooter: text("receipt_footer"),
         taxLabel: text("tax_label").notNull().default("Tax included"),
         logoUrl: text("logo_url"),
+        qrCodeUrl: text("qr_code_url"),
+        khrRate: integer("khr_rate"),
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
             .defaultNow(),

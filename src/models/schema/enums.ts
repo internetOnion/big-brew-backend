@@ -18,12 +18,8 @@ export const discountTypeEnum = pgEnum("discount_type", [
 
 export const orderStatusEnum = pgEnum("order_status", [
     "pending",
-    "confirmed",
-    "preparing",
-    "ready",
-    "delivered",
-    "cancelled",
-    "void_pending",
+    "completed",
+    "void_requested",
     "voided",
 ]);
 
@@ -32,11 +28,7 @@ export const diningOptionEnum = pgEnum("dining_option", [
     "take_away",
 ]);
 
-export const paymentMethodEnum = pgEnum("payment_method", [
-    "cash",
-    "card",
-    "qr",
-]);
+export const paymentMethodEnum = pgEnum("payment_method", ["cash", "qr"]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
     "pending",

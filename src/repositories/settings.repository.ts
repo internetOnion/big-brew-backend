@@ -11,6 +11,8 @@ export interface Settings {
     receiptFooter: string | null;
     taxLabel: string;
     logoUrl: string | null;
+    qrCodeUrl: string | null;
+    khrRate: number | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -23,6 +25,8 @@ export interface UpdateSettings {
     receiptFooter?: string | null;
     taxLabel?: string;
     logoUrl?: string | null;
+    qrCodeUrl?: string | null;
+    khrRate?: number | null;
 }
 
 export class SettingsRepository {
