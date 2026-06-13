@@ -13,8 +13,12 @@ const createValidator = (target: "body" | "params" | "query") => {
                     parsed.error.flatten(),
                 );
             }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (req as any)[target] = parsed.data;
+            Object.defineProperty(req, target, {
+                value: parsed.data,
+                writable: true,
+                configurable: true,
+                enumerable: true,
+            });
             next();
         };
     };

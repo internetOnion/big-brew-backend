@@ -168,6 +168,7 @@ const options: swaggerJsdoc.Options = {
                 Settings: {
                     type: "object",
                     properties: {
+                        id: { type: "integer" },
                         storeName: { type: "string" },
                         storeAddress: {
                             type: "string",
@@ -187,7 +188,21 @@ const options: swaggerJsdoc.Options = {
                             type: "string",
                             nullable: true,
                         },
+                        qrCodeUrl: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        createdAt: { type: "string", format: "date-time" },
+                        updatedAt: { type: "string", format: "date-time" },
                     },
+                    required: [
+                        "id",
+                        "storeName",
+                        "currencySymbol",
+                        "taxLabel",
+                        "createdAt",
+                        "updatedAt",
+                    ],
                 },
                 MenuItem: {
                     type: "object",
@@ -378,6 +393,353 @@ const options: swaggerJsdoc.Options = {
                     properties: {
                         accessToken: { type: "string" },
                     },
+                },
+                OrderEmployee: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                    },
+                    required: ["id", "name"],
+                },
+                OrderItemModifier: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        modifierOptionId: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        name: { type: "string" },
+                        price: { type: "string" },
+                    },
+                    required: ["id", "modifierOptionId", "name", "price"],
+                },
+                OrderItem: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        menuItemId: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        name: { type: "string" },
+                        unitPrice: { type: "string" },
+                        quantity: { type: "integer" },
+                        modifiers: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/OrderItemModifier",
+                            },
+                        },
+                    },
+                    required: [
+                        "id",
+                        "menuItemId",
+                        "name",
+                        "unitPrice",
+                        "quantity",
+                        "modifiers",
+                    ],
+                },
+                Order: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        orderNumber: { type: "integer" },
+                        receiptNumber: { type: "integer" },
+                        status: {
+                            type: "string",
+                            enum: [
+                                "pending",
+                                "completed",
+                                "void_requested",
+                                "voided",
+                            ],
+                        },
+                        diningOption: {
+                            type: "string",
+                            enum: ["dine_in", "take_away"],
+                        },
+                        subtotal: { type: "string" },
+                        discountId: {
+                            type: "string",
+                            format: "uuid",
+                            nullable: true,
+                        },
+                        discountAmount: { type: "string" },
+                        total: { type: "string" },
+                        paymentStatus: {
+                            type: "string",
+                            enum: ["pending", "paid", "refunded"],
+                        },
+                        createdBy: {
+                            $ref: "#/components/schemas/OrderEmployee",
+                        },
+                        voidRequestedBy: {
+                            allOf: [
+                                {
+                                    $ref: "#/components/schemas/OrderEmployee",
+                                },
+                            ],
+                            nullable: true,
+                        },
+                        voidRequestedAt: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                        },
+                        voidApprovedBy: {
+                            allOf: [
+                                {
+                                    $ref: "#/components/schemas/OrderEmployee",
+                                },
+                            ],
+                            nullable: true,
+                        },
+                        voidApprovedAt: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                        },
+                        voidRejectedAt: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                        },
+                        voidReason: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        items: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/OrderItem",
+                            },
+                        },
+                        payments: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/Payment",
+                            },
+                        },
+                        createdAt: {
+                            type: "string",
+                            format: "date-time",
+                        },
+                        updatedAt: {
+                            type: "string",
+                            format: "date-time",
+                        },
+                    },
+                    required: [
+                        "id",
+                        "orderNumber",
+                        "receiptNumber",
+                        "status",
+                        "diningOption",
+                        "subtotal",
+                        "discountAmount",
+                        "total",
+                        "paymentStatus",
+                        "createdBy",
+                        "items",
+                        "payments",
+                        "createdAt",
+                        "updatedAt",
+                    ],
+                },
+                CreateOrderRequest: {
+                    type: "object",
+                    required: ["dining_option", "items"],
+                    properties: {
+                        dining_option: {
+                            type: "string",
+                            enum: ["dine_in", "take_away"],
+                        },
+                        discount_id: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        items: {
+                            type: "array",
+                            minItems: 1,
+                            items: {
+                                type: "object",
+                                required: [
+                                    "menu_item_id",
+                                    "quantity",
+                                    "unit_price",
+                                ],
+                                properties: {
+                                    menu_item_id: {
+                                        type: "string",
+                                        format: "uuid",
+                                    },
+                                    quantity: {
+                                        type: "integer",
+                                        minimum: 1,
+                                    },
+                                    unit_price: {
+                                        type: "number",
+                                        minimum: 0,
+                                    },
+                                    modifier_option_ids: {
+                                        type: "array",
+                                        items: {
+                                            type: "string",
+                                            format: "uuid",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        payment_method: {
+                            type: "string",
+                            enum: ["cash", "qr"],
+                            description:
+                                "Optional - process payment with order creation",
+                        },
+                        amount_received: {
+                            type: "number",
+                            description: "Required when payment_method is cash",
+                        },
+                    },
+                },
+                ProcessPaymentRequest: {
+                    type: "object",
+                    required: ["payment_method"],
+                    properties: {
+                        payment_method: {
+                            type: "string",
+                            enum: ["cash", "qr"],
+                        },
+                        amount_received: {
+                            type: "number",
+                            description: "Required for cash payments",
+                        },
+                    },
+                },
+                UpdateOrderStatusRequest: {
+                    type: "object",
+                    required: ["status"],
+                    properties: {
+                        status: {
+                            type: "string",
+                            enum: ["pending", "completed"],
+                        },
+                    },
+                },
+                RequestVoidRequest: {
+                    type: "object",
+                    required: ["reason"],
+                    properties: {
+                        reason: { type: "string" },
+                    },
+                },
+                Discount: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        type: {
+                            type: "string",
+                            enum: ["percentage", "fixed_amount", "bogo"],
+                        },
+                        value: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        buyItemId: {
+                            type: "string",
+                            format: "uuid",
+                            nullable: true,
+                        },
+                        freeItemId: {
+                            type: "string",
+                            format: "uuid",
+                            nullable: true,
+                        },
+                        isActive: { type: "boolean" },
+                        startsAt: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                        },
+                        endsAt: {
+                            type: "string",
+                            format: "date-time",
+                            nullable: true,
+                        },
+                        createdAt: {
+                            type: "string",
+                            format: "date-time",
+                        },
+                        updatedAt: {
+                            type: "string",
+                            format: "date-time",
+                        },
+                    },
+                    required: [
+                        "id",
+                        "name",
+                        "type",
+                        "isActive",
+                        "createdAt",
+                        "updatedAt",
+                    ],
+                },
+                Payment: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        orderId: {
+                            type: "string",
+                            format: "uuid",
+                        },
+                        method: {
+                            type: "string",
+                            enum: ["cash", "qr"],
+                        },
+                        amount: { type: "string" },
+                        amountReceived: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        changeAmount: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        status: {
+                            type: "string",
+                            enum: ["pending", "completed", "refunded"],
+                        },
+                        notes: {
+                            type: "string",
+                            nullable: true,
+                        },
+                        createdBy: {
+                            $ref: "#/components/schemas/OrderEmployee",
+                        },
+                        createdAt: {
+                            type: "string",
+                            format: "date-time",
+                        },
+                        updatedAt: {
+                            type: "string",
+                            format: "date-time",
+                        },
+                    },
+                    required: [
+                        "id",
+                        "orderId",
+                        "method",
+                        "amount",
+                        "status",
+                        "createdBy",
+                        "createdAt",
+                        "updatedAt",
+                    ],
                 },
             },
             responses: {

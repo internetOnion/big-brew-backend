@@ -17,6 +17,8 @@ import modifierGroupRoutes from "./modifierGroup.routes.ts";
 import MenuItemRoutes from "./menuItem.routes.ts";
 import menuItemRecipeRoutes from "./menuItemRecipe.routes.ts";
 import menuItemModifierGroupRoutes from "./menuItemModifierGroup.routes.ts";
+import orderRoutes from "./order.routes.ts";
+import discountRoutes from "./discount.routes.ts";
 
 const router = Router();
 
@@ -29,6 +31,7 @@ const updateSettingsSchema = z
         receiptFooter: z.string().nullable().optional(),
         taxLabel: z.string().optional(),
         logoUrl: z.string().nullable().optional(),
+        qrCodeUrl: z.string().nullable().optional(),
     })
     .strict();
 
@@ -184,5 +187,8 @@ router.use(
     "/menu-items/:menuItemId/modifier-groups",
     menuItemModifierGroupRoutes,
 );
+
+router.use("/orders", orderRoutes);
+router.use("/discounts", discountRoutes);
 
 export default router;

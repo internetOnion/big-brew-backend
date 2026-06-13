@@ -12,7 +12,6 @@ import { sql } from "drizzle-orm";
 import {
     orderStatusEnum,
     diningOptionEnum,
-    paymentMethodEnum,
     paymentStatusEnum,
 } from "./enums.ts";
 import { discountsTable } from "./discounts.ts";
@@ -35,18 +34,9 @@ export const ordersTable = pgTable(
             .notNull()
             .default("0"),
         total: decimal({ precision: 10, scale: 2 }).notNull(),
-        paymentMethod: paymentMethodEnum("payment_method"),
         paymentStatus: paymentStatusEnum("payment_status")
             .notNull()
             .default("pending"),
-        amountReceived: decimal("amount_received", {
-            precision: 10,
-            scale: 2,
-        }),
-        changeAmount: decimal("change_amount", {
-            precision: 10,
-            scale: 2,
-        }),
         createdBy: uuid("created_by")
             .notNull()
             .references(() => employeesTable.id),
@@ -76,20 +66,11 @@ export const ordersTable = pgTable(
     (t) => [
         index("idx_orders_status").on(t.status),
         index("idx_orders_created_at").on(t.createdAt),
-        index("idx_orders_payment_method").on(t.paymentMethod),
         index("idx_orders_order_number").on(t.orderNumber),
         index("idx_orders_created_by").on(t.createdBy),
         check("chk_subtotal_non_negative", sql`${t.subtotal} >= 0`),
         check("chk_total_non_negative", sql`${t.total} >= 0`),
         check("chk_discount_non_negative", sql`${t.discountAmount} >= 0`),
-        check(
-            "chk_cash_fields",
-            sql`(
-                ${t.paymentMethod} IS NULL OR
-                ${t.paymentMethod} != 'cash' OR
-                (${t.amountReceived} IS NOT NULL AND ${t.changeAmount} IS NOT NULL)
-            )`,
-        ),
         check(
             "chk_void_approved_fields",
             sql`(

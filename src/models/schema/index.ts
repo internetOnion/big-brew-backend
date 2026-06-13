@@ -22,6 +22,7 @@ export { discountsTable } from "./discounts.ts";
 export { ordersTable } from "./orders.ts";
 export { orderItemsTable } from "./order-items.ts";
 export { orderItemModifiersTable } from "./order-item-modifiers.ts";
+export { paymentsTable } from "./payments.ts";
 export { stockMovementsTable } from "./stock-movements.ts";
 export { expensesTable } from "./expenses.ts";
 export { settingsTable } from "./settings.ts";
