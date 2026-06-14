@@ -19,3 +19,7 @@ export { OrderService, orderService } from "./order.service.ts";
 export { DiscountService, discountService } from "./discount.service.ts";
 export { PaymentService, paymentService } from "./payment.service.ts";
 export { ExpenseService, expenseService } from "./expense.service.ts";
+export {
+    StockMovementService,
+    stockMovementService,
+} from "./stockMovement.service.ts";

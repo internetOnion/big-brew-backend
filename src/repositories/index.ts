@@ -89,3 +89,9 @@ export {
     type ExpenseFilters,
     type ExpenseSummaryRow,
 } from "./expense.repository.ts";
+export {
+    StockMovementRepository,
+    stockMovementRepository,
+    type StockMovement,
+    type StockMovementFilters,
+} from "./stockMovement.repository.ts";

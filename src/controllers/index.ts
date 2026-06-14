@@ -26,3 +26,7 @@ export {
     discountController,
 } from "./discount.controller.ts";
 export { ExpenseController, expenseController } from "./expense.controller.ts";
+export {
+    StockMovementController,
+    stockMovementController,
+} from "./stockMovement.controller.ts";

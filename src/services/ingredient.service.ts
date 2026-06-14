@@ -1,3 +1,9 @@
+import { eq } from "drizzle-orm";
+import { db } from "../models/index.ts";
+import {
+    ingredientsTable,
+    stockMovementsTable,
+} from "../models/schema/index.ts";
 import {
     ingredientRepository,
     type Ingredient,
@@ -8,6 +14,7 @@ import type {
     UpdateIngredient,
 } from "../repositories/ingredient.respository.ts";
 import { AppError } from "../utils/AppError.ts";
+import type { StockReason } from "../types/index.ts";
 
 type IngredientResponse = Omit<Ingredient, "createdAt" | "updatedAt">;
 
@@ -62,8 +69,53 @@ export class IngredientService {
             }
             await ingredientRepository.delete(id);
         } catch (error) {
+            if (error instanceof AppError) {
+                throw error;
+            }
             throw AppError.internal("Failed to delete ingredient");
         }
+    }
+
+    async adjustStock(
+        id: string,
+        quantityChange: number,
+        reason: StockReason,
+        notes: string | undefined,
+        recordedBy: string,
+    ): Promise<IngredientResponse> {
+        const existingIngredient = await ingredientRepository.findById(id);
+        if (!existingIngredient) {
+            throw AppError.notFound("Ingredient not found");
+        }
+
+        const currentStock = parseFloat(existingIngredient.stockQuantity);
+        const newStock = currentStock + quantityChange;
+
+        if (newStock < 0) {
+            throw AppError.badRequest(
+                `Insufficient stock. Current: ${currentStock}, adjustment: ${quantityChange}`,
+            );
+        }
+
+        await db.transaction(async (tx) => {
+            await tx.insert(stockMovementsTable).values({
+                ingredientId: id,
+                quantityChange: quantityChange.toFixed(2),
+                reason,
+                notes: notes ?? null,
+            });
+
+            await tx
+                .update(ingredientsTable)
+                .set({
+                    stockQuantity: newStock.toFixed(2),
+                    updatedAt: new Date(),
+                })
+                .where(eq(ingredientsTable.id, id));
+        });
+
+        const updated = await ingredientRepository.findById(id);
+        return formatIngredient(updated!);
     }
 }
 

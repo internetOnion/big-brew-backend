@@ -20,6 +20,7 @@ import menuItemModifierGroupRoutes from "./menuItemModifierGroup.routes.ts";
 import orderRoutes from "./order.routes.ts";
 import discountRoutes from "./discount.routes.ts";
 import expenseRoutes from "./expense.routes.ts";
+import stockMovementRoutes from "./stockMovement.routes.ts";
 
 const router = Router();
 
@@ -204,5 +205,6 @@ router.use(
 router.use("/orders", orderRoutes);
 router.use("/discounts", discountRoutes);
 router.use("/expenses", expenseRoutes);
+router.use("/stock-movements", stockMovementRoutes);
 
 export default router;
