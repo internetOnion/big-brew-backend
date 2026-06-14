@@ -80,3 +80,12 @@ export {
     type Payment,
     type CreatePaymentInput,
 } from "./payment.repository.ts";
+export {
+    ExpenseRepository,
+    expenseRepository,
+    type Expense,
+    type InsertExpense,
+    type UpdateExpense,
+    type ExpenseFilters,
+    type ExpenseSummaryRow,
+} from "./expense.repository.ts";

@@ -2,6 +2,11 @@ import type { Request, Response } from "express";
 import { employeeService } from "../services/index.ts";
 
 export class EmployeeController {
+    async listEmployees(req: Request, res: Response) {
+        const employees = await employeeService.listEmployees();
+        return res.json(employees);
+    }
+
     async getEmployeeById(req: Request, res: Response) {
         const id = req.params.id as string;
 

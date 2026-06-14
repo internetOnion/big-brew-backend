@@ -48,6 +48,13 @@ export class EmployeeRepository {
         return result ?? null;
     }
 
+    async findAll(): Promise<Employee[]> {
+        return db
+            .select()
+            .from(employeesTable)
+            .orderBy(employeesTable.createdAt);
+    }
+
     async findActiveEmployees(): Promise<Employee[]> {
         return db
             .select()
