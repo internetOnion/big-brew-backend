@@ -30,3 +30,7 @@ export {
     StockMovementController,
     stockMovementController,
 } from "./stockMovement.controller.ts";
+export {
+    AnalyticsController,
+    analyticsController,
+} from "./analytics.controller.ts";

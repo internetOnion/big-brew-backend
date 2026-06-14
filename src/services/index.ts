@@ -23,3 +23,4 @@ export {
     StockMovementService,
     stockMovementService,
 } from "./stockMovement.service.ts";
+export { AnalyticsService, analyticsService } from "./analytics.service.ts";
