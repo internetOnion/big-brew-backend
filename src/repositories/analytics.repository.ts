@@ -42,9 +42,11 @@ export class AnalyticsRepository {
         to: Date,
         groupBy: GroupBy,
     ): Promise<RevenueDataPoint[]> {
+        const truncExpr = sql`date_trunc(${sql.raw(`'${groupBy}'`)}, ${ordersTable.createdAt})`;
+
         const results = await db
             .select({
-                period: sql<string>`date_trunc(${groupBy}, ${ordersTable.createdAt})::text`,
+                period: sql<string>`${truncExpr}::text`,
                 revenue: sql<string>`COALESCE(SUM(${ordersTable.total}), 0)::text`,
                 orderCount: sql<number>`COUNT(*)::int`,
             })
@@ -56,8 +58,8 @@ export class AnalyticsRepository {
                     lte(ordersTable.createdAt, to),
                 ),
             )
-            .groupBy(sql`date_trunc(${groupBy}, ${ordersTable.createdAt})`)
-            .orderBy(sql`date_trunc(${groupBy}, ${ordersTable.createdAt})`);
+            .groupBy(truncExpr)
+            .orderBy(truncExpr);
 
         return results;
     }
