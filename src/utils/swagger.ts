@@ -28,6 +28,27 @@ const options: swaggerJsdoc.Options = {
                     },
                     required: ["error"],
                 },
+                Expense: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        description: { type: "string" },
+                        amount: { type: "string" },
+                        category: { type: "string", nullable: true },
+                        recordedBy: { type: "string", format: "uuid" },
+                        recordedByName: { type: "string", nullable: true },
+                        recordedAt: { type: "string", format: "date-time" },
+                        createdAt: { type: "string", format: "date-time" },
+                    },
+                    required: [
+                        "id",
+                        "description",
+                        "amount",
+                        "recordedBy",
+                        "recordedAt",
+                        "createdAt",
+                    ],
+                },
                 Employee: {
                     type: "object",
                     properties: {
@@ -158,6 +179,33 @@ const options: swaggerJsdoc.Options = {
                         quantity: { type: "number" },
                     },
                     required: ["id", "itemId", "ingredientId", "quantity"],
+                },
+                StockMovement: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        ingredientId: { type: "string", format: "uuid" },
+                        ingredientName: { type: "string" },
+                        ingredientUnit: { type: "string" },
+                        quantityChange: { type: "string" },
+                        reason: { type: "string" },
+                        referenceOrderId: {
+                            type: "string",
+                            format: "uuid",
+                            nullable: true,
+                        },
+                        notes: { type: "string", nullable: true },
+                        createdAt: { type: "string", format: "date-time" },
+                    },
+                    required: [
+                        "id",
+                        "ingredientId",
+                        "ingredientName",
+                        "ingredientUnit",
+                        "quantityChange",
+                        "reason",
+                        "createdAt",
+                    ],
                 },
                 Settings: {
                     type: "object",

@@ -111,7 +111,7 @@ router.get(
  * /api/expenses/summary:
  *   get:
  *     tags: [Expenses]
- *     summary: Get expense summary grouped by categoryy
+ *     summary: Get expense summary grouped by category
  *     security:
  *       - bearerAuth: []
  *     parameters:

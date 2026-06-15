@@ -50,6 +50,13 @@
       "when": 1781326878199,
       "tag": "0006_noisy_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781515292396,
+      "tag": "0007_whole_maddog",
+      "breakpoints": true
     }
   ]
 }

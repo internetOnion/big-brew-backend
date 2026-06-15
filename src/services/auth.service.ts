@@ -29,10 +29,6 @@ interface LoginInput {
     password: string;
 }
 
-interface PinLoginInput {
-    pin: string;
-}
-
 interface TokenPair {
     accessToken: string;
     refreshToken: string;
@@ -178,50 +174,22 @@ export class AuthService {
         };
     }
 
-    async pinLogin(input: PinLoginInput): Promise<{
-        accessToken: string;
-        refreshToken: string;
-        employee: EmployeePayload;
+    async verifyPin(pin: string): Promise<{
+        id: string;
+        name: string;
+        role: EmployeeRole;
     }> {
-        const { pin } = input;
-
         const employees = await employeeRepository.findActiveEmployees();
 
-        let matchedEmployee: Employee | null = null;
         for (const emp of employees) {
             if (!emp.pin) continue;
             const match = await bcrypt.compare(pin, emp.pin);
             if (match) {
-                matchedEmployee = emp;
-                break;
+                return { id: emp.id, name: emp.name, role: emp.role };
             }
         }
 
-        if (!matchedEmployee) {
-            throw AppError.unauthorized("Invalid PIN");
-        }
-
-        if (!matchedEmployee.supabaseUid) {
-            throw AppError.unauthorized("Employee has no linked auth account");
-        }
-
-        let email: string | undefined;
-        const { data: userData, error: userError } =
-            await supabaseAdmin.auth.admin.getUserById(
-                matchedEmployee.supabaseUid,
-            );
-        if (!userError && userData?.user?.email) {
-            email = userData.user.email;
-        }
-
-        const { accessToken, refreshToken } =
-            await createTokenPair(matchedEmployee);
-
-        return {
-            accessToken,
-            refreshToken,
-            employee: formatEmployee(matchedEmployee, email),
-        };
+        throw AppError.unauthorized("Invalid PIN");
     }
 
     async refresh(refreshToken: string): Promise<string> {

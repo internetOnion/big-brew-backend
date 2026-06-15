@@ -32,6 +32,7 @@ const createOrderSchema = z
             .min(1, "At least one item is required"),
         payment_method: z.enum(["cash", "qr"]).optional(),
         amount_received: z.number().positive().optional(),
+        confirmed_by: z.uuid().optional(),
     })
     .strict()
     .refine(
@@ -76,6 +77,7 @@ const processPaymentSchema = z
 const requestVoidSchema = z
     .object({
         reason: z.string().min(1, "Void reason is required"),
+        verified_employee_id: z.uuid().optional(),
     })
     .strict();
 

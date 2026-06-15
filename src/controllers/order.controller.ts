@@ -9,6 +9,7 @@ export class OrderController {
             items,
             payment_method,
             amount_received,
+            confirmed_by,
         } = req.body;
         const employeeId = req.employee!.id;
 
@@ -23,6 +24,7 @@ export class OrderController {
                     modifierOptionIds: item.modifier_option_ids || [],
                 })),
                 createdBy: employeeId,
+                confirmedBy: confirmed_by || employeeId,
             },
             payment_method,
             amount_received,
@@ -91,8 +93,8 @@ export class OrderController {
 
     async requestVoid(req: Request, res: Response) {
         const { id } = req.params as { id: string };
-        const { reason } = req.body;
-        const employeeId = req.employee!.id;
+        const { reason, verified_employee_id } = req.body;
+        const employeeId = verified_employee_id || req.employee!.id;
 
         const order = await orderService.requestVoid(id, employeeId, reason);
         return res.json(order);

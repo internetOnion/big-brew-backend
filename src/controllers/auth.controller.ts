@@ -32,18 +32,13 @@ export class AuthController {
         });
     }
 
-    async pinLogin(req: Request, res: Response) {
+    async verifyPin(req: Request, res: Response) {
         const { pin } = req.body;
 
-        const result = await authService.pinLogin({ pin });
-
-        res.cookie("refresh_token", result.refreshToken, config.cookie);
+        const result = await authService.verifyPin(pin);
 
         return res.json({
-            data: {
-                access_token: result.accessToken,
-                user: result.employee,
-            },
+            data: result,
         });
     }
 

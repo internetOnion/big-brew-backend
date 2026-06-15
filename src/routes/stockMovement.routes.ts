@@ -57,32 +57,7 @@ const listQuerySchema = z
  *             schema:
  *               type: array
  *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                     format: uuid
- *                   ingredientId:
- *                     type: string
- *                     format: uuid
- *                   ingredientName:
- *                     type: string
- *                   ingredientUnit:
- *                     type: string
- *                   quantityChange:
- *                     type: string
- *                   reason:
- *                     type: string
- *                   referenceOrderId:
- *                     type: string
- *                     format: uuid
- *                     nullable: true
- *                   notes:
- *                     type: string
- *                     nullable: true
- *                   createdAt:
- *                     type: string
- *                     format: date-time
+ *                 $ref: "#/components/schemas/StockMovement"
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:

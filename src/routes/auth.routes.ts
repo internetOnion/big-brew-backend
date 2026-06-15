@@ -42,7 +42,7 @@ const loginSchema = z
     })
     .strict();
 
-const pinLoginSchema = z
+const verifyPinSchema = z
     .object({
         pin: z.string().length(6).regex(/^\d+$/, "PIN must be numeric"),
     })
@@ -167,10 +167,12 @@ router.post(
 
 /**
  * @openapi
- * /api/auth/pin-login:
+ * /api/auth/verify-pin:
  *   post:
  *     tags: [Auth]
- *     summary: Login with 6-digit PIN
+ *     summary: Verify a 6-digit PIN and return employee info (no tokens issued)
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -186,16 +188,23 @@ router.post(
  *                 pattern: "^\\d{6}$"
  *     responses:
  *       200:
- *         description: Login successful
- *         headers:
- *           Set-Cookie:
- *             schema:
- *               type: string
- *             description: HttpOnly refresh token cookie (path=/api/auth)
+ *         description: PIN verified
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/LoginResponse"
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     name:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                       enum: [barista, manager, owner]
  *       401:
  *         description: Invalid PIN
  *         content:
@@ -204,9 +213,10 @@ router.post(
  *               $ref: "#/components/schemas/Error"
  */
 router.post(
-    "/pin-login",
-    validateBody(pinLoginSchema),
-    (req: Request, res: Response) => authController.pinLogin(req, res),
+    "/verify-pin",
+    authenticate,
+    validateBody(verifyPinSchema),
+    (req: Request, res: Response) => authController.verifyPin(req, res),
 );
 
 /**
