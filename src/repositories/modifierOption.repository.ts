@@ -1,6 +1,6 @@
 import { db } from "../models/index.ts";
 import { modifierOptionsTable } from "../models/schema/index.ts";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { baseModifierOptionSchema } from "../models/schema/modifier-options.ts";
 import { insertModifierOptionValidationSchema } from "../routes/menuItem.routes.ts";
@@ -14,13 +14,23 @@ export type UpdateModifierOption = Partial<InsertModifierOption>;
 
 export class ModifierOptionRepository {
     async findAll(): Promise<ModifierOption[]> {
-        const results = await db.query.modifierOptionsTable.findMany();
+        const results = await db.query.modifierOptionsTable.findMany({
+            where: isNull(modifierOptionsTable.deletedAt),
+        });
         return results;
     }
 
-    async findById(id: string): Promise<ModifierOption | null> {
+    async findById(
+        id: string,
+        includeDeleted = false,
+    ): Promise<ModifierOption | null> {
         const result = await db.query.modifierOptionsTable.findFirst({
-            where: eq(modifierOptionsTable.id, id),
+            where: includeDeleted
+                ? eq(modifierOptionsTable.id, id)
+                : and(
+                      eq(modifierOptionsTable.id, id),
+                      isNull(modifierOptionsTable.deletedAt),
+                  ),
         });
         return result || null;
     }
@@ -29,7 +39,10 @@ export class ModifierOptionRepository {
         modifierGroupId: string,
     ): Promise<ModifierOption[]> {
         const results = await db.query.modifierOptionsTable.findMany({
-            where: eq(modifierOptionsTable.modifierGroupId, modifierGroupId),
+            where: and(
+                eq(modifierOptionsTable.modifierGroupId, modifierGroupId),
+                isNull(modifierOptionsTable.deletedAt),
+            ),
         });
         return results;
     }
@@ -60,7 +73,8 @@ export class ModifierOptionRepository {
 
     async delete(id: string): Promise<void> {
         await db
-            .delete(modifierOptionsTable)
+            .update(modifierOptionsTable)
+            .set({ deletedAt: new Date() })
             .where(eq(modifierOptionsTable.id, id));
     }
 }

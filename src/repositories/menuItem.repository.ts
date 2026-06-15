@@ -17,7 +17,7 @@ import { ModifierOptionIngredient } from "./modifierOptionIngredient.repository.
 import { ItemRecipe } from "./itemRecipe.repository.ts";
 import type { Ingredient } from "./ingredient.respository.ts";
 import { db } from "../models/index.ts";
-import { eq, isNull, inArray } from "drizzle-orm";
+import { eq, and, isNull, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
@@ -102,11 +102,23 @@ export class MenuItemRepository {
         const itemIds = menuItems.map((m) => m.menu_items.id);
         if (itemIds.length === 0) return [];
 
-        const allGroups = await db
-            .select()
-            .from(modifierGroupsTable)
-            .where(inArray(modifierGroupsTable.menuItemId, itemIds))
-            .orderBy(modifierGroupsTable.sortOrder);
+        const [allGroups, allRecipes] = await Promise.all([
+            db
+                .select()
+                .from(modifierGroupsTable)
+                .where(
+                    and(
+                        inArray(modifierGroupsTable.menuItemId, itemIds),
+                        isNull(modifierGroupsTable.deletedAt),
+                    ),
+                )
+                .orderBy(modifierGroupsTable.sortOrder),
+            db
+                .select()
+                .from(itemRecipesTable)
+                .where(inArray(itemRecipesTable.itemId, itemIds)),
+        ]);
+
         const groupIds = allGroups.map((g) => g.id);
 
         let allOptions: (typeof modifierOptionsTable.$inferSelect)[] = [];
@@ -116,7 +128,12 @@ export class MenuItemRepository {
             allOptions = await db
                 .select()
                 .from(modifierOptionsTable)
-                .where(inArray(modifierOptionsTable.modifierGroupId, groupIds))
+                .where(
+                    and(
+                        inArray(modifierOptionsTable.modifierGroupId, groupIds),
+                        isNull(modifierOptionsTable.deletedAt),
+                    ),
+                )
                 .orderBy(modifierOptionsTable.sortOrder);
             const optionIds = allOptions.map((o) => o.id);
             if (optionIds.length > 0) {
@@ -131,11 +148,6 @@ export class MenuItemRepository {
                     );
             }
         }
-
-        const allRecipes = await db
-            .select()
-            .from(itemRecipesTable)
-            .where(inArray(itemRecipesTable.itemId, itemIds));
 
         const allIngredientIds = [
             ...new Set([
@@ -248,11 +260,22 @@ export class MenuItemRepository {
         });
         if (!category) return null;
 
-        const groups = await db
-            .select()
-            .from(modifierGroupsTable)
-            .where(eq(modifierGroupsTable.menuItemId, id))
-            .orderBy(modifierGroupsTable.sortOrder);
+        const [groups, recipes] = await Promise.all([
+            db
+                .select()
+                .from(modifierGroupsTable)
+                .where(
+                    and(
+                        eq(modifierGroupsTable.menuItemId, id),
+                        isNull(modifierGroupsTable.deletedAt),
+                    ),
+                )
+                .orderBy(modifierGroupsTable.sortOrder),
+            db
+                .select()
+                .from(itemRecipesTable)
+                .where(eq(itemRecipesTable.itemId, id)),
+        ]);
 
         let allOptions: (typeof modifierOptionsTable.$inferSelect)[] = [];
         let allOptionIngredients: (typeof modifierOptionIngredientsTable.$inferSelect)[] =
@@ -262,7 +285,12 @@ export class MenuItemRepository {
             allOptions = await db
                 .select()
                 .from(modifierOptionsTable)
-                .where(inArray(modifierOptionsTable.modifierGroupId, groupIds))
+                .where(
+                    and(
+                        inArray(modifierOptionsTable.modifierGroupId, groupIds),
+                        isNull(modifierOptionsTable.deletedAt),
+                    ),
+                )
                 .orderBy(modifierOptionsTable.sortOrder);
             const optionIds = allOptions.map((o) => o.id);
             if (optionIds.length > 0) {
@@ -277,11 +305,6 @@ export class MenuItemRepository {
                     );
             }
         }
-
-        const recipes = await db
-            .select()
-            .from(itemRecipesTable)
-            .where(eq(itemRecipesTable.itemId, id));
 
         const allIngredientIds = [
             ...new Set([

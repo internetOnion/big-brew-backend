@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import { modifierOptionsTable } from "./modifier-options.ts";
 import { ingredientsTable } from "./ingredients.ts";
 import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const modifierOptionIngredientsTable = pgTable(
     "modifier_option_ingredients",
@@ -38,7 +39,10 @@ export const baseModifierOptionIngredientSchema = createInsertSchema(
         modifierOptionId: (schema) =>
             schema.nonempty("Modifier option ID is required"),
         ingredientId: (schema) => schema.nonempty("Ingredient ID is required"),
-        quantity: (schema) =>
-            schema.min(0.01, "Quantity must be greater than 0"),
+        quantity: () =>
+            z.coerce
+                .number()
+                .min(0.01, "Quantity must be greater than 0")
+                .transform((v) => v.toFixed(2)),
     },
 );

@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import { menuItemsTable } from "./menu-items.ts";
 import { ingredientsTable } from "./ingredients.ts";
 import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const itemRecipesTable = pgTable(
     "item_recipes",
@@ -34,5 +35,9 @@ export const itemRecipesTable = pgTable(
 export const baseItemRecipeSchema = createInsertSchema(itemRecipesTable, {
     itemId: (schema) => schema.nonempty("Item ID is required"),
     ingredientId: (schema) => schema.nonempty("Ingredient ID is required"),
-    quantity: (schema) => schema.min(0.01, "Quantity must be greater than 0"),
+    quantity: () =>
+        z.coerce
+            .number()
+            .min(0.01, "Quantity must be greater than 0")
+            .transform((v) => v.toFixed(2)),
 });

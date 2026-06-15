@@ -5,9 +5,9 @@ import { logger } from "../utils/logger.ts";
 
 const pool = new pg.Pool({
     connectionString: process.env.SUPABASE_DATABASE_URL,
-    max: 10,
+    max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 10000,
 });
 
 pool.on("error", (err) => {

@@ -125,3 +125,4 @@ Use `validateBody`, `validateParams`, `validateQuery` from `src/middlewares/inde
 - `src/utils/swagger.ts` has a bare `import logger from "./logger"` (no `.ts` extension) — this is an existing inconsistency, not the norm.
 - `src/repositories/ingredient.respository.ts` has a typo ("respository") — it's consistent across the codebase, don't "fix" it.
 - `src/middlewares/validate.ts` imports `AppError` without `.ts` extension — another existing inconsistency.
+- `src/services/modifierOptionIngredient.ts` does not follow the `.service.ts` naming convention and is not exported from the services barrel — use `modifierGroup.service.ts` instead.

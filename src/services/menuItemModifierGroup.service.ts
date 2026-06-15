@@ -46,7 +46,7 @@ export class MenuItemModifierGroupService {
     }
 
     async deleteGroup(menuItemId: string, groupId: string) {
-        const group = await modifierGroupRepository.findById(groupId);
+        const group = await modifierGroupRepository.findById(groupId, true);
         if (!group || group.menuItemId !== menuItemId) {
             throw AppError.notFound(
                 "Modifier group not found for this menu item",
@@ -98,14 +98,14 @@ export class MenuItemModifierGroupService {
     }
 
     async deleteOption(menuItemId: string, groupId: string, optionId: string) {
-        const group = await modifierGroupRepository.findById(groupId);
+        const group = await modifierGroupRepository.findById(groupId, true);
         if (!group || group.menuItemId !== menuItemId) {
             throw AppError.notFound(
                 "Modifier group not found for this menu item",
             );
         }
 
-        const option = await modifierOptionRepository.findById(optionId);
+        const option = await modifierOptionRepository.findById(optionId, true);
         if (!option || option.modifierGroupId !== groupId) {
             throw AppError.notFound("Modifier option not found for this group");
         }
@@ -192,14 +192,14 @@ export class MenuItemModifierGroupService {
         optionId: string,
         ingredientId: string,
     ) {
-        const group = await modifierGroupRepository.findById(groupId);
+        const group = await modifierGroupRepository.findById(groupId, true);
         if (!group || group.menuItemId !== menuItemId) {
             throw AppError.notFound(
                 "Modifier group not found for this menu item",
             );
         }
 
-        const option = await modifierOptionRepository.findById(optionId);
+        const option = await modifierOptionRepository.findById(optionId, true);
         if (!option || option.modifierGroupId !== groupId) {
             throw AppError.notFound("Modifier option not found for this group");
         }

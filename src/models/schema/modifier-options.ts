@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { modifierGroupsTable } from "./modifier-groups.ts";
 import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const modifierOptionsTable = pgTable(
     "modifier_options",
@@ -39,8 +40,12 @@ export const baseModifierOptionSchema = createInsertSchema(
         modifierGroupId: (schema) =>
             schema.nonempty("Modifier group ID is required"),
         name: (schema) => schema.nonempty("Name is required"),
-        price: (schema) =>
-            schema.min(0, "Price must be a non-negative number").default("0"),
+        price: () =>
+            z.coerce
+                .number()
+                .min(0, "Price must be a non-negative number")
+                .default(0)
+                .transform((v) => v.toFixed(2)),
         isAvailable: (schema) => schema.default(true),
         sortOrder: (schema) =>
             schema
