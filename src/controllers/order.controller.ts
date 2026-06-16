@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { orderService, paymentService } from "../services/index.ts";
+import { authService, orderService, paymentService } from "../services/index.ts";
 
 export class OrderController {
     async createOrder(req: Request, res: Response) {
@@ -105,6 +105,22 @@ export class OrderController {
         const employeeId = req.employee!.id;
 
         const order = await orderService.approveVoid(id, employeeId);
+        return res.json(order);
+    }
+
+    async voidWithPin(req: Request, res: Response) {
+        const { id } = req.params as { id: string };
+        const { pin, reason } = req.body;
+
+        const employee = await authService.verifyPin(pin);
+
+        if (employee.role === "manager" || employee.role === "owner") {
+            await orderService.requestVoid(id, employee.id, reason);
+            const order = await orderService.approveVoid(id, employee.id);
+            return res.json(order);
+        }
+
+        const order = await orderService.requestVoid(id, employee.id, reason);
         return res.json(order);
     }
 
