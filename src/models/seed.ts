@@ -13,6 +13,11 @@ import {
     itemRecipesTable,
     modifierOptionIngredientsTable,
     discountsTable,
+    ordersTable,
+    orderItemsTable,
+    orderItemModifiersTable,
+    paymentsTable,
+    stockMovementsTable,
 } from "./schema/index.ts";
 
 interface SeedEmployee {
@@ -3572,7 +3577,1307 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
+    await seedOrders();
+
     console.log("Seed complete.");
+};
+
+const seedOrders = async () => {
+    // Skip if orders already seeded
+    const existing = await db
+        .select({ id: ordersTable.id })
+        .from(ordersTable)
+        .limit(1);
+    if (existing.length > 0) {
+        console.log("  Orders already seeded, skipping...");
+        return;
+    }
+
+    console.log("  Orders (100 demo orders)...");
+
+    // Deterministic pseudo-random number generator (mulberry32)
+    const createRng = (seed: number) => {
+        let s = seed;
+        return () => {
+            s |= 0;
+            s = (s + 0x6d2b79f5) | 0;
+            let t = Math.imul(s ^ (s >>> 15), 1 | s);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    };
+    const rng = createRng(42);
+
+    // Menu items: id, basePrice, category
+    type MenuItemSeed = {
+        id: string;
+        name: string;
+        basePrice: string;
+        category: "coffee" | "tea" | "pastry" | "sandwich";
+    };
+    const menuItems: MenuItemSeed[] = [
+        {
+            id: "257f7064-9fd9-466f-afb0-7218e514f67f",
+            name: "Latte",
+            basePrice: "3.50",
+            category: "coffee",
+        },
+        {
+            id: "edf35213-cdf7-4979-963b-6806bb4f8933",
+            name: "Iced Latte",
+            basePrice: "4.00",
+            category: "coffee",
+        },
+        {
+            id: "1997b5d2-6563-43f5-a45d-d7fa9910adb4",
+            name: "Green Tea",
+            basePrice: "3.00",
+            category: "tea",
+        },
+        {
+            id: "cd297893-a429-4f86-a240-b99e01ab0d50",
+            name: "Croissant",
+            basePrice: "3.00",
+            category: "pastry",
+        },
+        {
+            id: "20bec654-ef01-4606-8eb5-31e7c6e88112",
+            name: "Espresso",
+            basePrice: "2.50",
+            category: "coffee",
+        },
+        {
+            id: "0f04732b-2db5-4166-a1c4-c6676de14e22",
+            name: "Americano",
+            basePrice: "3.00",
+            category: "coffee",
+        },
+        {
+            id: "6d68e9f3-9cfb-44dd-9d41-e5505685ce53",
+            name: "Cappuccino",
+            basePrice: "3.50",
+            category: "coffee",
+        },
+        {
+            id: "31106854-4c60-440c-9c31-fa1130c155f8",
+            name: "Flat White",
+            basePrice: "3.75",
+            category: "coffee",
+        },
+        {
+            id: "c6144bdf-f15b-4a8d-b594-cbe122140d4e",
+            name: "Mocha",
+            basePrice: "4.25",
+            category: "coffee",
+        },
+        {
+            id: "5d537708-a892-49ea-9886-64b1809b9406",
+            name: "Iced Americano",
+            basePrice: "3.50",
+            category: "coffee",
+        },
+        {
+            id: "43ba26be-4e84-45af-83b3-d99a4417585c",
+            name: "Cold Brew",
+            basePrice: "4.50",
+            category: "coffee",
+        },
+        {
+            id: "048bd930-5aa5-4049-826f-6de4c88ced8c",
+            name: "Frappuccino",
+            basePrice: "5.00",
+            category: "coffee",
+        },
+        {
+            id: "27ec4974-adbc-4543-a174-d9787b3e6666",
+            name: "Earl Grey Tea",
+            basePrice: "3.00",
+            category: "tea",
+        },
+        {
+            id: "2ff30749-4498-4945-8af1-4e022335db36",
+            name: "Chai Latte",
+            basePrice: "4.00",
+            category: "tea",
+        },
+        {
+            id: "f8d79186-76fe-431d-9224-4ff44ae95623",
+            name: "Matcha Latte",
+            basePrice: "4.50",
+            category: "tea",
+        },
+        {
+            id: "e20feb5b-5980-4e03-901a-c6c7a3fc4766",
+            name: "Blueberry Muffin",
+            basePrice: "3.50",
+            category: "pastry",
+        },
+        {
+            id: "8240a5b6-072c-4fb7-9345-8075489611cf",
+            name: "Chocolate Chip Cookie",
+            basePrice: "2.50",
+            category: "pastry",
+        },
+        {
+            id: "58f0375c-3367-44d6-a3d2-905e174d7598",
+            name: "Cinnamon Roll",
+            basePrice: "4.00",
+            category: "pastry",
+        },
+        {
+            id: "14cbc963-c2f3-44f0-9c45-56b62ac5b97b",
+            name: "Ham & Cheese Sandwich",
+            basePrice: "5.50",
+            category: "sandwich",
+        },
+        {
+            id: "3cad9c4a-de73-45a8-a669-c0a5ca7dd2a2",
+            name: "Chicken Caesar Wrap",
+            basePrice: "6.00",
+            category: "sandwich",
+        },
+    ];
+
+    // Modifier groups per menu item with their options
+    // required: always pick one; optional: pick one 50% of the time
+    type ModifierGroupSeed = {
+        groupId: string;
+        required: boolean;
+        options: { id: string; price: string }[];
+    };
+    const menuItemModifiers: Record<string, ModifierGroupSeed[]> = {
+        // Latte
+        "257f7064-9fd9-466f-afb0-7218e514f67f": [
+            {
+                groupId: "7c38084f-ce4c-4c5c-9587-ec203d8eeb99",
+                required: true,
+                options: [
+                    { id: "31fd6ad0-6301-465d-95d4-32accff8278c", price: "0" },
+                    {
+                        id: "8b916a91-8626-4256-9621-c80f6c91bf85",
+                        price: "0.50",
+                    },
+                    {
+                        id: "83caebeb-6a37-4ea6-be4f-77040d69429e",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "14fc7e10-5027-40ea-8eba-1419f8984acd",
+                required: true,
+                options: [
+                    { id: "b1a0f56a-3cb6-4f28-803f-cca5f21e5380", price: "0" },
+                    { id: "48199e89-7074-41d2-987f-cc726c4da1a4", price: "0" },
+                    { id: "8d3b639c-a7ef-4022-91c8-934ff4cdee10", price: "0" },
+                    { id: "57494bce-4c9c-455f-93b0-89967b0e9630", price: "0" },
+                    { id: "0a26ea1c-2e29-4849-89dc-8cd23b8b127b", price: "0" },
+                ],
+            },
+            {
+                groupId: "128d1d51-f5d4-4132-8f54-3e2c823fc6b5",
+                required: true,
+                options: [
+                    { id: "d677ff95-041b-42b6-b763-c066091b2c16", price: "0" },
+                    {
+                        id: "7d5a3c32-bc79-416c-b231-fc03d1fc623a",
+                        price: "0.50",
+                    },
+                    {
+                        id: "59f2fc2c-da36-4138-a532-68ea34ba9e34",
+                        price: "0.50",
+                    },
+                    {
+                        id: "1e47d41d-4e1f-4c29-9fc9-10b54a6201f3",
+                        price: "0.50",
+                    },
+                ],
+            },
+            {
+                groupId: "bd0ebe4c-5145-4053-ad14-c389ef96e78d",
+                required: false,
+                options: [
+                    { id: "e30a7fc9-e24e-40df-a2d6-a8a554d5ce96", price: "0" },
+                    {
+                        id: "70acc393-1ec4-400c-93b2-a40dd678186a",
+                        price: "1.00",
+                    },
+                    {
+                        id: "87e19f73-cc10-4bcc-9e05-1b43382947ac",
+                        price: "2.00",
+                    },
+                ],
+            },
+        ],
+        // Iced Latte
+        "edf35213-cdf7-4979-963b-6806bb4f8933": [
+            {
+                groupId: "ecf2a330-36c1-4a29-9583-903fe48e5388",
+                required: true,
+                options: [
+                    { id: "3f37ae28-4e37-4057-bfd5-f0748bb61ec2", price: "0" },
+                    {
+                        id: "10fb5717-0470-4ce0-b15c-14f1517917f2",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "c87fa5fd-0551-4fe6-b865-6894bbe2ed86",
+                required: true,
+                options: [
+                    { id: "901448fa-11e9-41f7-bd32-11934a8b62d5", price: "0" },
+                    { id: "f028fe02-8db5-4e71-a574-33024a44395b", price: "0" },
+                    { id: "9fb5001a-d482-4184-979d-79c67175bfc8", price: "0" },
+                    { id: "e5022435-9bf8-4b58-938c-2057ee888dd2", price: "0" },
+                    { id: "d65c327f-d589-4e0b-b0bc-9bc050e71659", price: "0" },
+                ],
+            },
+            {
+                groupId: "4b3667b8-43fc-4f89-8cae-352511e2accb",
+                required: false,
+                options: [
+                    { id: "1dac21b2-5b8b-47c9-b440-1217bcf75a5c", price: "0" },
+                    {
+                        id: "9b714eb0-1933-4074-8f1a-aa2e7eb7d07d",
+                        price: "0",
+                    },
+                    {
+                        id: "61c8a059-21bd-46d1-8692-b13ea1346b40",
+                        price: "0.50",
+                    },
+                    {
+                        id: "c9285b30-fad1-4369-99b8-8c9fc75edbb7",
+                        price: "0.50",
+                    },
+                    {
+                        id: "a33aeb6d-9ef1-4c82-a529-08160abc48b3",
+                        price: "0.50",
+                    },
+                ],
+            },
+            {
+                groupId: "d369535d-9be4-43af-aa94-0a543943f81f",
+                required: false,
+                options: [
+                    {
+                        id: "a7d3f3bd-d8cb-450f-86d4-c1115add5940",
+                        price: "0.50",
+                    },
+                    {
+                        id: "603291de-c298-41d4-968a-8b41392d18ba",
+                        price: "0.75",
+                    },
+                ],
+            },
+            {
+                groupId: "405ed4ad-6bf2-4aff-a9bd-cf89f80b1fa0",
+                required: true,
+                options: [
+                    { id: "030077bc-eb59-4d8d-a7de-dd6e7116365a", price: "0" },
+                    { id: "9d4b09c6-2f13-4181-9479-76d057f228cc", price: "0" },
+                    { id: "061cfb6a-60f6-41ac-ab0e-aaaff25b1ca5", price: "0" },
+                ],
+            },
+        ],
+        // Green Tea
+        "1997b5d2-6563-43f5-a45d-d7fa9910adb4": [
+            {
+                groupId: "03da6daa-ef4c-4d6a-8614-87ba0d2f6175",
+                required: true,
+                options: [
+                    { id: "57df93d0-5702-482c-8c52-1eed3c774110", price: "0" },
+                    {
+                        id: "c6637989-4e4f-48fa-a464-77af64ccb8cc",
+                        price: "0.50",
+                    },
+                    {
+                        id: "91b46408-22eb-4b17-836b-cf882b700000",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "10f7172a-071e-4e45-b4b9-e4afcd24e174",
+                required: true,
+                options: [
+                    { id: "659a614d-0f4f-4fd0-8d4b-dc0a64be2d15", price: "0" },
+                    {
+                        id: "414a93b4-a52d-429e-a000-43af047a2a47",
+                        price: "0",
+                    },
+                    { id: "806430d7-463c-4abf-94db-463e5d40f118", price: "0" },
+                    {
+                        id: "46e13bde-8b01-4c3b-9540-6131080ed6c2",
+                        price: "0",
+                    },
+                    {
+                        id: "7894920a-b4bf-44ff-b573-ae545888c96f",
+                        price: "0",
+                    },
+                ],
+            },
+            {
+                groupId: "d2c85d46-b507-4f16-8384-223ba2f62e91",
+                required: false,
+                options: [
+                    { id: "8a51c5ad-b028-49d6-85a8-7274c0c3bac0", price: "0" },
+                    {
+                        id: "6d12d196-2989-4cdb-abcf-51ddbf720692",
+                        price: "0",
+                    },
+                    {
+                        id: "b82a0cc0-1796-4d87-b323-fe168aaa7eed",
+                        price: "0.50",
+                    },
+                    {
+                        id: "d1fd9f2d-f912-4943-917c-601e6a681b18",
+                        price: "0.50",
+                    },
+                    {
+                        id: "ad092e0e-0a92-439b-ad5c-1dcaac12a836",
+                        price: "0.50",
+                    },
+                ],
+            },
+        ],
+        // Espresso
+        "20bec654-ef01-4606-8eb5-31e7c6e88112": [
+            {
+                groupId: "b7f08b19-3aab-4bf7-b61c-115ed485aecc",
+                required: true,
+                options: [
+                    { id: "f074a226-f425-4b84-a061-6d5bddaf6673", price: "0" },
+                    {
+                        id: "2fe4ec61-f51c-4347-ac05-1ae193c7a47b",
+                        price: "0.50",
+                    },
+                    {
+                        id: "3cc6b14e-9dd5-4448-9bbb-66165cf85496",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "9100b3b6-0691-4182-ab08-4eff151bb417",
+                required: true,
+                options: [
+                    { id: "2f70ab9d-8f4a-4f88-a0c5-13bae7579aac", price: "0" },
+                    { id: "2c0bdda8-a53a-4614-a668-31deb3438c3f", price: "0" },
+                    { id: "8c9394ed-243b-4ed2-983a-bdfa6780a20e", price: "0" },
+                    { id: "bf0e5101-0a0e-4e3a-aecc-c6b6635abced", price: "0" },
+                    { id: "d8f166fd-353a-407f-9753-ba80a88b7996", price: "0" },
+                ],
+            },
+            {
+                groupId: "de2e1a51-1b6f-4c85-a178-bad0e67a4604",
+                required: false,
+                options: [
+                    { id: "4382443c-e336-44fb-82e0-9f84c747d3bf", price: "0" },
+                    {
+                        id: "424a2f9d-8393-43d5-a227-612312398fca",
+                        price: "1.00",
+                    },
+                    {
+                        id: "70888213-6c6d-4d58-b34b-c7ff152d233d",
+                        price: "2.00",
+                    },
+                ],
+            },
+        ],
+        // Americano
+        "0f04732b-2db5-4166-a1c4-c6676de14e22": [
+            {
+                groupId: "f5c8f0ea-5905-4cfb-a4fa-7f8272a98f74",
+                required: true,
+                options: [
+                    { id: "1c5d0786-acaf-42ba-916f-e0e8fc19dfa6", price: "0" },
+                    {
+                        id: "2d951989-0535-4877-9204-d4b7bb70dd1e",
+                        price: "0.50",
+                    },
+                    {
+                        id: "1cbf6eb9-e6a1-4c0b-8012-9f2391449ce4",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "a93c1d1f-178d-49c2-a2eb-aa43e0a1ba6e",
+                required: true,
+                options: [
+                    { id: "4a5e8421-a60f-4900-a359-1bd9163de3fb", price: "0" },
+                    { id: "09d5ae3f-e08f-4a84-a131-fec4b50bf2a8", price: "0" },
+                    { id: "1f90f985-9c77-4331-9d8b-7ffc1c8d9bff", price: "0" },
+                    { id: "90e18680-f9c1-465e-98cc-c3fe439b489c", price: "0" },
+                    { id: "aa29b63d-e7be-4edb-8200-19549c8320ca", price: "0" },
+                ],
+            },
+            {
+                groupId: "a2b46de9-6eb8-4990-a412-12f52fa66e29",
+                required: false,
+                options: [
+                    { id: "fb4ad6e4-857f-4615-b9a0-67e654c9d934", price: "0" },
+                    { id: "c684f4d4-b6f7-4f77-a87e-aef2896ceada", price: "0" },
+                    {
+                        id: "df90ef89-b8df-475f-9d79-b5a70ad10ae3",
+                        price: "0.50",
+                    },
+                    {
+                        id: "c77f953f-4a1b-4d37-a12a-f4d14bddc9a1",
+                        price: "0.50",
+                    },
+                    {
+                        id: "6771e233-9a71-49c9-94cc-1585ad7abfdd",
+                        price: "0.50",
+                    },
+                ],
+            },
+        ],
+        // Cappuccino
+        "6d68e9f3-9cfb-44dd-9d41-e5505685ce53": [
+            {
+                groupId: "0fc57c7a-8194-4d4d-a92c-db071cf0614c",
+                required: true,
+                options: [
+                    { id: "de6767ca-9387-4701-af61-b3b2304cc693", price: "0" },
+                    {
+                        id: "74d47b6f-52f8-4182-aabe-7e75dc9abe35",
+                        price: "0.50",
+                    },
+                    {
+                        id: "c775a107-b8cd-4059-a712-63759553d647",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "05e07662-afb0-4f53-bb04-96e5d534ce75",
+                required: true,
+                options: [
+                    { id: "a23d2ebb-a9a5-4039-8f4e-a8b50bffdd37", price: "0" },
+                    { id: "8f1a83c6-0155-4c0b-9f1e-83b441918dc4", price: "0" },
+                    { id: "1974d714-beb9-4bcf-943f-3f544a6411b7", price: "0" },
+                    { id: "2bc0bd9d-51cc-4796-a283-26214ca2b8b3", price: "0" },
+                    { id: "c38bd709-651d-4dcf-98c7-3478bd7c7001", price: "0" },
+                ],
+            },
+            {
+                groupId: "49013759-2a8a-44d7-bbf5-ffdcc08121e9",
+                required: true,
+                options: [
+                    { id: "ba4b3521-3790-46ea-8f70-0ecc77f5e471", price: "0" },
+                    {
+                        id: "ed8c343d-8fcf-4166-8e94-fbac2bc44533",
+                        price: "0.50",
+                    },
+                    {
+                        id: "c4c734d0-3c52-42cb-b073-ff3ef397a790",
+                        price: "0.50",
+                    },
+                    {
+                        id: "9816d1ab-e95b-4b70-9f22-97e969bab14e",
+                        price: "0.50",
+                    },
+                ],
+            },
+            {
+                groupId: "d292ea49-33f7-4f7b-bcd8-cb991b711dda",
+                required: false,
+                options: [
+                    { id: "d18cc6d3-39f1-472d-aca5-b37c2569054a", price: "0" },
+                    {
+                        id: "297c26c2-71d8-4adc-b939-1d6d69239a5c",
+                        price: "1.00",
+                    },
+                    {
+                        id: "babe07ae-284c-48bb-bda0-c40313e0fcf6",
+                        price: "2.00",
+                    },
+                ],
+            },
+        ],
+        // Flat White
+        "31106854-4c60-440c-9c31-fa1130c155f8": [
+            {
+                groupId: "60befca9-289e-4797-8d55-f864047f2733",
+                required: true,
+                options: [
+                    { id: "f5418640-eaaf-4f9e-94db-01b9ceef8ddd", price: "0" },
+                    {
+                        id: "07139703-7816-4ac6-bf2d-0bf9289fff30",
+                        price: "0.50",
+                    },
+                    {
+                        id: "0e540db5-a81b-4878-b5b4-e917f8d86a10",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "16b4da2b-018e-4a77-91ee-bff1a8936ec7",
+                required: true,
+                options: [
+                    { id: "d5d750c0-d084-410e-b189-fa772274806c", price: "0" },
+                    { id: "b15ea72d-33d6-4233-9336-4713050e7d7a", price: "0" },
+                    { id: "11046aee-3410-4c75-bd8c-6d877e3fefc9", price: "0" },
+                    { id: "8e009b4d-bd0b-43c8-a220-be50bada15c1", price: "0" },
+                    { id: "c70bd050-a75b-40b9-b63a-ffff690b52fb", price: "0" },
+                ],
+            },
+            {
+                groupId: "aac10392-60d0-4048-817c-1e14620ac161",
+                required: true,
+                options: [
+                    { id: "5d3c6981-4368-499a-be81-751e17477a9c", price: "0" },
+                    {
+                        id: "c300afe9-bc5b-4ce5-ab7c-412c3243e12f",
+                        price: "0.50",
+                    },
+                    {
+                        id: "29463634-034b-4a37-8854-3634335c6115",
+                        price: "0.50",
+                    },
+                    {
+                        id: "8264d378-53c5-47a0-9dfc-77cbec1e5bd6",
+                        price: "0.50",
+                    },
+                ],
+            },
+        ],
+        // Mocha
+        "c6144bdf-f15b-4a8d-b594-cbe122140d4e": [
+            {
+                groupId: "e00819cf-1488-4978-9bca-0c1115f2d6ae",
+                required: true,
+                options: [
+                    { id: "8a33acda-bb52-40df-b4fc-9fe0a0a4f296", price: "0" },
+                    {
+                        id: "7ed8c7ab-697e-45fa-a09a-3543203cbb76",
+                        price: "0.50",
+                    },
+                    {
+                        id: "f944ff16-002d-40bf-9457-ffc07e7d198f",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "75d2fac7-2464-4dcf-aad4-262cd78ad4e3",
+                required: true,
+                options: [
+                    { id: "c6f36176-db1a-4bd6-83e6-fa104ef73ad6", price: "0" },
+                    { id: "d0690569-1668-4406-a7c8-627569d3e2c3", price: "0" },
+                    { id: "4c063b28-a55f-4aca-9e18-73daa96b07a8", price: "0" },
+                    { id: "4b36ec88-f304-48ab-b5e8-5bb63b7970a0", price: "0" },
+                    { id: "86f2ecef-e20c-4f0b-81e5-93ba568d8025", price: "0" },
+                ],
+            },
+            {
+                groupId: "ef07baf3-7e8d-49e1-b574-5e5bb1141979",
+                required: true,
+                options: [
+                    { id: "67dbe02a-c0d9-449f-ba73-70cdeeeb0a4c", price: "0" },
+                    {
+                        id: "bd42498f-054c-4ae2-aaa0-b33a3bdbd46b",
+                        price: "0.50",
+                    },
+                    {
+                        id: "a4ceebe4-32d0-4e0e-9013-d0f8bbe98374",
+                        price: "0.50",
+                    },
+                    {
+                        id: "ac58fecb-4000-4abc-9bce-2dfbaaaf7a34",
+                        price: "0.50",
+                    },
+                ],
+            },
+            {
+                groupId: "0cf2dbe8-a25f-4132-b78b-893c5945542b",
+                required: false,
+                options: [
+                    { id: "a4159f8a-cac8-4b89-b865-7d7e6173075b", price: "0" },
+                    {
+                        id: "95bb10ab-96e2-4615-86e9-8a3a810300a2",
+                        price: "1.00",
+                    },
+                    {
+                        id: "80054ef8-e727-4bac-8330-1f7b563c761f",
+                        price: "2.00",
+                    },
+                ],
+            },
+            {
+                groupId: "da087462-0709-43be-a691-8cb243a87bd5",
+                required: false,
+                options: [
+                    {
+                        id: "fcbd47c5-5761-4e6a-8ec9-dbd1d210886e",
+                        price: "0.50",
+                    },
+                    {
+                        id: "b4663fd0-f60b-4bea-8c4b-cd61b011794f",
+                        price: "0.75",
+                    },
+                    {
+                        id: "686f6fed-71a9-44c3-a149-22e1d6a083c6",
+                        price: "0.75",
+                    },
+                    {
+                        id: "7d7cf81b-51ba-4d64-885a-3a3f7c57f88f",
+                        price: "0.50",
+                    },
+                ],
+            },
+        ],
+        // Iced Americano
+        "5d537708-a892-49ea-9886-64b1809b9406": [
+            {
+                groupId: "ecf2a330-36c1-4a29-9583-903fe48e5388",
+                required: true,
+                options: [
+                    { id: "3f37ae28-4e37-4057-bfd5-f0748bb61ec2", price: "0" },
+                    {
+                        id: "10fb5717-0470-4ce0-b15c-14f1517917f2",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "c87fa5fd-0551-4fe6-b865-6894bbe2ed86",
+                required: true,
+                options: [
+                    { id: "901448fa-11e9-41f7-bd32-11934a8b62d5", price: "0" },
+                    { id: "f028fe02-8db5-4e71-a574-33024a44395b", price: "0" },
+                    { id: "9fb5001a-d482-4184-979d-79c67175bfc8", price: "0" },
+                    { id: "e5022435-9bf8-4b58-938c-2057ee888dd2", price: "0" },
+                    { id: "d65c327f-d589-4e0b-b0bc-9bc050e71659", price: "0" },
+                ],
+            },
+            {
+                groupId: "4b3667b8-43fc-4f89-8cae-352511e2accb",
+                required: false,
+                options: [
+                    { id: "1dac21b2-5b8b-47c9-b440-1217bcf75a5c", price: "0" },
+                    {
+                        id: "9b714eb0-1933-4074-8f1a-aa2e7eb7d07d",
+                        price: "0",
+                    },
+                    {
+                        id: "61c8a059-21bd-46d1-8692-b13ea1346b40",
+                        price: "0.50",
+                    },
+                    {
+                        id: "c9285b30-fad1-4369-99b8-8c9fc75edbb7",
+                        price: "0.50",
+                    },
+                    {
+                        id: "a33aeb6d-9ef1-4c82-a529-08160abc48b3",
+                        price: "0.50",
+                    },
+                ],
+            },
+            {
+                groupId: "405ed4ad-6bf2-4aff-a9bd-cf89f80b1fa0",
+                required: true,
+                options: [
+                    { id: "030077bc-eb59-4d8d-a7de-dd6e7116365a", price: "0" },
+                    { id: "9d4b09c6-2f13-4181-9479-76d057f228cc", price: "0" },
+                    { id: "061cfb6a-60f6-41ac-ab0e-aaaff25b1ca5", price: "0" },
+                ],
+            },
+        ],
+        // Cold Brew
+        "43ba26be-4e84-45af-83b3-d99a4417585c": [
+            {
+                groupId: "59d33b4b-f23e-4bd1-9a09-45f4f0df45d1",
+                required: true,
+                options: [
+                    { id: "4453109d-7ce1-49ac-b907-84a417a3de0a", price: "0" },
+                    {
+                        id: "e4ead042-c561-4d0e-862b-77d52ff83cf4",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "60deb156-275f-4cf6-9f19-33b4a8319a05",
+                required: true,
+                options: [
+                    { id: "89332f48-4ba3-474f-8fe0-d6fc80d2ac71", price: "0" },
+                    { id: "7f499c2d-dc91-40a7-8bca-34d0880690bd", price: "0" },
+                    { id: "9958983e-0a5b-458b-9f86-5474257f558b", price: "0" },
+                    { id: "0ee8dae6-eb62-4b21-8991-537eebe5f62b", price: "0" },
+                    { id: "f454f313-c36e-47f2-afc8-4b6d65928007", price: "0" },
+                ],
+            },
+            {
+                groupId: "0ed04a37-3f76-46fb-b062-1c7257ca1f7d",
+                required: false,
+                options: [
+                    { id: "02134cfb-36a0-4249-bcf5-e54e14fd706f", price: "0" },
+                    { id: "c4685578-1537-43a3-aa74-3571461f18f6", price: "0" },
+                    {
+                        id: "936275a5-67a6-4a5b-80c9-65e763224162",
+                        price: "0.50",
+                    },
+                    {
+                        id: "b8f6b286-5779-44b8-bf13-45a00b7566f4",
+                        price: "0.50",
+                    },
+                    {
+                        id: "734fc5f1-bb0b-4ac7-bb69-bd33552399da",
+                        price: "0.50",
+                    },
+                ],
+            },
+            {
+                groupId: "83f0900f-55dd-43d4-b31a-8fd9ae6239a6",
+                required: true,
+                options: [
+                    { id: "4d6a5692-acd9-4e3c-b258-572b132f8eba", price: "0" },
+                    { id: "3931a01d-ca4c-44ad-b9ee-fbe4d9f434db", price: "0" },
+                    { id: "e0e4e5a9-8ef6-4250-9ba7-b34b1a370359", price: "0" },
+                ],
+            },
+        ],
+        // Frappuccino
+        "048bd930-5aa5-4049-826f-6de4c88ced8c": [
+            {
+                groupId: "8a558da3-82c2-487a-9dd5-f037eaea1ad2",
+                required: true,
+                options: [
+                    { id: "e963ff2c-e16d-4b66-a4d9-113379a25bd2", price: "0" },
+                    {
+                        id: "bbc008f9-0c45-4e68-863d-14cf13a65f61",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "29850737-b313-45dd-868f-b025d173c458",
+                required: true,
+                options: [
+                    { id: "7cb58bbe-25dd-43d7-954f-f82d1c3e0e27", price: "0" },
+                    { id: "670ead10-ce09-48cb-89e3-337798b1c06f", price: "0" },
+                    { id: "6fb43e41-8b4b-4fc1-b155-652296340c93", price: "0" },
+                    { id: "f9118cce-b169-4c65-b574-a471b6408fe5", price: "0" },
+                    { id: "75a56afa-c92b-41aa-8ab0-1a465cde8ce7", price: "0" },
+                ],
+            },
+            {
+                groupId: "4aad97c0-7fbb-41bd-b2de-48e7b7aedd26",
+                required: true,
+                options: [
+                    { id: "48020399-aca2-447a-b676-b88e6b64ba66", price: "0" },
+                    { id: "493cf157-6eb1-4d8c-b89b-531d9b35a8a3", price: "0" },
+                    { id: "4c2cabc8-0c15-47a5-8db0-571ac7f794c2", price: "0" },
+                ],
+            },
+            {
+                groupId: "1930e57b-84a3-438d-a604-d36d3316789e",
+                required: true,
+                options: [
+                    { id: "7bf3a333-11d7-416b-8eca-468a5b4478f0", price: "0" },
+                    { id: "ac30ea55-c8a2-4d78-b1e9-0becbc79fa02", price: "0" },
+                ],
+            },
+            {
+                groupId: "da087462-0709-43be-a691-8cb243a87bd5",
+                required: false,
+                options: [
+                    {
+                        id: "fcbd47c5-5761-4e6a-8ec9-dbd1d210886e",
+                        price: "0.50",
+                    },
+                    {
+                        id: "b4663fd0-f60b-4bea-8c4b-cd61b011794f",
+                        price: "0.75",
+                    },
+                    {
+                        id: "686f6fed-71a9-44c3-a149-22e1d6a083c6",
+                        price: "0.75",
+                    },
+                    {
+                        id: "7d7cf81b-51ba-4d64-885a-3a3f7c57f88f",
+                        price: "0.50",
+                    },
+                ],
+            },
+        ],
+        // Earl Grey Tea
+        "27ec4974-adbc-4543-a174-d9787b3e6666": [
+            {
+                groupId: "03da6daa-ef4c-4d6a-8614-87ba0d2f6175",
+                required: true,
+                options: [
+                    { id: "57df93d0-5702-482c-8c52-1eed3c774110", price: "0" },
+                    {
+                        id: "c6637989-4e4f-48fa-a464-77af64ccb8cc",
+                        price: "0.50",
+                    },
+                    {
+                        id: "91b46408-22eb-4b17-836b-cf882b700000",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "10f7172a-071e-4e45-b4b9-e4afcd24e174",
+                required: true,
+                options: [
+                    { id: "659a614d-0f4f-4fd0-8d4b-dc0a64be2d15", price: "0" },
+                    {
+                        id: "414a93b4-a52d-429e-a000-43af047a2a47",
+                        price: "0",
+                    },
+                    { id: "806430d7-463c-4abf-94db-463e5d40f118", price: "0" },
+                    {
+                        id: "46e13bde-8b01-4c3b-9540-6131080ed6c2",
+                        price: "0",
+                    },
+                    {
+                        id: "7894920a-b4bf-44ff-b573-ae545888c96f",
+                        price: "0",
+                    },
+                ],
+            },
+            {
+                groupId: "d2c85d46-b507-4f16-8384-223ba2f62e91",
+                required: false,
+                options: [
+                    { id: "8a51c5ad-b028-49d6-85a8-7274c0c3bac0", price: "0" },
+                    {
+                        id: "6d12d196-2989-4cdb-abcf-51ddbf720692",
+                        price: "0",
+                    },
+                    {
+                        id: "b82a0cc0-1796-4d87-b323-fe168aaa7eed",
+                        price: "0.50",
+                    },
+                    {
+                        id: "d1fd9f2d-f912-4943-917c-601e6a681b18",
+                        price: "0.50",
+                    },
+                    {
+                        id: "ad092e0e-0a92-439b-ad5c-1dcaac12a836",
+                        price: "0.50",
+                    },
+                ],
+            },
+        ],
+        // Chai Latte
+        "2ff30749-4498-4945-8af1-4e022335db36": [
+            {
+                groupId: "07f476eb-014e-4892-8d2b-8acbb5e5e1fe",
+                required: true,
+                options: [
+                    { id: "77bb4e0f-1e09-4408-8621-eb9ad34d5d81", price: "0" },
+                    {
+                        id: "277c1946-9bde-4e75-b71c-2417cb6cd512",
+                        price: "0.50",
+                    },
+                    {
+                        id: "ab289954-e053-47cf-b418-84fab3e388c4",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "ba5daedb-8a4d-4e70-b8d6-e6f2bdd526ad",
+                required: true,
+                options: [
+                    { id: "ac151913-6dc3-4d89-8d60-23590ebb031b", price: "0" },
+                    { id: "4875ea5b-71d6-46a0-ae73-ce3d9df52131", price: "0" },
+                    { id: "d31786d8-0ba2-4bc4-9709-abd018a07e61", price: "0" },
+                    { id: "0fb27a8d-9e8f-4bc7-b6fc-23fcf434dda0", price: "0" },
+                    { id: "f9563442-d16f-456c-841c-623a23713ec5", price: "0" },
+                ],
+            },
+            {
+                groupId: "de04dd9b-a785-4570-bfb4-ea6b83437cad",
+                required: true,
+                options: [
+                    { id: "f65f4736-9d92-4768-b1ca-22750c2d6ead", price: "0" },
+                    {
+                        id: "943ba5f5-c5de-448a-82b9-75f3eb94ae96",
+                        price: "0.50",
+                    },
+                    {
+                        id: "db87dfc4-c1a3-4e47-ac1e-cc574f426de2",
+                        price: "0.50",
+                    },
+                    {
+                        id: "65ce6173-17fb-41f3-8cad-aebf57c97ea3",
+                        price: "0.50",
+                    },
+                ],
+            },
+        ],
+        // Matcha Latte
+        "f8d79186-76fe-431d-9224-4ff44ae95623": [
+            {
+                groupId: "071ea9e1-6077-494f-9626-5e94eb38deda",
+                required: true,
+                options: [
+                    { id: "e59e4359-ee47-4944-a503-a63b50a33b43", price: "0" },
+                    {
+                        id: "702dd08c-0c4d-4333-85e3-10a48f420996",
+                        price: "0.50",
+                    },
+                    {
+                        id: "17bddc5a-fd25-42f8-af62-0dcd771e7dab",
+                        price: "1.00",
+                    },
+                ],
+            },
+            {
+                groupId: "22817a4d-a43d-4bee-b449-b834da57b511",
+                required: true,
+                options: [
+                    { id: "1c7b70ae-85af-49ca-be82-7e57b2689216", price: "0" },
+                    { id: "2d657489-1612-41c2-8c6c-be2b2570eaec", price: "0" },
+                    { id: "bbe40976-8ac7-4d74-b5d9-472424f114ce", price: "0" },
+                    { id: "052c40f8-d378-496b-b15b-05d95c68984e", price: "0" },
+                    { id: "f46bf951-63e2-4942-990e-18b2a89a368f", price: "0" },
+                ],
+            },
+            {
+                groupId: "ed26965f-d429-4cdb-a559-775d6a0defe1",
+                required: true,
+                options: [
+                    { id: "5a3bf748-81a6-4ca1-86e5-01155eb85884", price: "0" },
+                    {
+                        id: "27e0be72-cd95-4fc1-a67f-395b593f8c86",
+                        price: "0.50",
+                    },
+                    {
+                        id: "5c4e43fa-ae94-4979-a963-725884414d5f",
+                        price: "0.50",
+                    },
+                    {
+                        id: "5bfc6c28-a8bd-4632-abaa-48a058a085c1",
+                        price: "0.50",
+                    },
+                ],
+            },
+            {
+                groupId: "23db2081-6e59-4f06-b8dd-4274e7ace923",
+                required: false,
+                options: [
+                    { id: "f12d9f0e-3029-4973-9ab4-9568a71f0bca", price: "0" },
+                    { id: "cba0f386-fd5e-4cdd-b0de-cead30bb02cd", price: "0" },
+                ],
+            },
+        ],
+        // Ham & Cheese Sandwich
+        "14cbc963-c2f3-44f0-9c45-56b62ac5b97b": [
+            {
+                groupId: "511b414e-9e7d-403d-a460-27dbf689ebce",
+                required: true,
+                options: [
+                    { id: "0c1a8cb1-ad51-4767-a245-a2c75e5be617", price: "0" },
+                    { id: "8b074fc3-d21f-4105-9d30-b878cfdf9b54", price: "0" },
+                    { id: "4a472d89-3a78-4e7c-bd19-6927ee455f07", price: "0" },
+                ],
+            },
+        ],
+        // Chicken Caesar Wrap
+        "3cad9c4a-de73-45a8-a669-c0a5ca7dd2a2": [
+            {
+                groupId: "372e2e25-02e8-467e-900b-7abe9848f583",
+                required: true,
+                options: [
+                    { id: "06b594ad-7ff0-440c-bba2-50fdee0ffdaf", price: "0" },
+                    { id: "1532cd27-351b-4fdd-bcba-54c264331876", price: "0" },
+                    { id: "f775ce64-f3eb-41c8-8482-3df40bb78556", price: "0" },
+                ],
+            },
+        ],
+    };
+
+    // Employee IDs for order assignment
+    const employeeIds = [
+        "dc194edc-71fe-49e5-a710-482680f8436a", // Dev Team (owner)
+        "1d04ed7f-e00a-450e-9397-d87ded11c5c6", // Cafe Owner (owner)
+        "3a7af35d-daca-4a0f-bc74-e5d3815861e9", // Alice (manager)
+        "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b", // Bob (barista)
+        "265a9de3-aaf0-4a98-9143-d12ab3b67478", // Cindy (barista)
+    ];
+
+    const now = Date.now();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const ORDER_COUNT = 100;
+
+    const ordersToInsert: (typeof ordersTable.$inferInsert)[] = [];
+    const orderItemsToInsert: (typeof orderItemsTable.$inferInsert)[] = [];
+    const orderItemModsToInsert: (typeof orderItemModifiersTable.$inferInsert)[] =
+        [];
+    const paymentsToInsert: (typeof paymentsTable.$inferInsert)[] = [];
+    const stockMovementsToInsert: (typeof stockMovementsTable.$inferInsert)[] =
+        [];
+
+    // Weighted random item selection (coffee is more popular)
+    const weights: Record<string, number> = {
+        coffee: 45,
+        tea: 20,
+        pastry: 25,
+        sandwich: 10,
+    };
+    const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+
+    const pickWeightedItem = () => {
+        let r = rng() * totalWeight;
+        for (const [cat, w] of Object.entries(weights)) {
+            r -= w;
+            if (r <= 0) {
+                const itemsInCat = menuItems.filter(
+                    (mi) => mi.category === cat,
+                );
+                return itemsInCat[Math.floor(rng() * itemsInCat.length)];
+            }
+        }
+        return menuItems[0];
+    };
+
+    for (let i = 0; i < ORDER_COUNT; i++) {
+        const orderId = crypto.randomUUID();
+        const daysAgo = Math.floor(rng() * 30);
+        const hoursOffset = Math.floor(rng() * 14) + 7; // 7am-9pm
+        const minutesOffset = Math.floor(rng() * 60);
+        const orderTime = new Date(
+            now -
+                daysAgo * msPerDay +
+                hoursOffset * 3600000 +
+                minutesOffset * 60000,
+        );
+
+        const createdBy = employeeIds[Math.floor(rng() * employeeIds.length)];
+        const confirmedBy = employeeIds[Math.floor(rng() * employeeIds.length)];
+        const diningOption = rng() < 0.6 ? "dine_in" : "take_away";
+
+        // 1-4 items per order
+        const itemCount = Math.floor(rng() * 4) + 1;
+        const selectedItems: { item: MenuItemSeed; quantity: number }[] = [];
+        for (let j = 0; j < itemCount; j++) {
+            const item = pickWeightedItem();
+            const quantity = rng() < 0.15 ? 2 : 1; // 15% chance of 2
+            selectedItems.push({ item, quantity });
+        }
+
+        // Calculate subtotal and build order items
+        let subtotal = 0;
+
+        for (let j = 0; j < selectedItems.length; j++) {
+            const { item, quantity } = selectedItems[j];
+            const orderItemId = crypto.randomUUID();
+            const basePrice = parseFloat(item.basePrice);
+            let itemTotal = basePrice * quantity;
+
+            const mods = menuItemModifiers[item.id] || [];
+            const chosenModifiers: {
+                optionId: string;
+                price: string;
+            }[] = [];
+
+            for (const group of mods) {
+                if (group.required || (!group.required && rng() < 0.5)) {
+                    const option =
+                        group.options[Math.floor(rng() * group.options.length)];
+                    chosenModifiers.push({
+                        optionId: option.id,
+                        price: option.price,
+                    });
+                    itemTotal += parseFloat(option.price) * quantity;
+                }
+            }
+
+            subtotal += itemTotal;
+
+            orderItemsToInsert.push({
+                id: orderItemId,
+                orderId,
+                menuItemId: item.id,
+                unitPrice: item.basePrice,
+                quantity,
+            });
+
+            // Add modifier entries for this order item
+            for (let k = 0; k < chosenModifiers.length; k++) {
+                const mod = chosenModifiers[k];
+                orderItemModsToInsert.push({
+                    orderItemId,
+                    modifierOptionId: mod.optionId,
+                    price: mod.price,
+                });
+            }
+
+            // Stock movements for this item
+            // Food items use item_recipes, drinks use modifier_option_ingredients
+            if (item.category === "pastry" || item.category === "sandwich") {
+                // Food: one stock movement per recipe ingredient
+                // Use fixed ingredient IDs based on item
+                const recipeIngredients = getRecipeIngredients(item.id);
+                for (const ri of recipeIngredients) {
+                    stockMovementsToInsert.push({
+                        ingredientId: ri.ingredientId,
+                        quantityChange: `-${ri.quantity}`,
+                        reason: "order_placed",
+                        referenceOrderId: orderId,
+                    });
+                }
+            }
+            // Drinks: stock movements from modifier option ingredients
+            // (handled below after all modifiers are chosen)
+        }
+
+        const total = subtotal;
+
+        ordersToInsert.push({
+            id: orderId,
+            status: "completed",
+            diningOption,
+            subtotal: subtotal.toFixed(2),
+            total: total.toFixed(2),
+            paymentStatus: "paid",
+            createdBy,
+            confirmedBy,
+            createdAt: orderTime,
+            updatedAt: orderTime,
+        });
+
+        // Payment
+        const isCash = rng() < 0.5;
+        const method = isCash ? "cash" : "qr";
+        const amountReceived = isCash
+            ? (Math.ceil(total * 2) / 2).toFixed(2) // round up to nearest 0.50
+            : undefined;
+        const changeAmount = isCash
+            ? (parseFloat(amountReceived as string) - total).toFixed(2)
+            : undefined;
+
+        paymentsToInsert.push({
+            orderId,
+            method,
+            amount: total.toFixed(2),
+            amountReceived,
+            changeAmount,
+            status: "paid",
+            createdBy,
+            createdAt: orderTime,
+            updatedAt: orderTime,
+        });
+    }
+
+    // Batch insert orders
+    for (let i = 0; i < ordersToInsert.length; i += 50) {
+        const batch = ordersToInsert.slice(i, i + 50);
+        await db.insert(ordersTable).values(batch).onConflictDoNothing();
+    }
+    console.log(`    ${ordersToInsert.length} orders`);
+
+    // Batch insert order items
+    for (let i = 0; i < orderItemsToInsert.length; i += 50) {
+        const batch = orderItemsToInsert.slice(i, i + 50);
+        await db.insert(orderItemsTable).values(batch).onConflictDoNothing();
+    }
+    console.log(`    ${orderItemsToInsert.length} order items`);
+
+    // Batch insert order item modifiers
+    for (let i = 0; i < orderItemModsToInsert.length; i += 50) {
+        const batch = orderItemModsToInsert.slice(i, i + 50);
+        await db
+            .insert(orderItemModifiersTable)
+            .values(batch)
+            .onConflictDoNothing();
+    }
+    console.log(`    ${orderItemModsToInsert.length} order item modifiers`);
+
+    // Batch insert payments
+    for (let i = 0; i < paymentsToInsert.length; i += 50) {
+        const batch = paymentsToInsert.slice(i, i + 50);
+        await db.insert(paymentsTable).values(batch).onConflictDoNothing();
+    }
+    console.log(`    ${paymentsToInsert.length} payments`);
+
+    // Stock movements
+    for (let i = 0; i < stockMovementsToInsert.length; i += 50) {
+        const batch = stockMovementsToInsert.slice(i, i + 50);
+        await db
+            .insert(stockMovementsTable)
+            .values(batch)
+            .onConflictDoNothing();
+    }
+    console.log(`    ${stockMovementsToInsert.length} stock movements`);
+};
+
+const getRecipeIngredients = (
+    menuItemId: string,
+): { ingredientId: string; quantity: string }[] => {
+    const recipes: Record<
+        string,
+        { ingredientId: string; quantity: string }[]
+    > = {
+        // Croissant
+        "cd297893-a429-4f86-a240-b99e01ab0d50": [
+            {
+                ingredientId: "60340e44-5a8e-456b-b254-f62336da788e",
+                quantity: "1",
+            },
+        ],
+        // Blueberry Muffin
+        "e20feb5b-5980-4e03-901a-c6c7a3fc4766": [
+            {
+                ingredientId: "36f31b16-2435-4471-8b2b-2dc8a7ccdaa9",
+                quantity: "1",
+            },
+        ],
+        // Chocolate Chip Cookie
+        "8240a5b6-072c-4fb7-9345-8075489611cf": [
+            {
+                ingredientId: "82d1098d-9674-40a3-a706-9315a9402056",
+                quantity: "1",
+            },
+        ],
+        // Cinnamon Roll
+        "58f0375c-3367-44d6-a3d2-905e174d7598": [
+            {
+                ingredientId: "f655d517-c708-4f31-a375-62262c3fab17",
+                quantity: "1",
+            },
+        ],
+        // Ham & Cheese Sandwich
+        "14cbc963-c2f3-44f0-9c45-56b62ac5b97b": [
+            {
+                ingredientId: "9dcc2862-58ef-4261-ac56-c1498412257b",
+                quantity: "1",
+            },
+            {
+                ingredientId: "5eca42e5-d1a6-4b1d-8bab-2e4594e4176f",
+                quantity: "80",
+            },
+            {
+                ingredientId: "55cb7dae-0fe6-4bc0-ba77-096f0b81d224",
+                quantity: "1",
+            },
+        ],
+        // Chicken Caesar Wrap
+        "3cad9c4a-de73-45a8-a669-c0a5ca7dd2a2": [
+            {
+                ingredientId: "6c158039-0aa4-4baa-9555-a619387af12d",
+                quantity: "1",
+            },
+            {
+                ingredientId: "b883c31d-219e-48b5-ba84-d5d439513480",
+                quantity: "100",
+            },
+            {
+                ingredientId: "62835de4-5ddc-450f-9fa5-4ea3807edfcd",
+                quantity: "30",
+            },
+        ],
+    };
+    return recipes[menuItemId] || [];
 };
 
 import { fileURLToPath } from "url";
