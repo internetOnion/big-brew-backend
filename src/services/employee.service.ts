@@ -19,6 +19,21 @@ interface UpdateEmployeeInput {
 }
 
 export class EmployeeService {
+    async listEmployees(): Promise<EmployeePayload[]> {
+        const employees = await employeeRepository.findAll();
+        const results: EmployeePayload[] = [];
+        for (const emp of employees) {
+            let email: string | undefined;
+            if (emp.supabaseUid) {
+                const { data: userData } =
+                    await supabaseAdmin.auth.admin.getUserById(emp.supabaseUid);
+                email = userData?.user?.email;
+            }
+            results.push(formatEmployee(emp, email));
+        }
+        return results;
+    }
+
     async getEmployeeById(id: string): Promise<EmployeePayload> {
         const employee = await employeeRepository.findById(id);
         if (!employee || !employee.isActive) {

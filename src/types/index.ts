@@ -5,6 +5,7 @@ import type {
     paymentMethodEnum,
     paymentStatusEnum,
     diningOptionEnum,
+    stockReasonEnum,
 } from "../models/schema/enums.ts";
 
 export type EmployeeRole = (typeof employeeRoleEnum.enumValues)[number];
@@ -13,6 +14,7 @@ export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
 export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
 export type DiningOption = (typeof diningOptionEnum.enumValues)[number];
+export type StockReason = (typeof stockReasonEnum.enumValues)[number];
 
 export interface EmployeePayload {
     id: string;

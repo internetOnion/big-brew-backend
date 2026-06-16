@@ -32,6 +32,7 @@ const createOrderSchema = z
             .min(1, "At least one item is required"),
         payment_method: z.enum(["cash", "qr"]).optional(),
         amount_received: z.number().positive().optional(),
+        confirmed_by: z.uuid().optional(),
     })
     .strict()
     .refine(
@@ -75,6 +76,14 @@ const processPaymentSchema = z
 
 const requestVoidSchema = z
     .object({
+        reason: z.string().min(1, "Void reason is required"),
+        verified_employee_id: z.uuid().optional(),
+    })
+    .strict();
+
+const voidWithPinSchema = z
+    .object({
+        pin: z.string().min(1, "PIN is required"),
         reason: z.string().min(1, "Void reason is required"),
     })
     .strict();
@@ -376,6 +385,51 @@ router.post(
     validateParams(idParamsSchema),
     validateBody(requestVoidSchema),
     (req, res) => orderController.requestVoid(req, res),
+);
+
+/**
+ * @openapi
+ * /api/orders/{id}/void-with-pin:
+ *   post:
+ *     tags: [Orders]
+ *     summary: "Void an order (barista: request void; manager/owner: auto-approve)"
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [pin, reason]
+ *             properties:
+ *               pin:
+ *                 type: string
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Void processed
+ *       400:
+ *         description: Invalid PIN or request
+ *       401:
+ *         $ref: "#/components/responses/Unauthorized"
+ *       404:
+ *         description: Order not found
+ */
+router.post(
+    "/:id/void-with-pin",
+    requireRole("barista", "manager", "owner"),
+    validateParams(idParamsSchema),
+    validateBody(voidWithPinSchema),
+    (req, res) => orderController.voidWithPin(req, res),
 );
 
 /**

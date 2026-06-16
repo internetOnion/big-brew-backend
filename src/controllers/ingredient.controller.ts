@@ -35,6 +35,22 @@ export class IngredientController {
         await ingredientService.deleteIngredient(id);
         res.status(204).send();
     }
+
+    async adjustStock(req: Request, res: Response) {
+        const id = req.params.id as string;
+        const { quantityChange, reason, notes } = req.body;
+        const recordedBy = req.employee!.id;
+
+        const ingredient = await ingredientService.adjustStock(
+            id,
+            quantityChange,
+            reason,
+            notes,
+            recordedBy,
+        );
+
+        res.json(ingredient);
+    }
 }
 
 export const ingredientController = new IngredientController();

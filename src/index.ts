@@ -7,6 +7,8 @@ const server = app.listen(config.port, () => {
     logger.info(`Server running on http://localhost:${config.port}`);
 });
 
+server.timeout = 30000;
+
 server.on("error", (err) => {
     logger.error(err, "Server failed to start");
     process.exit(1);

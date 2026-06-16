@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import { discountsTable } from "../models/schema/index.ts";
 
@@ -16,6 +16,28 @@ export interface Discount {
     updatedAt: Date;
 }
 
+export interface InsertDiscount {
+    name: string;
+    type: "percentage" | "fixed_amount" | "bogo";
+    value: string | null;
+    buyItemId: string | null;
+    freeItemId: string | null;
+    isActive?: boolean;
+    startsAt?: Date | null;
+    endsAt?: Date | null;
+}
+
+export interface UpdateDiscount {
+    name?: string;
+    type?: "percentage" | "fixed_amount" | "bogo";
+    value?: string | null;
+    buyItemId?: string | null;
+    freeItemId?: string | null;
+    isActive?: boolean;
+    startsAt?: Date | null;
+    endsAt?: Date | null;
+}
+
 export class DiscountRepository {
     async findActive(): Promise<Discount[]> {
         const now = new Date();
@@ -23,21 +45,20 @@ export class DiscountRepository {
         const results = await db
             .select()
             .from(discountsTable)
-            .where(
-                and(
-                    eq(discountsTable.isActive, true),
-                    // Check date range if set
-                    // starts_at is null OR starts_at <= now
-                    // ends_at is null OR ends_at >= now
-                ),
-            );
+            .where(eq(discountsTable.isActive, true));
 
-        // Filter by date range in application code
         return results.filter((discount) => {
             if (discount.startsAt && discount.startsAt > now) return false;
             if (discount.endsAt && discount.endsAt < now) return false;
             return true;
         });
+    }
+
+    async findAll(): Promise<Discount[]> {
+        return db
+            .select()
+            .from(discountsTable)
+            .orderBy(desc(discountsTable.createdAt));
     }
 
     async findById(id: string): Promise<Discount | null> {
@@ -48,6 +69,48 @@ export class DiscountRepository {
             .limit(1);
 
         return result[0] ?? null;
+    }
+
+    async insert(data: InsertDiscount): Promise<Discount> {
+        const result = await db
+            .insert(discountsTable)
+            .values({
+                name: data.name,
+                type: data.type,
+                value: data.value,
+                buyItemId: data.buyItemId,
+                freeItemId: data.freeItemId,
+                ...(data.isActive !== undefined && {
+                    isActive: data.isActive,
+                }),
+                ...(data.startsAt !== undefined && {
+                    startsAt: data.startsAt,
+                }),
+                ...(data.endsAt !== undefined && { endsAt: data.endsAt }),
+            })
+            .returning();
+
+        return result[0];
+    }
+
+    async update(id: string, data: UpdateDiscount): Promise<Discount> {
+        const result = await db
+            .update(discountsTable)
+            .set({ ...data, updatedAt: new Date() })
+            .where(eq(discountsTable.id, id))
+            .returning();
+
+        return result[0];
+    }
+
+    async deactivate(id: string): Promise<Discount> {
+        const result = await db
+            .update(discountsTable)
+            .set({ isActive: false, updatedAt: new Date() })
+            .where(eq(discountsTable.id, id))
+            .returning();
+
+        return result[0];
     }
 }
 

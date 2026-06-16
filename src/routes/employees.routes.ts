@@ -14,6 +14,35 @@ const router = Router();
 
 const idParamsSchema = z.object({ id: z.uuid() });
 
+/**
+ * @openapi
+ * /api/employees:
+ *   get:
+ *     tags: [Employees]
+ *     summary: List all employees
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of employees
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: "#/components/schemas/Employee"
+ *       401:
+ *         $ref: "#/components/responses/Unauthorized"
+ *       403:
+ *         $ref: "#/components/responses/Forbidden"
+ */
+router.get(
+    "/",
+    authenticate,
+    requireRole("owner", "manager"),
+    (req: Request, res: Response) => employeeController.listEmployees(req, res),
+);
+
 const updateEmployeeSchema = z
     .object({
         name: z.string().min(1).max(100).optional(),

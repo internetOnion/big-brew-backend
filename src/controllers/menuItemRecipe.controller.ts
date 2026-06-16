@@ -5,7 +5,7 @@ export class MenuItemRecipeController {
     async getRecipes(req: Request, res: Response) {
         const menuItemId = req.params.menuItemId as string;
         const recipes = await menuItemRecipeService.getRecipes(menuItemId);
-        res.json({ data: recipes });
+        return res.json({ data: recipes });
     }
 
     async addRecipes(req: Request, res: Response) {
@@ -14,7 +14,7 @@ export class MenuItemRecipeController {
             menuItemId,
             req.body,
         );
-        res.status(201).json({ data: recipes });
+        return res.status(201).json({ data: recipes });
     }
 
     async updateRecipe(req: Request, res: Response) {

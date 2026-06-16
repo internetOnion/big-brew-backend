@@ -73,6 +73,8 @@ export {
     DiscountRepository,
     discountRepository,
     type Discount,
+    type InsertDiscount,
+    type UpdateDiscount,
 } from "./discount.repository.ts";
 export {
     PaymentRepository,
@@ -80,3 +82,27 @@ export {
     type Payment,
     type CreatePaymentInput,
 } from "./payment.repository.ts";
+export {
+    ExpenseRepository,
+    expenseRepository,
+    type Expense,
+    type InsertExpense,
+    type UpdateExpense,
+    type ExpenseFilters,
+    type ExpenseSummaryRow,
+} from "./expense.repository.ts";
+export {
+    StockMovementRepository,
+    stockMovementRepository,
+    type StockMovement,
+    type StockMovementFilters,
+} from "./stockMovement.repository.ts";
+export {
+    AnalyticsRepository,
+    analyticsRepository,
+    type GroupBy,
+    type RevenueDataPoint,
+    type TopItem,
+    type ExpenseCategoryTotal,
+    type AnalyticsSummary,
+} from "./analytics.repository.ts";

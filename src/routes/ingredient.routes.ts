@@ -9,6 +9,7 @@ import {
     validateParams,
 } from "../middlewares/index.ts";
 import { ingredientUnitEnumSchema } from "../models/schema/enums.ts";
+import { stockReasonEnum } from "../models/schema/enums.ts";
 
 const router = Router();
 const idParamsSchema = z.object({ id: z.uuid() });
@@ -18,6 +19,24 @@ const addIngredientSchema = z
         unit: ingredientUnitEnumSchema,
         stockQuantity: z.number().nonnegative(),
         lowStockThreshold: z.number().nonnegative(),
+    })
+    .strict();
+
+const adjustStockSchema = z
+    .object({
+        quantityChange: z
+            .number()
+            .refine((v) => v !== 0, "Quantity change cannot be zero"),
+        reason: z.enum(
+            stockReasonEnum.enumValues.filter((r) =>
+                [
+                    "manual_restock",
+                    "manual_deduction",
+                    "manual_adjustment",
+                ].includes(r),
+            ) as [string, ...string[]],
+        ),
+        notes: z.string().max(500).optional(),
     })
     .strict();
 
@@ -168,6 +187,71 @@ router.patch(
     validateParams(idParamsSchema),
     validateBody(addIngredientSchema.partial()),
     (req, res) => ingredientController.updateIngredient(req, res),
+);
+
+/**
+ * @openapi
+ * /api/ingredients/{id}/adjust:
+ *   post:
+ *     tags: [Ingredients]
+ *     summary: Adjust stock quantity for an ingredient
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [quantityChange, reason]
+ *             properties:
+ *               quantityChange:
+ *                 type: number
+ *                 description: Positive to add stock, negative to deduct
+ *               reason:
+ *                 type: string
+ *                 enum: [manual_restock, manual_deduction, manual_adjustment]
+ *               notes:
+ *                 type: string
+ *                 maxLength: 500
+ *     responses:
+ *       200:
+ *         description: Stock adjusted, returns updated ingredient
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Ingredient"
+ *       400:
+ *         description: Validation error or insufficient stock
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Error"
+ *       401:
+ *         $ref: "#/components/responses/Unauthorized"
+ *       403:
+ *         $ref: "#/components/responses/Forbidden"
+ *       404:
+ *         description: Ingredient not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Error"
+ */
+router.post(
+    "/:id/adjust",
+    authenticate,
+    requireRole("owner", "manager"),
+    validateParams(idParamsSchema),
+    validateBody(adjustStockSchema),
+    (req, res) => ingredientController.adjustStock(req, res),
 );
 
 /**

@@ -1,5 +1,4 @@
-import { date } from "drizzle-orm/mysql-core";
-import { Ingredient } from "../repositories/ingredient.respository";
+import type { Ingredient } from "../repositories/ingredient.respository";
 
 export const formatIngredient = (ingredient: Ingredient) => ({
     id: ingredient.id,
