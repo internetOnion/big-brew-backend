@@ -66,8 +66,16 @@ export class OrderController {
             filters.to = new Date(to as string);
         }
 
-        const orders = await orderService.listOrders(filters);
-        return res.json(orders);
+        const result = await orderService.listOrders(filters);
+        return res.json({
+            data: result.data,
+            pagination: {
+                page: result.page,
+                limit: result.limit,
+                total: result.total,
+                totalPages: Math.ceil(result.total / result.limit),
+            },
+        });
     }
 
     async updateOrderStatus(req: Request, res: Response) {
