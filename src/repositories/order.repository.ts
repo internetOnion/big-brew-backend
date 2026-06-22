@@ -1,4 +1,4 @@
-import { eq, inArray, desc, and, sql } from "drizzle-orm";
+import { eq, inArray, desc, and, sql, gte, lte } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import {
     ordersTable,
@@ -80,6 +80,8 @@ export interface ListOrdersFilters {
     createdById?: string;
     limit?: number;
     offset?: number;
+    from?: Date;
+    to?: Date;
 }
 
 export class OrderRepository {
@@ -325,6 +327,14 @@ export class OrderRepository {
 
         if (filters.createdById) {
             conditions.push(eq(ordersTable.createdBy, filters.createdById));
+        }
+
+        if (filters.from) {
+            conditions.push(gte(ordersTable.createdAt, filters.from));
+        }
+
+        if (filters.to) {
+            conditions.push(lte(ordersTable.createdAt, filters.to));
         }
 
         const whereClause =

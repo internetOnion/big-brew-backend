@@ -44,7 +44,7 @@ export class OrderController {
     }
 
     async listOrders(req: Request, res: Response) {
-        const { status, created_by_id, limit, offset } = req.query;
+        const { status, created_by_id, limit, offset, from, to } = req.query;
 
         const filters: any = {};
         if (status) {
@@ -58,6 +58,12 @@ export class OrderController {
         }
         if (offset) {
             filters.offset = parseInt(offset as string, 10);
+        }
+        if (from) {
+            filters.from = new Date(from as string);
+        }
+        if (to) {
+            filters.to = new Date(to as string);
         }
 
         const orders = await orderService.listOrders(filters);

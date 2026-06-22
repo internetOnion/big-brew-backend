@@ -94,6 +94,8 @@ const listOrdersQuerySchema = z
         created_by_id: z.uuid().optional(),
         limit: z.coerce.number().int().positive().optional(),
         offset: z.coerce.number().int().min(0).optional(),
+        from: z.iso.datetime().optional(),
+        to: z.iso.datetime().optional(),
     })
     .strict();
 
