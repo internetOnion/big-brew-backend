@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import { paymentsTable, employeesTable } from "../models/schema/index.ts";
 import type { PaymentMethod, PaymentStatus } from "../types/index.ts";
@@ -117,6 +117,54 @@ export class PaymentRepository {
             createdAt: p.createdAt,
             updatedAt: p.updatedAt,
         }));
+    }
+
+    async findByOrderIds(orderIds: string[]): Promise<Map<string, Payment[]>> {
+        if (orderIds.length === 0) {
+            return new Map();
+        }
+
+        const results = await db
+            .select({
+                id: paymentsTable.id,
+                orderId: paymentsTable.orderId,
+                method: paymentsTable.method,
+                amount: paymentsTable.amount,
+                amountReceived: paymentsTable.amountReceived,
+                changeAmount: paymentsTable.changeAmount,
+                status: paymentsTable.status,
+                createdAt: paymentsTable.createdAt,
+                updatedAt: paymentsTable.updatedAt,
+                createdById: paymentsTable.createdBy,
+                createdByName: employeesTable.name,
+            })
+            .from(paymentsTable)
+            .leftJoin(
+                employeesTable,
+                eq(paymentsTable.createdBy, employeesTable.id),
+            )
+            .where(inArray(paymentsTable.orderId, orderIds));
+
+        const paymentsByOrder = new Map<string, Payment[]>();
+        for (const p of results) {
+            const payment: Payment = {
+                id: p.id,
+                orderId: p.orderId,
+                method: p.method as PaymentMethod,
+                amount: p.amount,
+                amountReceived: p.amountReceived,
+                changeAmount: p.changeAmount,
+                status: p.status as PaymentStatus,
+                createdBy: { id: p.createdById, name: p.createdByName },
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt,
+            };
+            const list = paymentsByOrder.get(p.orderId) || [];
+            list.push(payment);
+            paymentsByOrder.set(p.orderId, list);
+        }
+
+        return paymentsByOrder;
     }
 
     async refund(id: string): Promise<Payment | null> {

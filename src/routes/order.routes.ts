@@ -94,6 +94,8 @@ const listOrdersQuerySchema = z
         created_by_id: z.uuid().optional(),
         limit: z.coerce.number().int().positive().optional(),
         offset: z.coerce.number().int().min(0).optional(),
+        from: z.iso.datetime().optional(),
+        to: z.iso.datetime().optional(),
     })
     .strict();
 
@@ -160,22 +162,38 @@ router.post(
  *         schema:
  *           type: integer
  *           minimum: 1
- *         description: Number of orders to return
+ *         description: Number of orders to return (default 50)
  *       - in: query
  *         name: offset
  *         schema:
  *           type: integer
  *           minimum: 0
- *         description: Number of orders to skip
+ *         description: Number of orders to skip (default 0)
  *     responses:
  *       200:
- *         description: List of orders
+ *         description: Paginated list of orders
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: "#/components/schemas/Order"
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: "#/components/schemas/Order"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  */

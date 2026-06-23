@@ -1,4 +1,4 @@
-import { eq, inArray, desc, and, sql } from "drizzle-orm";
+import { eq, inArray, desc, and, sql, gte, lte, count } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import {
     ordersTable,
@@ -80,6 +80,15 @@ export interface ListOrdersFilters {
     createdById?: string;
     limit?: number;
     offset?: number;
+    from?: Date;
+    to?: Date;
+}
+
+export interface PaginatedOrdersResult {
+    data: Order[];
+    total: number;
+    page: number;
+    limit: number;
 }
 
 export class OrderRepository {
@@ -247,12 +256,17 @@ export class OrderRepository {
             )
             .where(eq(orderItemsTable.orderId, id));
 
-        // Get modifiers for each item
-        const itemsWithModifiers: OrderItem[] = [];
+        // Batch-load modifiers for all items at once
+        const itemIds: string[] = [];
         for (const item of items) {
-            const modifiers = await dbClient
+            itemIds.push(item.id);
+        }
+        const modifiersByItem = new Map<string, OrderItemModifier[]>();
+        if (itemIds.length > 0) {
+            const allModifiers = await dbClient
                 .select({
                     id: orderItemModifiersTable.id,
+                    orderItemId: orderItemModifiersTable.orderItemId,
                     modifierOptionId: orderItemModifiersTable.modifierOptionId,
                     modifierGroupId: modifierGroupsTable.id,
                     groupName: modifierGroupsTable.name,
@@ -274,11 +288,27 @@ export class OrderRepository {
                         modifierGroupsTable.id,
                     ),
                 )
-                .where(eq(orderItemModifiersTable.orderItemId, item.id));
+                .where(inArray(orderItemModifiersTable.orderItemId, itemIds));
 
+            for (const modifier of allModifiers) {
+                const list = modifiersByItem.get(modifier.orderItemId) || [];
+                list.push({
+                    id: modifier.id,
+                    modifierOptionId: modifier.modifierOptionId,
+                    modifierGroupId: modifier.modifierGroupId!,
+                    groupName: modifier.groupName!,
+                    name: modifier.name!,
+                    price: modifier.price,
+                });
+                modifiersByItem.set(modifier.orderItemId, list);
+            }
+        }
+
+        const itemsWithModifiers: OrderItem[] = [];
+        for (const item of items) {
             itemsWithModifiers.push({
                 ...item,
-                modifiers,
+                modifiers: modifiersByItem.get(item.id) || [],
             });
         }
 
@@ -316,7 +346,7 @@ export class OrderRepository {
         };
     }
 
-    async list(filters: ListOrdersFilters): Promise<Order[]> {
+    async list(filters: ListOrdersFilters): Promise<PaginatedOrdersResult> {
         const conditions = [];
 
         if (filters.status && filters.status.length > 0) {
@@ -327,26 +357,227 @@ export class OrderRepository {
             conditions.push(eq(ordersTable.createdBy, filters.createdById));
         }
 
+        if (filters.from) {
+            conditions.push(gte(ordersTable.createdAt, filters.from));
+        }
+
+        if (filters.to) {
+            conditions.push(lte(ordersTable.createdAt, filters.to));
+        }
+
         const whereClause =
             conditions.length > 0 ? and(...conditions) : undefined;
 
-        const orders = await db
-            .select({ id: ordersTable.id })
-            .from(ordersTable)
-            .where(whereClause)
-            .orderBy(desc(ordersTable.createdAt))
-            .limit(filters.limit || 50)
-            .offset(filters.offset || 0);
+        const limit = filters.limit ?? 20;
+        const offset = filters.offset ?? 0;
 
-        const results: Order[] = [];
-        for (const order of orders) {
-            const fullOrder = await this.findById(order.id);
-            if (fullOrder) {
-                results.push(fullOrder);
-            }
+        // Run count and paginated header query in parallel
+        const [countResult, ordersHeaders] = await Promise.all([
+            db.select({ total: count() }).from(ordersTable).where(whereClause),
+            db
+                .select({
+                    id: ordersTable.id,
+                    orderNumber: ordersTable.orderNumber,
+                    receiptNumber: ordersTable.receiptNumber,
+                    status: ordersTable.status,
+                    diningOption: ordersTable.diningOption,
+                    subtotal: ordersTable.subtotal,
+                    discountId: ordersTable.discountId,
+                    discountAmount: ordersTable.discountAmount,
+                    total: ordersTable.total,
+                    paymentStatus: ordersTable.paymentStatus,
+                    voidRequestedAt: ordersTable.voidRequestedAt,
+                    voidApprovedAt: ordersTable.voidApprovedAt,
+                    voidRejectedAt: ordersTable.voidRejectedAt,
+                    voidReason: ordersTable.voidReason,
+                    createdAt: ordersTable.createdAt,
+                    updatedAt: ordersTable.updatedAt,
+                    createdById: ordersTable.createdBy,
+                    createdByName: employeesTable.name,
+                    confirmedById: ordersTable.confirmedBy,
+                    confirmedByName: sql<string>`cb.name`,
+                    voidRequestedById: ordersTable.voidRequestedBy,
+                    voidRequestedByName: sql<string>`vr.name`,
+                    voidApprovedById: ordersTable.voidApprovedBy,
+                    voidApprovedByName: sql<string>`va.name`,
+                })
+                .from(ordersTable)
+                .leftJoin(
+                    employeesTable,
+                    eq(ordersTable.createdBy, employeesTable.id),
+                )
+                .leftJoin(
+                    sql`employees AS cb`,
+                    sql`${ordersTable.confirmedBy} = cb.id`,
+                )
+                .leftJoin(
+                    sql`employees AS vr`,
+                    sql`${ordersTable.voidRequestedBy} = vr.id`,
+                )
+                .leftJoin(
+                    sql`employees AS va`,
+                    sql`${ordersTable.voidApprovedBy} = va.id`,
+                )
+                .where(whereClause)
+                .orderBy(desc(ordersTable.createdAt))
+                .limit(limit)
+                .offset(offset),
+        ]);
+
+        const total = countResult[0]?.total ?? 0;
+
+        if (ordersHeaders.length === 0) {
+            return {
+                data: [],
+                total,
+                page: Math.floor(offset / limit) + 1,
+                limit,
+            };
         }
 
-        return results;
+        const orderIds = ordersHeaders.map((o) => o.id);
+
+        // Batch-load items, modifiers, and payments in parallel
+        const [items, modifiersByItem, paymentsByOrder] = await Promise.all([
+            db
+                .select({
+                    id: orderItemsTable.id,
+                    orderId: orderItemsTable.orderId,
+                    menuItemId: orderItemsTable.menuItemId,
+                    name: menuItemsTable.name,
+                    unitPrice: orderItemsTable.unitPrice,
+                    quantity: orderItemsTable.quantity,
+                })
+                .from(orderItemsTable)
+                .leftJoin(
+                    menuItemsTable,
+                    eq(orderItemsTable.menuItemId, menuItemsTable.id),
+                )
+                .where(inArray(orderItemsTable.orderId, orderIds)),
+            this.batchLoadModifiers(db, orderIds),
+            paymentRepository.findByOrderIds(orderIds),
+        ]);
+
+        // Group items by order and build ordered items list
+        const itemsByOrder = new Map<string, (typeof items)[number][]>();
+        for (const item of items) {
+            const list = itemsByOrder.get(item.orderId) || [];
+            list.push(item);
+            itemsByOrder.set(item.orderId, list);
+        }
+
+        const data = ordersHeaders.map((o) => {
+            const orderItems = itemsByOrder.get(o.id) || [];
+            const itemsWithModifiers = orderItems.map((item) => ({
+                ...item,
+                name: item.name!,
+                modifiers: modifiersByItem.get(item.id) || [],
+            }));
+
+            return {
+                id: o.id,
+                orderNumber: o.orderNumber,
+                receiptNumber: o.receiptNumber,
+                status: o.status as OrderStatus,
+                diningOption: o.diningOption as DiningOption,
+                subtotal: o.subtotal,
+                discountId: o.discountId,
+                discountAmount: o.discountAmount,
+                total: o.total,
+                paymentStatus: o.paymentStatus as PaymentStatus,
+                createdBy: { id: o.createdById, name: o.createdByName! },
+                confirmedBy: {
+                    id: o.confirmedById,
+                    name: o.confirmedByName!,
+                },
+                voidRequestedBy: o.voidRequestedById
+                    ? {
+                          id: o.voidRequestedById,
+                          name: o.voidRequestedByName!,
+                      }
+                    : null,
+                voidRequestedAt: o.voidRequestedAt,
+                voidApprovedBy: o.voidApprovedById
+                    ? {
+                          id: o.voidApprovedById,
+                          name: o.voidApprovedByName!,
+                      }
+                    : null,
+                voidApprovedAt: o.voidApprovedAt,
+                voidRejectedAt: o.voidRejectedAt,
+                voidReason: o.voidReason,
+                items: itemsWithModifiers,
+                payments: paymentsByOrder.get(o.id) || [],
+                createdAt: o.createdAt,
+                updatedAt: o.updatedAt,
+            };
+        });
+
+        return {
+            data,
+            total,
+            page: Math.floor(offset / limit) + 1,
+            limit,
+        };
+    }
+
+    private async batchLoadModifiers(
+        client: typeof db,
+        orderIds: string[],
+    ): Promise<Map<string, OrderItemModifier[]>> {
+        const modifiersByItem = new Map<string, OrderItemModifier[]>();
+        if (orderIds.length === 0) return modifiersByItem;
+
+        // Get item IDs for these orders
+        const itemRows = await client
+            .select({ id: orderItemsTable.id })
+            .from(orderItemsTable)
+            .where(inArray(orderItemsTable.orderId, orderIds));
+
+        const itemIds = itemRows.map((i) => i.id);
+        if (itemIds.length === 0) return modifiersByItem;
+
+        const allModifiers = await client
+            .select({
+                id: orderItemModifiersTable.id,
+                orderItemId: orderItemModifiersTable.orderItemId,
+                modifierOptionId: orderItemModifiersTable.modifierOptionId,
+                modifierGroupId: modifierGroupsTable.id,
+                groupName: modifierGroupsTable.name,
+                name: modifierOptionsTable.name,
+                price: orderItemModifiersTable.price,
+            })
+            .from(orderItemModifiersTable)
+            .leftJoin(
+                modifierOptionsTable,
+                eq(
+                    orderItemModifiersTable.modifierOptionId,
+                    modifierOptionsTable.id,
+                ),
+            )
+            .leftJoin(
+                modifierGroupsTable,
+                eq(
+                    modifierOptionsTable.modifierGroupId,
+                    modifierGroupsTable.id,
+                ),
+            )
+            .where(inArray(orderItemModifiersTable.orderItemId, itemIds));
+
+        for (const modifier of allModifiers) {
+            const list = modifiersByItem.get(modifier.orderItemId) || [];
+            list.push({
+                id: modifier.id,
+                modifierOptionId: modifier.modifierOptionId,
+                modifierGroupId: modifier.modifierGroupId!,
+                groupName: modifier.groupName!,
+                name: modifier.name!,
+                price: modifier.price,
+            });
+            modifiersByItem.set(modifier.orderItemId, list);
+        }
+
+        return modifiersByItem;
     }
 
     async updateStatus(id: string, status: OrderStatus): Promise<Order | null> {

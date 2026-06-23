@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { AppError } from "../utils/AppError.ts";
 import { db } from "../models/index.ts";
 import {
@@ -13,6 +13,7 @@ import {
     type Order,
     type CreateOrderInput,
     type ListOrdersFilters,
+    type PaginatedOrdersResult,
 } from "../repositories/index.ts";
 import { paymentService } from "./payment.service.ts";
 import type { PaymentMethod, EmployeeRole } from "../types/index.ts";
@@ -24,32 +25,36 @@ export class OrderService {
         amountReceived?: number,
     ): Promise<Order> {
         // Validate menu items exist
-        for (const item of input.items) {
-            const menuItem = await db
-                .select()
-                .from(menuItemsTable)
-                .where(eq(menuItemsTable.id, item.menuItemId))
-                .limit(1);
-
-            if (!menuItem[0]) {
-                throw AppError.notFound(
-                    `Menu item with ID ${item.menuItemId} not found`,
-                );
+        const menuItemIds = [
+            ...new Set(input.items.map((item) => item.menuItemId)),
+        ];
+        const existingMenuItems = await db
+            .select({ id: menuItemsTable.id })
+            .from(menuItemsTable)
+            .where(inArray(menuItemsTable.id, menuItemIds));
+        const existingMenuItemIds = new Set(existingMenuItems.map((m) => m.id));
+        for (const id of menuItemIds) {
+            if (!existingMenuItemIds.has(id)) {
+                throw AppError.notFound(`Menu item with ID ${id} not found`);
             }
         }
 
         // Validate modifier options exist
-        for (const item of input.items) {
-            for (const modId of item.modifierOptionIds) {
-                const modOption = await db
-                    .select()
-                    .from(modifierOptionsTable)
-                    .where(eq(modifierOptionsTable.id, modId))
-                    .limit(1);
-
-                if (!modOption[0]) {
+        const modifierOptionIds = [
+            ...new Set(input.items.flatMap((item) => item.modifierOptionIds)),
+        ];
+        if (modifierOptionIds.length > 0) {
+            const existingModOptions = await db
+                .select({ id: modifierOptionsTable.id })
+                .from(modifierOptionsTable)
+                .where(inArray(modifierOptionsTable.id, modifierOptionIds));
+            const existingModOptionIds = new Set(
+                existingModOptions.map((m) => m.id),
+            );
+            for (const id of modifierOptionIds) {
+                if (!existingModOptionIds.has(id)) {
                     throw AppError.notFound(
-                        `Modifier option with ID ${modId} not found`,
+                        `Modifier option with ID ${id} not found`,
                     );
                 }
             }
@@ -86,15 +91,54 @@ export class OrderService {
             referenceOrderId: string;
         }> = [];
 
-        for (const item of items) {
-            // Get recipe ingredients for this menu item
-            const recipeIngredients = await db
-                .select()
-                .from(itemRecipesTable)
-                .where(eq(itemRecipesTable.itemId, item.menuItemId));
+        const menuItemIds = [...new Set(items.map((i) => i.menuItemId))];
+        const modifierOptionIds = [
+            ...new Set(items.flatMap((i) => i.modifierOptionIds)),
+        ];
 
-            // Deduct base recipe ingredients
-            for (const recipe of recipeIngredients) {
+        // Batch-load recipes and modifier ingredients in parallel
+        const [recipes, modIngredients] = await Promise.all([
+            menuItemIds.length > 0
+                ? db
+                      .select()
+                      .from(itemRecipesTable)
+                      .where(inArray(itemRecipesTable.itemId, menuItemIds))
+                : ([] as (typeof itemRecipesTable.$inferSelect)[]),
+            modifierOptionIds.length > 0
+                ? db
+                      .select()
+                      .from(modifierOptionIngredientsTable)
+                      .where(
+                          inArray(
+                              modifierOptionIngredientsTable.modifierOptionId,
+                              modifierOptionIds,
+                          ),
+                      )
+                : ([] as (typeof modifierOptionIngredientsTable.$inferSelect)[]),
+        ]);
+
+        // Build lookup maps
+        const recipesByItemId = new Map<string, typeof recipes>();
+        for (const r of recipes) {
+            const list = recipesByItemId.get(r.itemId) || [];
+            list.push(r);
+            recipesByItemId.set(r.itemId, list);
+        }
+
+        const modIngredientsByOptionId = new Map<
+            string,
+            typeof modIngredients
+        >();
+        for (const mi of modIngredients) {
+            const list =
+                modIngredientsByOptionId.get(mi.modifierOptionId) || [];
+            list.push(mi);
+            modIngredientsByOptionId.set(mi.modifierOptionId, list);
+        }
+
+        for (const item of items) {
+            const itemRecipes = recipesByItemId.get(item.menuItemId) || [];
+            for (const recipe of itemRecipes) {
                 stockMovements.push({
                     ingredientId: recipe.ingredientId,
                     quantityChange: (
@@ -105,19 +149,10 @@ export class OrderService {
                 });
             }
 
-            // Deduct modifier option ingredients
             for (const modId of item.modifierOptionIds) {
-                const modIngredients = await db
-                    .select()
-                    .from(modifierOptionIngredientsTable)
-                    .where(
-                        eq(
-                            modifierOptionIngredientsTable.modifierOptionId,
-                            modId,
-                        ),
-                    );
-
-                for (const modIng of modIngredients) {
+                const optionIngredients =
+                    modIngredientsByOptionId.get(modId) || [];
+                for (const modIng of optionIngredients) {
                     stockMovements.push({
                         ingredientId: modIng.ingredientId,
                         quantityChange: (
@@ -130,14 +165,12 @@ export class OrderService {
             }
         }
 
-        // Insert all stock movements
         if (stockMovements.length > 0) {
             await db.insert(stockMovementsTable).values(stockMovements);
         }
     }
 
     private async restoreStock(orderId: string): Promise<void> {
-        // Get the order with items
         const order = await orderRepository.findById(orderId);
         if (!order) return;
 
@@ -148,15 +181,56 @@ export class OrderService {
             referenceOrderId: string;
         }> = [];
 
-        for (const item of order.items) {
-            // Get recipe ingredients for this menu item
-            const recipeIngredients = await db
-                .select()
-                .from(itemRecipesTable)
-                .where(eq(itemRecipesTable.itemId, item.menuItemId));
+        const menuItemIds = [...new Set(order.items.map((i) => i.menuItemId))];
+        const modifierOptionIds = [
+            ...new Set(
+                order.items.flatMap((i) =>
+                    i.modifiers.map((m) => m.modifierOptionId),
+                ),
+            ),
+        ];
 
-            // Restore base recipe ingredients
-            for (const recipe of recipeIngredients) {
+        const [recipes, modIngredients] = await Promise.all([
+            menuItemIds.length > 0
+                ? db
+                      .select()
+                      .from(itemRecipesTable)
+                      .where(inArray(itemRecipesTable.itemId, menuItemIds))
+                : ([] as (typeof itemRecipesTable.$inferSelect)[]),
+            modifierOptionIds.length > 0
+                ? db
+                      .select()
+                      .from(modifierOptionIngredientsTable)
+                      .where(
+                          inArray(
+                              modifierOptionIngredientsTable.modifierOptionId,
+                              modifierOptionIds,
+                          ),
+                      )
+                : ([] as (typeof modifierOptionIngredientsTable.$inferSelect)[]),
+        ]);
+
+        const recipesByItemId = new Map<string, typeof recipes>();
+        for (const r of recipes) {
+            const list = recipesByItemId.get(r.itemId) || [];
+            list.push(r);
+            recipesByItemId.set(r.itemId, list);
+        }
+
+        const modIngredientsByOptionId = new Map<
+            string,
+            typeof modIngredients
+        >();
+        for (const mi of modIngredients) {
+            const list =
+                modIngredientsByOptionId.get(mi.modifierOptionId) || [];
+            list.push(mi);
+            modIngredientsByOptionId.set(mi.modifierOptionId, list);
+        }
+
+        for (const item of order.items) {
+            const itemRecipes = recipesByItemId.get(item.menuItemId) || [];
+            for (const recipe of itemRecipes) {
                 stockMovements.push({
                     ingredientId: recipe.ingredientId,
                     quantityChange: (
@@ -167,19 +241,10 @@ export class OrderService {
                 });
             }
 
-            // Restore modifier option ingredients
             for (const mod of item.modifiers) {
-                const modIngredients = await db
-                    .select()
-                    .from(modifierOptionIngredientsTable)
-                    .where(
-                        eq(
-                            modifierOptionIngredientsTable.modifierOptionId,
-                            mod.modifierOptionId,
-                        ),
-                    );
-
-                for (const modIng of modIngredients) {
+                const optionIngredients =
+                    modIngredientsByOptionId.get(mod.modifierOptionId) || [];
+                for (const modIng of optionIngredients) {
                     stockMovements.push({
                         ingredientId: modIng.ingredientId,
                         quantityChange: (
@@ -192,7 +257,6 @@ export class OrderService {
             }
         }
 
-        // Insert all stock movements
         if (stockMovements.length > 0) {
             await db.insert(stockMovementsTable).values(stockMovements);
         }
@@ -206,7 +270,9 @@ export class OrderService {
         return order;
     }
 
-    async listOrders(filters: ListOrdersFilters): Promise<Order[]> {
+    async listOrders(
+        filters: ListOrdersFilters,
+    ): Promise<PaginatedOrdersResult> {
         return orderRepository.list(filters);
     }
 

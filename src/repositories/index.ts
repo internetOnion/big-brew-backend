@@ -68,6 +68,7 @@ export {
     type OrderItemInput,
     type CreateOrderInput,
     type ListOrdersFilters,
+    type PaginatedOrdersResult,
 } from "./order.repository.ts";
 export {
     DiscountRepository,
