@@ -16,6 +16,7 @@ interface UpdateEmployeeInput {
     email?: string;
     pin?: string;
     password?: string;
+    isActive?: boolean;
 }
 
 export class EmployeeService {
@@ -57,11 +58,11 @@ export class EmployeeService {
         input: UpdateEmployeeInput,
     ): Promise<EmployeePayload> {
         const employee = await employeeRepository.findById(id);
-        if (!employee || !employee.isActive) {
+        if (!employee) {
             throw AppError.notFound("Employee not found");
         }
 
-        const { name, email, pin, password } = input;
+        const { name, email, pin, password, isActive } = input;
 
         if (pin) {
             const employees = await employeeRepository.findActiveEmployees();
@@ -113,6 +114,7 @@ export class EmployeeService {
             if (pin !== undefined) {
                 dbUpdate.pin = await bcrypt.hash(pin, SALT_ROUNDS);
             }
+            if (isActive !== undefined) dbUpdate.isActive = isActive;
 
             let resultEmployee: typeof employee;
             if (Object.keys(dbUpdate).length > 0) {
@@ -152,8 +154,11 @@ export class EmployeeService {
 
     async deleteEmployee(id: string): Promise<void> {
         const employee = await employeeRepository.findById(id);
-        if (!employee || !employee.isActive) {
+        if (!employee) {
             throw AppError.notFound("Employee not found");
+        }
+        if (employee.role === "owner") {
+            throw AppError.forbidden("Cannot delete owner account");
         }
         await employeeRepository.delete(id);
 

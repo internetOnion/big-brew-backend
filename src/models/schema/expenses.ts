@@ -26,6 +26,7 @@ export const expensesTable = pgTable(
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
             .defaultNow(),
+        deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (t) => [
         index("idx_expenses_recorded_at").on(t.recordedAt),

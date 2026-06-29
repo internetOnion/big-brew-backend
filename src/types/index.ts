@@ -21,6 +21,7 @@ export interface EmployeePayload {
     role: EmployeeRole;
     name: string;
     supabaseUid: string | null;
+    isActive: boolean;
     email?: string;
 }
 

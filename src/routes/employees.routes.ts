@@ -59,6 +59,7 @@ const updateEmployeeSchema = z
                 "Password must be 8-25 characters with at least one uppercase, one lowercase, and one number",
             )
             .optional(),
+        isActive: z.boolean().optional(),
     })
     .strict()
     .refine((data) => Object.keys(data).length > 0, {

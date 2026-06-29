@@ -11,6 +11,7 @@ export const categoriesTable = pgTable("categories", {
     updatedAt: timestamp("updated_at", { withTimezone: true })
         .notNull()
         .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const insertCategorySchema = createInsertSchema(categoriesTable, {

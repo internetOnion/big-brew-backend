@@ -33,6 +33,7 @@ export const ingredientsTable = pgTable(
         updatedAt: timestamp("updated_at", { withTimezone: true })
             .notNull()
             .defaultNow(),
+        deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (t) => [check("chk_stock_non_negative", sql`${t.stockQuantity} >= 0`)],
 );

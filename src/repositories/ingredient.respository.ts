@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import { ingredientsTable } from "../models/schema/index.ts";
 import type { IngredientUnit } from "../types/index.ts";
@@ -21,7 +21,9 @@ export type UpdateIngredient = Partial<InsertIngredient>;
 
 export class IngredientRepository {
     async findAll(): Promise<Ingredient[]> {
-        const results = await db.query.ingredientsTable.findMany();
+        const results = await db.query.ingredientsTable.findMany({
+            where: isNull(ingredientsTable.deletedAt),
+        });
         return results;
     }
 
@@ -29,6 +31,7 @@ export class IngredientRepository {
         const result = await db.query.ingredientsTable.findFirst({
             where: eq(ingredientsTable.id, id),
         });
+        if (result?.deletedAt) return null;
         return result ?? null;
     }
 
@@ -37,7 +40,7 @@ export class IngredientRepository {
         const results = await db.query.ingredientsTable.findMany({
             where: inArray(ingredientsTable.id, ids),
         });
-        return results;
+        return results.filter((r) => !r.deletedAt);
     }
 
     async insert(input: InsertIngredient): Promise<Ingredient> {
@@ -58,7 +61,10 @@ export class IngredientRepository {
     }
 
     async delete(id: string): Promise<void> {
-        await db.delete(ingredientsTable).where(eq(ingredientsTable.id, id));
+        await db
+            .update(ingredientsTable)
+            .set({ deletedAt: new Date() })
+            .where(eq(ingredientsTable.id, id));
     }
 }
 

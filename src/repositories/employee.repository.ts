@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import { employeesTable } from "../models/schema/index.ts";
 import type { EmployeeRole } from "../types/index.ts";
@@ -13,6 +13,7 @@ export interface InsertEmployee {
 export interface UpdateEmployee {
     name?: string;
     pin?: string;
+    isActive?: boolean;
 }
 
 export interface Employee {
@@ -22,6 +23,7 @@ export interface Employee {
     pin: string;
     supabaseUid: string | null;
     isActive: boolean;
+    deletedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -52,6 +54,7 @@ export class EmployeeRepository {
         return db
             .select()
             .from(employeesTable)
+            .where(isNull(employeesTable.deletedAt))
             .orderBy(employeesTable.createdAt);
     }
 
@@ -59,7 +62,12 @@ export class EmployeeRepository {
         return db
             .select()
             .from(employeesTable)
-            .where(eq(employeesTable.isActive, true));
+            .where(
+                and(
+                    eq(employeesTable.isActive, true),
+                    isNull(employeesTable.deletedAt),
+                ),
+            );
     }
 
     async insert(data: InsertEmployee): Promise<Employee> {
@@ -79,8 +87,16 @@ export class EmployeeRepository {
     async delete(id: string): Promise<void> {
         await db
             .update(employeesTable)
-            .set({ isActive: false, updatedAt: new Date() })
+            .set({
+                isActive: false,
+                deletedAt: new Date(),
+                updatedAt: new Date(),
+            })
             .where(eq(employeesTable.id, id));
+    }
+
+    async hardDelete(id: string): Promise<void> {
+        await db.delete(employeesTable).where(eq(employeesTable.id, id));
     }
 }
 
