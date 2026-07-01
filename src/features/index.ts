@@ -2,6 +2,18 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 
 import { authenticate, requireRole } from "../shared/middlewares/index.ts";
+import { logger } from "../shared/utils/logger.ts";
+
+const safeImport = (name: string, importFn: () => Promise<any>) => {
+    return importFn().catch((err: Error) => {
+        logger.error(
+            { name, error: err.message },
+            "Failed to load route module",
+        );
+        return { default: Router() };
+    });
+};
+
 import authRoutes from "./auth/auth.routes.ts";
 import employeeRoutes from "./employees/employees.routes.ts";
 import storageRoutes from "./storage/storage.routes.ts";

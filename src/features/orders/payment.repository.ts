@@ -88,8 +88,9 @@ export class PaymentRepository {
         };
     }
 
-    async findByOrderId(orderId: string): Promise<Payment[]> {
-        const results = await db
+    async findByOrderId(orderId: string, tx?: any): Promise<Payment[]> {
+        const dbClient = tx || db;
+        const results = await dbClient
             .select({
                 id: paymentsTable.id,
                 orderId: paymentsTable.orderId,
@@ -110,7 +111,7 @@ export class PaymentRepository {
             )
             .where(eq(paymentsTable.orderId, orderId));
 
-        return results.map((p) => ({
+        return results.map((p: any) => ({
             id: p.id,
             orderId: p.orderId,
             method: p.method as PaymentMethod,
@@ -124,12 +125,16 @@ export class PaymentRepository {
         }));
     }
 
-    async findByOrderIds(orderIds: string[]): Promise<Map<string, Payment[]>> {
+    async findByOrderIds(
+        orderIds: string[],
+        tx?: any,
+    ): Promise<Map<string, Payment[]>> {
         if (orderIds.length === 0) {
             return new Map();
         }
 
-        const results = await db
+        const dbClient = tx || db;
+        const results = await dbClient
             .select({
                 id: paymentsTable.id,
                 orderId: paymentsTable.orderId,

@@ -189,6 +189,16 @@ export class OrderRepository {
     }
 
     async findByIdForUpdate(id: string, tx: any): Promise<Order | null> {
+        // Lock the order row first — FOR UPDATE can't be combined with outer joins
+        const [locked] = await tx
+            .select({ id: ordersTable.id })
+            .from(ordersTable)
+            .where(eq(ordersTable.id, id))
+            .for("update")
+            .limit(1);
+
+        if (!locked) return null;
+
         const order = await tx
             .select({
                 id: ordersTable.id,
@@ -234,10 +244,7 @@ export class OrderRepository {
                 sql`${ordersTable.voidApprovedBy} = va.id`,
             )
             .where(eq(ordersTable.id, id))
-            .for("update")
             .limit(1);
-
-        if (!order[0]) return null;
 
         // Get order items with menu item names
         const items = await tx
@@ -312,7 +319,7 @@ export class OrderRepository {
         }
 
         // Get payments for this order
-        const payments = await paymentRepository.findByOrderId(id);
+        const payments = await paymentRepository.findByOrderId(id, tx);
 
         const o = order[0];
         return {
@@ -470,7 +477,7 @@ export class OrderRepository {
         }
 
         // Get payments for this order
-        const payments = await paymentRepository.findByOrderId(id);
+        const payments = await paymentRepository.findByOrderId(id, dbClient);
 
         const o = order[0];
         return {
