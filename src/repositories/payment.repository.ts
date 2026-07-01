@@ -26,8 +26,9 @@ export interface CreatePaymentInput {
 }
 
 export class PaymentRepository {
-    async create(input: CreatePaymentInput): Promise<Payment> {
-        const [payment] = await db
+    async create(input: CreatePaymentInput, tx?: any): Promise<Payment> {
+        const dbClient = tx || db;
+        const [payment] = await dbClient
             .insert(paymentsTable)
             .values({
                 orderId: input.orderId,
@@ -40,11 +41,12 @@ export class PaymentRepository {
             })
             .returning();
 
-        return this.findById(payment.id) as Promise<Payment>;
+        return this.findById(payment.id, dbClient) as Promise<Payment>;
     }
 
-    async findById(id: string): Promise<Payment | null> {
-        const result = await db
+    async findById(id: string, tx?: any): Promise<Payment | null> {
+        const dbClient = tx || db;
+        const result = await dbClient
             .select({
                 id: paymentsTable.id,
                 orderId: paymentsTable.orderId,
@@ -167,13 +169,14 @@ export class PaymentRepository {
         return paymentsByOrder;
     }
 
-    async refund(id: string): Promise<Payment | null> {
-        await db
+    async refund(id: string, tx?: any): Promise<Payment | null> {
+        const dbClient = tx || db;
+        await dbClient
             .update(paymentsTable)
             .set({ status: "refunded", updatedAt: new Date() })
             .where(eq(paymentsTable.id, id));
 
-        return this.findById(id);
+        return this.findById(id, dbClient);
     }
 }
 

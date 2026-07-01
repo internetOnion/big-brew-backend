@@ -188,6 +188,163 @@ export class OrderRepository {
         });
     }
 
+    async findByIdForUpdate(id: string, tx: any): Promise<Order | null> {
+        const order = await tx
+            .select({
+                id: ordersTable.id,
+                orderNumber: ordersTable.orderNumber,
+                receiptNumber: ordersTable.receiptNumber,
+                status: ordersTable.status,
+                diningOption: ordersTable.diningOption,
+                subtotal: ordersTable.subtotal,
+                discountId: ordersTable.discountId,
+                discountAmount: ordersTable.discountAmount,
+                total: ordersTable.total,
+                paymentStatus: ordersTable.paymentStatus,
+                voidRequestedAt: ordersTable.voidRequestedAt,
+                voidApprovedAt: ordersTable.voidApprovedAt,
+                voidRejectedAt: ordersTable.voidRejectedAt,
+                voidReason: ordersTable.voidReason,
+                createdAt: ordersTable.createdAt,
+                updatedAt: ordersTable.updatedAt,
+                createdById: ordersTable.createdBy,
+                createdByName: employeesTable.name,
+                confirmedById: ordersTable.confirmedBy,
+                confirmedByName: sql<string>`cb.name`,
+                voidRequestedById: ordersTable.voidRequestedBy,
+                voidRequestedByName: sql<string>`vr.name`,
+                voidApprovedById: ordersTable.voidApprovedBy,
+                voidApprovedByName: sql<string>`va.name`,
+            })
+            .from(ordersTable)
+            .leftJoin(
+                employeesTable,
+                eq(ordersTable.createdBy, employeesTable.id),
+            )
+            .leftJoin(
+                sql`employees AS cb`,
+                sql`${ordersTable.confirmedBy} = cb.id`,
+            )
+            .leftJoin(
+                sql`employees AS vr`,
+                sql`${ordersTable.voidRequestedBy} = vr.id`,
+            )
+            .leftJoin(
+                sql`employees AS va`,
+                sql`${ordersTable.voidApprovedBy} = va.id`,
+            )
+            .where(eq(ordersTable.id, id))
+            .for("update")
+            .limit(1);
+
+        if (!order[0]) return null;
+
+        // Get order items with menu item names
+        const items = await tx
+            .select({
+                id: orderItemsTable.id,
+                menuItemId: orderItemsTable.menuItemId,
+                name: menuItemsTable.name,
+                unitPrice: orderItemsTable.unitPrice,
+                quantity: orderItemsTable.quantity,
+            })
+            .from(orderItemsTable)
+            .leftJoin(
+                menuItemsTable,
+                eq(orderItemsTable.menuItemId, menuItemsTable.id),
+            )
+            .where(eq(orderItemsTable.orderId, id));
+
+        // Batch-load modifiers for all items at once
+        const itemIds: string[] = [];
+        for (const item of items) {
+            itemIds.push(item.id);
+        }
+        const modifiersByItem = new Map<string, OrderItemModifier[]>();
+        if (itemIds.length > 0) {
+            const allModifiers = await tx
+                .select({
+                    id: orderItemModifiersTable.id,
+                    orderItemId: orderItemModifiersTable.orderItemId,
+                    modifierOptionId: orderItemModifiersTable.modifierOptionId,
+                    modifierGroupId: modifierGroupsTable.id,
+                    groupName: modifierGroupsTable.name,
+                    name: modifierOptionsTable.name,
+                    price: orderItemModifiersTable.price,
+                })
+                .from(orderItemModifiersTable)
+                .leftJoin(
+                    modifierOptionsTable,
+                    eq(
+                        orderItemModifiersTable.modifierOptionId,
+                        modifierOptionsTable.id,
+                    ),
+                )
+                .leftJoin(
+                    modifierGroupsTable,
+                    eq(
+                        modifierOptionsTable.modifierGroupId,
+                        modifierGroupsTable.id,
+                    ),
+                )
+                .where(inArray(orderItemModifiersTable.orderItemId, itemIds));
+
+            for (const modifier of allModifiers) {
+                const list = modifiersByItem.get(modifier.orderItemId) || [];
+                list.push({
+                    id: modifier.id,
+                    modifierOptionId: modifier.modifierOptionId,
+                    modifierGroupId: modifier.modifierGroupId!,
+                    groupName: modifier.groupName!,
+                    name: modifier.name!,
+                    price: modifier.price,
+                });
+                modifiersByItem.set(modifier.orderItemId, list);
+            }
+        }
+
+        const itemsWithModifiers: OrderItem[] = [];
+        for (const item of items) {
+            itemsWithModifiers.push({
+                ...item,
+                modifiers: modifiersByItem.get(item.id) || [],
+            });
+        }
+
+        // Get payments for this order
+        const payments = await paymentRepository.findByOrderId(id);
+
+        const o = order[0];
+        return {
+            id: o.id,
+            orderNumber: o.orderNumber,
+            receiptNumber: o.receiptNumber,
+            status: o.status as OrderStatus,
+            diningOption: o.diningOption as DiningOption,
+            subtotal: o.subtotal,
+            discountId: o.discountId,
+            discountAmount: o.discountAmount,
+            total: o.total,
+            paymentStatus: o.paymentStatus as PaymentStatus,
+            createdBy: { id: o.createdById, name: o.createdByName },
+            confirmedBy: { id: o.confirmedById, name: o.confirmedByName! },
+            voidRequestedBy: o.voidRequestedById
+                ? { id: o.voidRequestedById, name: o.voidRequestedByName! }
+                : null,
+            voidRequestedAt: o.voidRequestedAt,
+            voidApprovedBy: o.voidApprovedById
+                ? { id: o.voidApprovedById, name: o.voidApprovedByName! }
+                : null,
+            voidApprovedAt: o.voidApprovedAt,
+            voidRejectedAt: o.voidRejectedAt,
+            voidReason: o.voidReason,
+            items: itemsWithModifiers,
+            payments,
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
+        };
+    }
+
     async findById(id: string, tx?: any): Promise<Order | null> {
         const dbClient = tx || db;
 
@@ -592,8 +749,10 @@ export class OrderRepository {
     async updatePaymentStatus(
         id: string,
         paymentStatus: PaymentStatus,
+        tx?: any,
     ): Promise<void> {
-        await db
+        const dbClient = tx || db;
+        await dbClient
             .update(ordersTable)
             .set({ paymentStatus, updatedAt: new Date() })
             .where(eq(ordersTable.id, id));
@@ -618,8 +777,13 @@ export class OrderRepository {
         return this.findById(id);
     }
 
-    async approveVoid(id: string, approvedBy: string): Promise<Order | null> {
-        await db
+    async approveVoid(
+        id: string,
+        approvedBy: string,
+        tx?: any,
+    ): Promise<Order | null> {
+        const dbClient = tx || db;
+        await dbClient
             .update(ordersTable)
             .set({
                 status: "voided",
@@ -629,7 +793,7 @@ export class OrderRepository {
             })
             .where(eq(ordersTable.id, id));
 
-        return this.findById(id);
+        return this.findById(id, dbClient);
     }
 
     async rejectVoid(id: string): Promise<Order | null> {

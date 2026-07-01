@@ -4,6 +4,7 @@ import {
     type Payment,
 } from "../repositories/payment.repository.ts";
 import { orderRepository } from "../repositories/order.repository.ts";
+import { db } from "../models/index.ts";
 import type { PaymentMethod } from "../types/index.ts";
 
 export class PaymentService {
@@ -12,51 +13,63 @@ export class PaymentService {
         method: PaymentMethod,
         createdBy: string,
         amountReceived?: number,
+        tx?: any,
     ): Promise<Payment> {
-        // Get the order to validate
-        const order = await orderRepository.findById(orderId);
-        if (!order) {
-            throw AppError.notFound("Order not found");
-        }
-
-        if (order.paymentStatus === "paid") {
-            throw AppError.badRequest("Order is already paid");
-        }
-
-        const total = parseFloat(order.total);
-
-        // Validate cash payment
-        if (method === "cash") {
-            if (amountReceived === undefined || amountReceived === null) {
-                throw AppError.badRequest(
-                    "Amount received is required for cash payments",
-                );
+        const run = async (client: any): Promise<Payment> => {
+            const order = await orderRepository.findByIdForUpdate(
+                orderId,
+                client,
+            );
+            if (!order) {
+                throw AppError.notFound("Order not found");
             }
 
-            if (amountReceived < total) {
-                throw AppError.badRequest(
-                    "Amount received is less than the total",
-                );
+            if (order.paymentStatus === "paid") {
+                throw AppError.badRequest("Order is already paid");
             }
+
+            const total = parseFloat(order.total);
+
+            if (method === "cash") {
+                if (amountReceived === undefined || amountReceived === null) {
+                    throw AppError.badRequest(
+                        "Amount received is required for cash payments",
+                    );
+                }
+
+                if (amountReceived < total) {
+                    throw AppError.badRequest(
+                        "Amount received is less than the total",
+                    );
+                }
+            }
+
+            const payment = await paymentRepository.create(
+                {
+                    orderId,
+                    method,
+                    amount: total,
+                    amountReceived:
+                        method === "cash" ? amountReceived : undefined,
+                    changeAmount:
+                        method === "cash" && amountReceived
+                            ? amountReceived - total
+                            : undefined,
+                    createdBy,
+                },
+                client,
+            );
+
+            await orderRepository.updatePaymentStatus(orderId, "paid", client);
+
+            return payment;
+        };
+
+        // ponytail: if caller is already in a transaction, use it; otherwise wrap
+        if (tx) {
+            return run(tx);
         }
-
-        // Create the payment
-        const payment = await paymentRepository.create({
-            orderId,
-            method,
-            amount: total,
-            amountReceived: method === "cash" ? amountReceived : undefined,
-            changeAmount:
-                method === "cash" && amountReceived
-                    ? amountReceived - total
-                    : undefined,
-            createdBy,
-        });
-
-        // Update order payment status
-        await orderRepository.updatePaymentStatus(orderId, "paid");
-
-        return payment;
+        return db.transaction(run);
     }
 
     async getPayment(id: string): Promise<Payment> {
@@ -72,21 +85,34 @@ export class PaymentService {
     }
 
     async refundPayment(id: string): Promise<Payment> {
-        const payment = await paymentRepository.findById(id);
-        if (!payment) {
-            throw AppError.notFound("Payment not found");
-        }
+        return db.transaction(async (tx) => {
+            const payment = await paymentRepository.findById(id, tx);
+            if (!payment) {
+                throw AppError.notFound("Payment not found");
+            }
 
-        if (payment.status === "refunded") {
-            throw AppError.badRequest("Payment is already refunded");
-        }
+            if (payment.status === "refunded") {
+                throw AppError.badRequest("Payment is already refunded");
+            }
 
-        const refunded = await paymentRepository.refund(id);
+            const order = await orderRepository.findByIdForUpdate(
+                payment.orderId,
+                tx,
+            );
+            if (!order) {
+                throw AppError.notFound("Order not found");
+            }
 
-        // Update order payment status
-        await orderRepository.updatePaymentStatus(payment.orderId, "refunded");
+            const refunded = await paymentRepository.refund(id, tx);
 
-        return refunded!;
+            await orderRepository.updatePaymentStatus(
+                payment.orderId,
+                "refunded",
+                tx,
+            );
+
+            return refunded!;
+        });
     }
 }
 
