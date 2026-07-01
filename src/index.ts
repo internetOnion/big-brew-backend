@@ -1,7 +1,7 @@
 import app from "./app.ts";
-import { logger } from "./shared/utils/logger.ts";
-import { config } from "./shared/config/index.ts";
-import { pool } from "./shared/models/index.ts";
+import { logger } from "./utils/logger.ts";
+import { config } from "./config/index.ts";
+import { pool } from "./models/index.ts";
 
 const server = app.listen(config.port, () => {
     logger.info(`Server running on http://localhost:${config.port}`);

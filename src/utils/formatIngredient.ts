@@ -1,0 +1,9 @@
+import type { Ingredient } from "../repositories/ingredient.respository";
+
+export const formatIngredient = (ingredient: Ingredient) => ({
+    id: ingredient.id,
+    name: ingredient.name,
+    unit: ingredient.unit,
+    stockQuantity: ingredient.stockQuantity,
+    lowStockThreshold: ingredient.lowStockThreshold,
+});

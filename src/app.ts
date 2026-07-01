@@ -3,11 +3,11 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { pinoHttp } from "pino-http";
 
-import routes from "./features/index.ts";
-import { errorHandler, notFound } from "./shared/middlewares/index.ts";
-import { logger } from "./shared/utils/logger.ts";
-import { config } from "./shared/config/index.ts";
-import { swaggerDocs } from "./shared/utils/swagger.ts";
+import routes from "./routes/index.ts";
+import { errorHandler, notFound } from "./middlewares/index.ts";
+import { logger } from "./utils/logger.ts";
+import { config } from "./config/index.ts";
+import { swaggerDocs } from "./utils/swagger.ts";
 
 const app = express();
 
