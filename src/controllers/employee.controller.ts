@@ -19,13 +19,14 @@ export class EmployeeController {
 
     async updateEmployee(req: Request, res: Response) {
         const id = req.params.id as string;
-        const { name, email, pin, password } = req.body;
+        const { name, email, pin, password, isActive } = req.body;
 
         const result = await employeeService.updateEmployee(id, {
             name,
             email,
             pin,
             password,
+            isActive,
         });
 
         return res.json({

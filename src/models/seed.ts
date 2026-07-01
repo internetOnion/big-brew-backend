@@ -18,6 +18,7 @@ import {
     orderItemModifiersTable,
     paymentsTable,
     stockMovementsTable,
+    settingsTable,
 } from "./schema/index.ts";
 
 interface SeedEmployee {
@@ -4809,6 +4810,13 @@ const seedOrders = async () => {
             .onConflictDoNothing();
     }
     console.log(`    ${stockMovementsToInsert.length} stock movements`);
+
+    console.log("  Settings...");
+    await db
+        .insert(settingsTable)
+        .values({ khrRate: 4100 })
+        .onConflictDoNothing();
+    console.log("    Default settings");
 };
 
 const getRecipeIngredients = (

@@ -18,6 +18,7 @@ export const employeesTable = pgTable(
         pin: text().notNull().unique(),
         supabaseUid: uuid("supabase_uid").unique(),
         isActive: boolean("is_active").notNull().default(true),
+        deletedAt: timestamp("deleted_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
             .defaultNow(),

@@ -86,6 +86,7 @@ export const authenticate = async (
         role: employee.role,
         name: employee.name,
         supabaseUid: employee.supabaseUid,
+        isActive: employee.isActive,
     };
 
     next();

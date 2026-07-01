@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, isNull } from "drizzle-orm";
 import { db } from "../models/index.ts";
 import { expensesTable, employeesTable } from "../models/schema/index.ts";
 
@@ -41,7 +41,7 @@ export interface ExpenseSummaryRow {
 
 export class ExpenseRepository {
     async findAll(filters: ExpenseFilters): Promise<Expense[]> {
-        const conditions = [];
+        const conditions = [isNull(expensesTable.deletedAt)];
 
         if (filters.from) {
             conditions.push(gte(expensesTable.recordedAt, filters.from));
@@ -95,7 +95,9 @@ export class ExpenseRepository {
                 employeesTable,
                 eq(expensesTable.recordedBy, employeesTable.id),
             )
-            .where(eq(expensesTable.id, id))
+            .where(
+                and(eq(expensesTable.id, id), isNull(expensesTable.deletedAt)),
+            )
             .limit(1);
 
         return result[0] ?? null;
@@ -126,7 +128,10 @@ export class ExpenseRepository {
     }
 
     async delete(id: string): Promise<void> {
-        await db.delete(expensesTable).where(eq(expensesTable.id, id));
+        await db
+            .update(expensesTable)
+            .set({ deletedAt: new Date() })
+            .where(eq(expensesTable.id, id));
     }
 
     async getSummary(from: Date, to: Date): Promise<ExpenseSummaryRow[]> {
@@ -141,6 +146,7 @@ export class ExpenseRepository {
                 and(
                     gte(expensesTable.recordedAt, from),
                     lte(expensesTable.recordedAt, to),
+                    isNull(expensesTable.deletedAt),
                 ),
             )
             .groupBy(expensesTable.category);

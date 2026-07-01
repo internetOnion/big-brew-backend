@@ -1,6 +1,6 @@
 import { db } from "../models/index.ts";
 import { categoriesTable } from "../models/schema/index.ts";
-import { eq } from "drizzle-orm";
+import { eq, isNull, and } from "drizzle-orm";
 import { z } from "zod";
 import { insertCategorySchema } from "../models/schema/categories.ts";
 import { PgTransaction } from "drizzle-orm/pg-core";
@@ -15,7 +15,9 @@ export type UpdateCategory = Partial<InsertCategory>;
 
 export class CategoryRepository {
     async findAll(): Promise<Category[]> {
-        const results = await db.query.categoriesTable.findMany();
+        const results = await db.query.categoriesTable.findMany({
+            where: isNull(categoriesTable.deletedAt),
+        });
         return results;
     }
 
@@ -27,7 +29,12 @@ export class CategoryRepository {
         const [result] = await client
             .select()
             .from(categoriesTable)
-            .where(eq(categoriesTable.id, id));
+            .where(
+                and(
+                    eq(categoriesTable.id, id),
+                    isNull(categoriesTable.deletedAt),
+                ),
+            );
         return result || null;
     }
 
@@ -35,7 +42,12 @@ export class CategoryRepository {
         const [result] = await db
             .select()
             .from(categoriesTable)
-            .where(eq(categoriesTable.name, name));
+            .where(
+                and(
+                    eq(categoriesTable.name, name),
+                    isNull(categoriesTable.deletedAt),
+                ),
+            );
         return result || null;
     }
 
@@ -61,7 +73,10 @@ export class CategoryRepository {
     }
 
     async delete(id: string): Promise<void> {
-        await db.delete(categoriesTable).where(eq(categoriesTable.id, id));
+        await db
+            .update(categoriesTable)
+            .set({ deletedAt: new Date() })
+            .where(eq(categoriesTable.id, id));
     }
 }
 
