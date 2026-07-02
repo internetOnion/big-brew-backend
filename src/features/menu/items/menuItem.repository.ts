@@ -21,7 +21,7 @@ import { eq, and, isNull, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
-export type MenuItem = z.infer<typeof baseMenuItemSchema>;
+export type MenuItem = typeof menuItemsTable.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemValidationSchema>;
 export type UpdateMenuItem = z.infer<typeof updateMenuItemValidationSchema>;
 
@@ -95,6 +95,14 @@ export class MenuItemRepository {
             where: eq(menuItemsTable.id, id),
         });
         return result || null;
+    }
+
+    async findByName(name: string): Promise<MenuItem | null> {
+        const result = await db.query.menuItemsTable.findFirst({
+            where: (menuItems, { and, isNull, eq }) =>
+                and(eq(menuItems.name, name), isNull(menuItems.deletedAt)),
+        });
+        return result ?? null;
     }
 
     async findAllWithRelations(): Promise<MenuItemWithRelations[]> {
@@ -384,7 +392,10 @@ export class MenuItemRepository {
         const client = tx || db;
         const result = await client
             .insert(menuItemsTable)
-            .values(input)
+            .values({
+                ...input,
+                basePrice: input.basePrice.toString(),
+            })
             .returning();
         return result[0];
     }
@@ -473,9 +484,13 @@ export class MenuItemRepository {
     }
 
     async update(id: string, input: UpdateMenuItem): Promise<MenuItem> {
+        const values: Record<string, unknown> = { ...input };
+        if (typeof values.basePrice === "number") {
+            values.basePrice = values.basePrice.toString();
+        }
         const result = await db
             .update(menuItemsTable)
-            .set(input)
+            .set(values)
             .where(eq(menuItemsTable.id, id))
             .returning();
         return result[0];
