@@ -5,8 +5,9 @@ import {
     boolean,
     timestamp,
     index,
+    uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, isNull } from "drizzle-orm";
 import { employeeRoleEnum } from "./enums.ts";
 
 export const employeesTable = pgTable(
@@ -15,8 +16,8 @@ export const employeesTable = pgTable(
         id: uuid().primaryKey().defaultRandom(),
         role: employeeRoleEnum().notNull(),
         name: text().notNull(),
-        pin: text().notNull().unique(),
-        supabaseUid: uuid("supabase_uid").unique(),
+        pin: text().notNull(),
+        supabaseUid: uuid("supabase_uid"),
         isActive: boolean("is_active").notNull().default(true),
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true })
@@ -30,5 +31,7 @@ export const employeesTable = pgTable(
         index("idx_employees_pin")
             .on(t.pin)
             .where(sql`${t.isActive} = true`),
+        uniqueIndex("employees_pin_unique").on(t.pin).where(isNull(t.deletedAt)),
+        uniqueIndex("employees_supabase_uid_unique").on(t.supabaseUid).where(isNull(t.deletedAt)),
     ],
 );

@@ -41,6 +41,13 @@ export class MenuItemService {
             throw AppError.badRequest("Invalid category ID");
         }
 
+        const existing = await menuItemRepository.findByName(input.name);
+        if (existing) {
+            throw AppError.conflict(
+                `Menu item "${input.name}" already exists`,
+            );
+        }
+
         const newMenuItem = await menuItemRepository.insert(input);
 
         return formatMenuItemBasic({
@@ -55,6 +62,13 @@ export class MenuItemService {
         const category = await categoryRepository.findById(input.categoryId);
         if (!category) {
             throw AppError.badRequest("Invalid category ID");
+        }
+
+        const existing = await menuItemRepository.findByName(input.name);
+        if (existing) {
+            throw AppError.conflict(
+                `Menu item "${input.name}" already exists`,
+            );
         }
 
         const ingredientIds = new Set<string>();
