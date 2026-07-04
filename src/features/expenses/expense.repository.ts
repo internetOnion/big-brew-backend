@@ -52,9 +52,7 @@ export interface ExpenseSummaryRow {
 }
 
 export class ExpenseRepository {
-    async findAll(
-        filters: ExpenseFilters,
-    ): Promise<PaginatedExpensesResult> {
+    async findAll(filters: ExpenseFilters): Promise<PaginatedExpensesResult> {
         const conditions = [isNull(expensesTable.deletedAt)];
 
         if (filters.from) {

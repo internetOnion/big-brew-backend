@@ -31,7 +31,11 @@ export const employeesTable = pgTable(
         index("idx_employees_pin")
             .on(t.pin)
             .where(sql`${t.isActive} = true`),
-        uniqueIndex("employees_pin_unique").on(t.pin).where(isNull(t.deletedAt)),
-        uniqueIndex("employees_supabase_uid_unique").on(t.supabaseUid).where(isNull(t.deletedAt)),
+        uniqueIndex("employees_pin_unique")
+            .on(t.pin)
+            .where(isNull(t.deletedAt)),
+        uniqueIndex("employees_supabase_uid_unique")
+            .on(t.supabaseUid)
+            .where(isNull(t.deletedAt)),
     ],
 );
