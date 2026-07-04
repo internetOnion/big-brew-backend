@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, isNull, count } from "drizzle-orm";
 import { db } from "../../shared/models/index.ts";
 import {
     expensesTable,
@@ -34,6 +34,15 @@ export interface ExpenseFilters {
     from?: Date;
     to?: Date;
     category?: string;
+    limit?: number;
+    offset?: number;
+}
+
+export interface PaginatedExpensesResult {
+    data: Expense[];
+    total: number;
+    page: number;
+    limit: number;
 }
 
 export interface ExpenseSummaryRow {
@@ -43,7 +52,9 @@ export interface ExpenseSummaryRow {
 }
 
 export class ExpenseRepository {
-    async findAll(filters: ExpenseFilters): Promise<Expense[]> {
+    async findAll(
+        filters: ExpenseFilters,
+    ): Promise<PaginatedExpensesResult> {
         const conditions = [isNull(expensesTable.deletedAt)];
 
         if (filters.from) {
@@ -59,26 +70,44 @@ export class ExpenseRepository {
         const whereClause =
             conditions.length > 0 ? and(...conditions) : undefined;
 
-        const results = await db
-            .select({
-                id: expensesTable.id,
-                description: expensesTable.description,
-                amount: expensesTable.amount,
-                category: expensesTable.category,
-                recordedBy: expensesTable.recordedBy,
-                recordedByName: employeesTable.name,
-                recordedAt: expensesTable.recordedAt,
-                createdAt: expensesTable.createdAt,
-            })
-            .from(expensesTable)
-            .leftJoin(
-                employeesTable,
-                eq(expensesTable.recordedBy, employeesTable.id),
-            )
-            .where(whereClause)
-            .orderBy(desc(expensesTable.recordedAt));
+        const limit = filters.limit ?? 20;
+        const offset = filters.offset ?? 0;
 
-        return results;
+        const [countResult, results] = await Promise.all([
+            db
+                .select({ total: count() })
+                .from(expensesTable)
+                .where(whereClause),
+            db
+                .select({
+                    id: expensesTable.id,
+                    description: expensesTable.description,
+                    amount: expensesTable.amount,
+                    category: expensesTable.category,
+                    recordedBy: expensesTable.recordedBy,
+                    recordedByName: employeesTable.name,
+                    recordedAt: expensesTable.recordedAt,
+                    createdAt: expensesTable.createdAt,
+                })
+                .from(expensesTable)
+                .leftJoin(
+                    employeesTable,
+                    eq(expensesTable.recordedBy, employeesTable.id),
+                )
+                .where(whereClause)
+                .orderBy(desc(expensesTable.recordedAt))
+                .limit(limit)
+                .offset(offset),
+        ]);
+
+        const total = countResult[0]?.total ?? 0;
+
+        return {
+            data: results,
+            total,
+            page: Math.floor(offset / limit) + 1,
+            limit,
+        };
     }
 
     async findById(id: string): Promise<Expense | null> {

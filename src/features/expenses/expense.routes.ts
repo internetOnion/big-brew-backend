@@ -50,6 +50,8 @@ const listQuerySchema = z
         from: z.iso.datetime().optional(),
         to: z.iso.datetime().optional(),
         category: z.enum(EXPENSE_CATEGORIES).optional(),
+        limit: z.coerce.number().int().positive().optional(),
+        offset: z.coerce.number().int().min(0).optional(),
     })
     .strict();
 
