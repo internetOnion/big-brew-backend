@@ -4,6 +4,7 @@ import {
     type Expense,
     type ExpenseFilters,
     type ExpenseSummaryRow,
+    type PaginatedExpensesResult,
 } from "./expense.repository.ts";
 
 const EXPENSE_CATEGORIES = [
@@ -39,7 +40,9 @@ interface ExpenseSummary {
 }
 
 export class ExpenseService {
-    async listExpenses(filters: ExpenseFilters): Promise<Expense[]> {
+    async listExpenses(
+        filters: ExpenseFilters,
+    ): Promise<PaginatedExpensesResult> {
         return expenseRepository.findAll(filters);
     }
 

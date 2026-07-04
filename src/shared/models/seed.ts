@@ -6,6 +6,7 @@ import { supabaseAdmin } from "../lib/supabase.ts";
 import {
     employeesTable,
     categoriesTable,
+    expenseCategoriesTable,
     ingredientsTable,
     modifierGroupsTable,
     modifierOptionsTable,
@@ -19,6 +20,7 @@ import {
     paymentsTable,
     stockMovementsTable,
     settingsTable,
+    expensesTable,
 } from "./schema/index.ts";
 
 interface SeedEmployee {
@@ -169,6 +171,21 @@ export const seed = async () => {
                 name: "Sandwich",
                 sortOrder: 4,
             },
+        ])
+        .onConflictDoNothing();
+
+    console.log("  Expense Categories...");
+    await db
+        .insert(expenseCategoriesTable)
+        .values([
+            { name: "Supplies" },
+            { name: "Utilities" },
+            { name: "Rent" },
+            { name: "Maintenance" },
+            { name: "Ingredients" },
+            { name: "Equipment" },
+            { name: "Marketing" },
+            { name: "Other" },
         ])
         .onConflictDoNothing();
 
@@ -3574,6 +3591,173 @@ export const seed = async () => {
                 type: "bogo",
                 value: null,
                 isActive: true,
+            },
+        ])
+        .onConflictDoNothing();
+
+    console.log("  Expenses...");
+    await db
+        .insert(expensesTable)
+        .values([
+            {
+                id: "d1000001-0000-4000-8000-000000000001",
+                description: "Coffee cup restock (12oz, 16oz)",
+                amount: "245.00",
+                category: "Supplies",
+                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
+                recordedAt: new Date(Date.now() - 5 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000002",
+                description: "Napkins & takeaway bags",
+                amount: "89.50",
+                category: "Supplies",
+                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
+                recordedAt: new Date(Date.now() - 12 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000003",
+                description: "Cleaning supplies (sanitizer, degreaser)",
+                amount: "67.00",
+                category: "Supplies",
+                recordedBy: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
+                recordedAt: new Date(Date.now() - 20 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000004",
+                description: "Straws & cup sleeves",
+                amount: "42.00",
+                category: "Supplies",
+                recordedBy: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
+                recordedAt: new Date(Date.now() - 30 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000005",
+                description: "Monthly electricity bill",
+                amount: "520.00",
+                category: "Utilities",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 7 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000006",
+                description: "Monthly electricity bill",
+                amount: "490.00",
+                category: "Utilities",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 37 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000007",
+                description: "Water & sewer",
+                amount: "185.00",
+                category: "Utilities",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 14 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000008",
+                description: "Internet & phone",
+                amount: "95.00",
+                category: "Utilities",
+                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
+                recordedAt: new Date(Date.now() - 3 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000009",
+                description: "Monthly rent — July",
+                amount: "2500.00",
+                category: "Rent",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 25 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000010",
+                description: "Monthly rent — June",
+                amount: "2500.00",
+                category: "Rent",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 55 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000011",
+                description: "Monthly rent — May",
+                amount: "2500.00",
+                category: "Rent",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 85 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000012",
+                description: "Espresso machine maintenance",
+                amount: "350.00",
+                category: "Maintenance",
+                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
+                recordedAt: new Date(Date.now() - 10 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000013",
+                description: "AC service & filter replacement",
+                amount: "220.00",
+                category: "Maintenance",
+                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
+                recordedAt: new Date(Date.now() - 40 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000014",
+                description: "Plumbing — sink drain repair",
+                amount: "175.00",
+                category: "Maintenance",
+                recordedBy: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
+                recordedAt: new Date(Date.now() - 60 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000015",
+                description: "Specialty syrup restock (vanilla, caramel, hazelnut)",
+                amount: "185.00",
+                category: "Ingredients",
+                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
+                recordedAt: new Date(Date.now() - 8 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000016",
+                description: "Pastry ingredients bulk order (flour, butter, sugar)",
+                amount: "320.00",
+                category: "Ingredients",
+                recordedBy: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
+                recordedAt: new Date(Date.now() - 18 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000017",
+                description: "Commercial blender replacement",
+                amount: "450.00",
+                category: "Equipment",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 45 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000018",
+                description: "Ice machine condenser fan motor",
+                amount: "175.00",
+                category: "Equipment",
+                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
+                recordedAt: new Date(Date.now() - 70 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000019",
+                description: "Instagram & Facebook ads — July",
+                amount: "200.00",
+                category: "Marketing",
+                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
+                recordedAt: new Date(Date.now() - 15 * 86400000),
+            },
+            {
+                id: "d1000001-0000-4000-8000-000000000020",
+                description: "Local farmers market booth fee",
+                amount: "75.00",
+                category: "Marketing",
+                recordedBy: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
+                recordedAt: new Date(Date.now() - 50 * 86400000),
             },
         ])
         .onConflictDoNothing();

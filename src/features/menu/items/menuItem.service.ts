@@ -43,9 +43,7 @@ export class MenuItemService {
 
         const existing = await menuItemRepository.findByName(input.name);
         if (existing) {
-            throw AppError.conflict(
-                `Menu item "${input.name}" already exists`,
-            );
+            throw AppError.conflict(`Menu item "${input.name}" already exists`);
         }
 
         const newMenuItem = await menuItemRepository.insert(input);
@@ -66,9 +64,7 @@ export class MenuItemService {
 
         const existing = await menuItemRepository.findByName(input.name);
         if (existing) {
-            throw AppError.conflict(
-                `Menu item "${input.name}" already exists`,
-            );
+            throw AppError.conflict(`Menu item "${input.name}" already exists`);
         }
 
         const ingredientIds = new Set<string>();

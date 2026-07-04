@@ -3,20 +3,32 @@ import { expenseService } from "./expense.service.ts";
 
 export class ExpenseController {
     async listExpenses(req: Request, res: Response) {
-        const { from, to, category } = req.query;
+        const { from, to, category, limit, offset } = req.query;
 
         const filters: {
             from?: Date;
             to?: Date;
             category?: string;
+            limit?: number;
+            offset?: number;
         } = {};
 
         if (from) filters.from = new Date(from as string);
         if (to) filters.to = new Date(to as string);
         if (category) filters.category = category as string;
+        if (limit) filters.limit = parseInt(limit as string, 10);
+        if (offset) filters.offset = parseInt(offset as string, 10);
 
-        const expenses = await expenseService.listExpenses(filters);
-        return res.json(expenses);
+        const result = await expenseService.listExpenses(filters);
+        return res.json({
+            data: result.data,
+            pagination: {
+                page: result.page,
+                limit: result.limit,
+                total: result.total,
+                totalPages: Math.ceil(result.total / result.limit),
+            },
+        });
     }
 
     async getExpense(req: Request, res: Response) {

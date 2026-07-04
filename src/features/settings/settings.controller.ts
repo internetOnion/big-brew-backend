@@ -37,7 +37,6 @@ export class SettingsController {
         });
         return res.json(updated);
     }
-
 }
 
 export const settingsController = new SettingsController();

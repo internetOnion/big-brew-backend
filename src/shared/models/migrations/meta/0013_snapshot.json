@@ -1,6 +1,6 @@
 {
-    "id": "019d888a-2509-47b6-9801-39abc9667e6e",
-    "prevId": "d23c65cf-f361-4350-a620-14518e00f431",
+    "id": "1a5ace5e-4210-488c-acb2-0f869fc0ac54",
+    "prevId": "abf8d597-84fa-4c01-8a40-f99781dc8d27",
     "version": "7",
     "dialect": "postgresql",
     "tables": {
@@ -49,16 +49,27 @@
                     "notNull": false
                 }
             },
-            "indexes": {},
-            "foreignKeys": {},
-            "compositePrimaryKeys": {},
-            "uniqueConstraints": {
+            "indexes": {
                 "categories_name_unique": {
                     "name": "categories_name_unique",
-                    "nullsNotDistinct": false,
-                    "columns": ["name"]
+                    "columns": [
+                        {
+                            "expression": "name",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "where": "\"categories\".\"deleted_at\" is null",
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
                 }
             },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
             "policies": {},
             "checkConstraints": {},
             "isRLSEnabled": false
@@ -286,22 +297,99 @@
                     "concurrently": false,
                     "method": "btree",
                     "with": {}
+                },
+                "employees_pin_unique": {
+                    "name": "employees_pin_unique",
+                    "columns": [
+                        {
+                            "expression": "pin",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "where": "\"employees\".\"deleted_at\" is null",
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "employees_supabase_uid_unique": {
+                    "name": "employees_supabase_uid_unique",
+                    "columns": [
+                        {
+                            "expression": "supabase_uid",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "where": "\"employees\".\"deleted_at\" is null",
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
                 }
             },
             "foreignKeys": {},
             "compositePrimaryKeys": {},
-            "uniqueConstraints": {
-                "employees_pin_unique": {
-                    "name": "employees_pin_unique",
-                    "nullsNotDistinct": false,
-                    "columns": ["pin"]
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.expense_categories": {
+            "name": "expense_categories",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
                 },
-                "employees_supabase_uid_unique": {
-                    "name": "employees_supabase_uid_unique",
-                    "nullsNotDistinct": false,
-                    "columns": ["supabase_uid"]
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "deleted_at": {
+                    "name": "deleted_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
                 }
             },
+            "indexes": {
+                "expense_categories_name_unique": {
+                    "name": "expense_categories_name_unique",
+                    "columns": [
+                        {
+                            "expression": "name",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "where": "\"expense_categories\".\"deleted_at\" is null",
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
             "policies": {},
             "checkConstraints": {},
             "isRLSEnabled": false
@@ -687,6 +775,22 @@
                     "concurrently": false,
                     "method": "btree",
                     "with": {}
+                },
+                "menu_items_name_unique": {
+                    "name": "menu_items_name_unique",
+                    "columns": [
+                        {
+                            "expression": "name",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "where": "\"menu_items\".\"deleted_at\" is null",
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
                 }
             },
             "foreignKeys": {
@@ -701,13 +805,7 @@
                 }
             },
             "compositePrimaryKeys": {},
-            "uniqueConstraints": {
-                "menu_items_name_unique": {
-                    "name": "menu_items_name_unique",
-                    "nullsNotDistinct": false,
-                    "columns": ["name"]
-                }
-            },
+            "uniqueConstraints": {},
             "policies": {},
             "checkConstraints": {
                 "chk_base_price_positive": {
