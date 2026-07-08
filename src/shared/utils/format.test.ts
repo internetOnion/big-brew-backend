@@ -1,0 +1,52 @@
+import { describe, it, expect } from "vitest";
+import { formatCategory } from "./formatCategory";
+import { formatEmployee } from "./formatEmployee";
+import type { Category } from "../../features/categories/category.repository";
+import type { Employee } from "../../features/employees/employee.repository";
+
+describe("formatCategory.formatCategory", () => {
+    it("returns a formatted category object", () => {
+        const mockCategory: Category = {
+            id: "1",
+            name: "Hot",
+            sortOrder: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+        };
+
+        const formattedCategory = formatCategory(mockCategory);
+
+        expect(formattedCategory).toEqual({
+            id: "1",
+            name: "Hot",
+            sortOrder: 1,
+        });
+    });
+});
+
+describe("formatEmployee.formatEmployee", () => {
+    it("return a formatted employee object", () => {
+        const mockEmployee: Employee = {
+            id: "1",
+            role: "owner",
+            name: "Reaksmey Nou",
+            pin: "123456",
+            supabaseUid: "supabase-uid",
+            isActive: true,
+            deletedAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+
+        const formattedEmployee = formatEmployee(mockEmployee);
+
+        expect(formattedEmployee).toEqual({
+            id: "1",
+            role: "owner",
+            name: "Reaksmey Nou",
+            supabaseUid: "supabase-uid",
+            isActive: true,
+        });
+    });
+});

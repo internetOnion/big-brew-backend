@@ -3713,7 +3713,8 @@ export const seed = async () => {
             },
             {
                 id: "d1000001-0000-4000-8000-000000000015",
-                description: "Specialty syrup restock (vanilla, caramel, hazelnut)",
+                description:
+                    "Specialty syrup restock (vanilla, caramel, hazelnut)",
                 amount: "185.00",
                 category: "Ingredients",
                 recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
@@ -3721,7 +3722,8 @@ export const seed = async () => {
             },
             {
                 id: "d1000001-0000-4000-8000-000000000016",
-                description: "Pastry ingredients bulk order (flour, butter, sugar)",
+                description:
+                    "Pastry ingredients bulk order (flour, butter, sugar)",
                 amount: "320.00",
                 category: "Ingredients",
                 recordedBy: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
