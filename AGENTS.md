@@ -15,10 +15,12 @@
 | `npm run db:seed` | Seed dev data (employees, menu, modifiers, etc.) |
 | `npm run db:reset` | Truncate all tables **and** delete Supabase Auth users — destructive |
 | `npm run db:studio` | Open Drizzle Studio GUI |
+| `npx vitest run` | Run all unit tests |
+| `npx vitest run src/path/to/file.test.ts` | Run a single test file |
 
-Before committing: `npm run format && npm run build`
+Before committing: `npm run format && npm run build && npx vitest run`
 
-There are no tests. No CI pipeline.
+No CI pipeline.
 
 ## Setup
 
