@@ -4,7 +4,7 @@ import * as schema from "./schema/index.ts";
 import { logger } from "../utils/logger.ts";
 
 const pool = new pg.Pool({
-    connectionString: process.env.SUPABASE_DATABASE_URL,
+    connectionString: process.env.NEON_DATABASE_URL,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,

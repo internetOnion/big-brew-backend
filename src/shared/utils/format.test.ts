@@ -32,7 +32,7 @@ describe("formatEmployee.formatEmployee", () => {
             role: "owner",
             name: "Reaksmey Nou",
             pin: "123456",
-            supabaseUid: "supabase-uid",
+            clerkUserId: "clerk-user-id",
             isActive: true,
             deletedAt: null,
             createdAt: new Date(),
@@ -45,7 +45,7 @@ describe("formatEmployee.formatEmployee", () => {
             id: "1",
             role: "owner",
             name: "Reaksmey Nou",
-            supabaseUid: "supabase-uid",
+            clerkUserId: "clerk-user-id",
             isActive: true,
         });
     });

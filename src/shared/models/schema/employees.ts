@@ -17,7 +17,7 @@ export const employeesTable = pgTable(
         role: employeeRoleEnum().notNull(),
         name: text().notNull(),
         pin: text().notNull(),
-        supabaseUid: uuid("supabase_uid"),
+        clerkUserId: text("clerk_user_id"),
         isActive: boolean("is_active").notNull().default(true),
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true })
@@ -34,8 +34,8 @@ export const employeesTable = pgTable(
         uniqueIndex("employees_pin_unique")
             .on(t.pin)
             .where(isNull(t.deletedAt)),
-        uniqueIndex("employees_supabase_uid_unique")
-            .on(t.supabaseUid)
+        uniqueIndex("employees_clerk_user_id_unique")
+            .on(t.clerkUserId)
             .where(isNull(t.deletedAt)),
     ],
 );

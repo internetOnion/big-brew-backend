@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { sql } from "drizzle-orm";
 import { db, pool } from "./index.ts";
-import { supabaseAdmin } from "../lib/supabase.ts";
+import { clerkClient } from "../lib/clerk.ts";
 
 const requireEnv = (name: string): string => {
     const value = process.env[name];
@@ -13,9 +13,10 @@ const requireEnv = (name: string): string => {
 };
 
 const reset = async () => {
-    requireEnv("SUPABASE_DATABASE_URL");
+    requireEnv("NEON_DATABASE_URL");
     requireEnv("SUPABASE_URL");
     requireEnv("SUPABASE_SECRET_KEY");
+    requireEnv("CLERK_SECRET_KEY");
 
     console.log("Truncating all tables...");
     await db.execute(sql`
@@ -39,12 +40,14 @@ const reset = async () => {
         RESTART IDENTITY CASCADE
     `);
 
-    console.log("Deleting Supabase Auth users...");
-    const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-    for (const user of usersData.users) {
-        await supabaseAdmin.auth.admin.deleteUser(user.id);
+    console.log("Deleting Clerk users...");
+    const users = await clerkClient.users.getUserList({ limit: 500 });
+    let deleted = 0;
+    for (const user of users.data) {
+        await clerkClient.users.deleteUser(user.id);
+        deleted++;
     }
-    console.log(`  Deleted ${usersData.users.length} auth users.`);
+    console.log(`  Deleted ${deleted} auth users.`);
 
     console.log("Reset complete.");
 };

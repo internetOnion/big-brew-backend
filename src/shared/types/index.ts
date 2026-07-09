@@ -20,7 +20,7 @@ export interface EmployeePayload {
     id: string;
     role: EmployeeRole;
     name: string;
-    supabaseUid: string | null;
+    clerkUserId: string | null;
     isActive: boolean;
     email?: string;
 }

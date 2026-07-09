@@ -58,14 +58,13 @@ const options: swaggerJsdoc.Options = {
                             enum: ["barista", "manager", "owner"],
                         },
                         name: { type: "string" },
-                        supabaseUid: {
+                        clerkUserId: {
                             type: "string",
-                            format: "uuid",
                             nullable: true,
                         },
                         email: { type: "string", format: "email" },
                     },
-                    required: ["id", "role", "name", "supabaseUid"],
+                    required: ["id", "role", "name", "clerkUserId"],
                 },
                 Ingredient: {
                     type: "object",

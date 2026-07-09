@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { supabaseAdmin } from "../../shared/lib/supabase.ts";
+import { clerkClient } from "../../shared/lib/clerk.ts";
 import { AppError } from "../../shared/utils/AppError.ts";
 import { logger } from "../../shared/utils/logger.ts";
 import { formatEmployee } from "../../shared/utils/formatEmployee.ts";
@@ -25,10 +25,17 @@ export class EmployeeService {
         const results: EmployeePayload[] = [];
         for (const emp of employees) {
             let email: string | undefined;
-            if (emp.supabaseUid) {
-                const { data: userData } =
-                    await supabaseAdmin.auth.admin.getUserById(emp.supabaseUid);
-                email = userData?.user?.email;
+            if (emp.clerkUserId) {
+                try {
+                    const clerkUser = await clerkClient.users.getUser(
+                        emp.clerkUserId,
+                    );
+                    email = clerkUser.emailAddresses?.find(
+                        (e) => e.id === clerkUser.primaryEmailAddressId,
+                    )?.emailAddress;
+                } catch {
+                    // ponytail: clerk fetch failure is non-critical
+                }
             }
             results.push(formatEmployee(emp, email));
         }
@@ -42,12 +49,17 @@ export class EmployeeService {
         }
 
         let email: string | undefined;
-        if (employee.supabaseUid) {
-            const { data: userData } =
-                await supabaseAdmin.auth.admin.getUserById(
-                    employee.supabaseUid,
+        if (employee.clerkUserId) {
+            try {
+                const clerkUser = await clerkClient.users.getUser(
+                    employee.clerkUserId,
                 );
-            email = userData?.user?.email;
+                email = clerkUser.emailAddresses?.find(
+                    (e) => e.id === clerkUser.primaryEmailAddressId,
+                )?.emailAddress;
+            } catch {
+                // ponytail: clerk fetch failure is non-critical
+            }
         }
 
         return formatEmployee(employee, email);
@@ -76,32 +88,44 @@ export class EmployeeService {
         }
 
         let originalEmail: string | undefined;
-        if ((email || password) && employee.supabaseUid) {
-            const { data: userData } =
-                await supabaseAdmin.auth.admin.getUserById(
-                    employee.supabaseUid,
+        if ((email || password) && employee.clerkUserId) {
+            try {
+                const clerkUser = await clerkClient.users.getUser(
+                    employee.clerkUserId,
                 );
-            originalEmail = userData?.user?.email;
+                originalEmail = clerkUser.emailAddresses?.find(
+                    (e) => e.id === clerkUser.primaryEmailAddressId,
+                )?.emailAddress;
+            } catch {
+                // ponytail: clerk fetch failure is non-critical
+            }
         }
 
         if (email || password) {
-            if (!employee.supabaseUid) {
+            if (!employee.clerkUserId) {
                 throw AppError.badRequest(
                     "Employee has no linked auth account",
                 );
             }
 
-            const updateData: { email?: string; password?: string } = {};
-            if (email) updateData.email = email;
-            if (password) updateData.password = password;
-
-            const { error } = await supabaseAdmin.auth.admin.updateUserById(
-                employee.supabaseUid,
-                updateData,
-            );
-
-            if (error) {
-                if (error.status === 422) {
+            try {
+                if (password) {
+                    await clerkClient.users.updateUser(employee.clerkUserId, {
+                        password,
+                    });
+                }
+                if (email) {
+                    const newEmail =
+                        await clerkClient.emailAddresses.createEmailAddress({
+                            userId: employee.clerkUserId,
+                            emailAddress: email,
+                        });
+                    await clerkClient.users.updateUser(employee.clerkUserId, {
+                        primaryEmailAddressID: newEmail.id,
+                    });
+                }
+            } catch (err: any) {
+                if (err?.errors?.[0]?.code === "form_identifier_exists") {
                     throw AppError.conflict("Email already registered");
                 }
                 throw AppError.internal("Failed to update auth user");
@@ -124,26 +148,35 @@ export class EmployeeService {
             }
 
             let finalEmail = email ?? originalEmail;
-            if (finalEmail === undefined && employee.supabaseUid) {
-                const { data: userData } =
-                    await supabaseAdmin.auth.admin.getUserById(
-                        employee.supabaseUid,
+            if (finalEmail === undefined && employee.clerkUserId) {
+                try {
+                    const clerkUser = await clerkClient.users.getUser(
+                        employee.clerkUserId,
                     );
-                finalEmail = userData?.user?.email;
+                    finalEmail = clerkUser.emailAddresses?.find(
+                        (e) => e.id === clerkUser.primaryEmailAddressId,
+                    )?.emailAddress;
+                } catch {
+                    // ponytail: clerk fetch failure is non-critical
+                }
             }
 
             return formatEmployee(resultEmployee, finalEmail);
         } catch (err) {
-            if (email && originalEmail && employee.supabaseUid) {
+            if (email && originalEmail && employee.clerkUserId) {
                 try {
-                    await supabaseAdmin.auth.admin.updateUserById(
-                        employee.supabaseUid,
-                        { email: originalEmail },
-                    );
+                    const rollbackEmail =
+                        await clerkClient.emailAddresses.createEmailAddress({
+                            userId: employee.clerkUserId,
+                            emailAddress: originalEmail,
+                        });
+                    await clerkClient.users.updateUser(employee.clerkUserId, {
+                        primaryEmailAddressID: rollbackEmail.id,
+                    });
                 } catch (rollbackErr) {
                     logger.error(
                         rollbackErr as Error,
-                        "Failed to rollback Supabase email after DB update failure",
+                        "Failed to rollback Clerk email after DB update failure",
                     );
                 }
             }
@@ -162,13 +195,13 @@ export class EmployeeService {
         }
         await employeeRepository.delete(id);
 
-        if (employee.supabaseUid) {
+        if (employee.clerkUserId) {
             try {
-                await supabaseAdmin.auth.admin.deleteUser(employee.supabaseUid);
+                await clerkClient.users.deleteUser(employee.clerkUserId);
             } catch (err) {
                 logger.error(
                     err as Error,
-                    "Failed to delete Supabase auth user during employee deletion",
+                    "Failed to delete Clerk user during employee deletion",
                 );
             }
         }

@@ -17,7 +17,7 @@
         "test": "vitest"
     },
     "dependencies": {
-        "@supabase/supabase-js": "^2.106.2",
+        "@clerk/backend": "^1.25.0",
         "bcrypt": "^6.0.0",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
