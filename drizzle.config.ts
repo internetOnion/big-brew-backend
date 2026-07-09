@@ -6,6 +6,6 @@ export default defineConfig({
     out: "./src/shared/models/migrations",
     dialect: "postgresql",
     dbCredentials: {
-        url: process.env.SUPABASE_DATABASE_URL!,
+        url: process.env.NEON_DATABASE_URL!,
     },
 });

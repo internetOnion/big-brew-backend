@@ -1,9 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { supabaseAuth } from "../lib/supabase.ts";
 import { AppError } from "../utils/AppError.ts";
 import { config } from "../config/index.ts";
-import { logger } from "../utils/logger.ts";
 import { employeeRepository } from "../../features/employees/employee.repository.ts";
 import type { EmployeeRole } from "../types/index.ts";
 
@@ -21,46 +19,6 @@ const extractBearerToken = (req: Request): string => {
     return header.slice(7);
 };
 
-const resolveSupabaseUid = async (token: string): Promise<string | null> => {
-    try {
-        const payload = jwt.verify(token, config.jwtSecret) as LocalJwtPayload;
-        return payload.sub;
-    } catch (err) {
-        if (err instanceof jwt.TokenExpiredError) {
-            throw AppError.unauthorized("Access token expired", {
-                code: "TOKEN_EXPIRED",
-            });
-        }
-    }
-
-    const {
-        data: { user },
-        error,
-    } = await supabaseAuth.auth.getUser(token);
-
-    if (!error && user) {
-        return user.id;
-    }
-
-    if (
-        error?.message?.toLowerCase().includes("expired") ||
-        error?.message?.toLowerCase().includes("invalid token")
-    ) {
-        throw AppError.unauthorized("Access token expired", {
-            code: "TOKEN_EXPIRED",
-        });
-    }
-
-    if (error) {
-        logger.error(
-            { message: error.message, status: error.status },
-            "Supabase getUser returned unexpected error",
-        );
-    }
-
-    return null;
-};
-
 export const authenticate = async (
     req: Request,
     _res: Response,
@@ -68,12 +26,19 @@ export const authenticate = async (
 ) => {
     const token = extractBearerToken(req);
 
-    const supabaseUid = await resolveSupabaseUid(token);
-    if (!supabaseUid) {
+    let payload: LocalJwtPayload;
+    try {
+        payload = jwt.verify(token, config.jwtSecret) as LocalJwtPayload;
+    } catch (err) {
+        if (err instanceof jwt.TokenExpiredError) {
+            throw AppError.unauthorized("Access token expired", {
+                code: "TOKEN_EXPIRED",
+            });
+        }
         throw AppError.unauthorized("Invalid or expired token");
     }
 
-    const employee = await employeeRepository.findBySupabaseUid(supabaseUid);
+    const employee = await employeeRepository.findById(payload.employeeId);
     if (!employee) {
         throw AppError.unauthorized("Employee not found");
     }
@@ -85,7 +50,7 @@ export const authenticate = async (
         id: employee.id,
         role: employee.role,
         name: employee.name,
-        supabaseUid: employee.supabaseUid,
+        clerkUserId: employee.clerkUserId,
         isActive: employee.isActive,
     };
 

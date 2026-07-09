@@ -1,10 +1,32 @@
 import { randomUUID } from "node:crypto";
-import { supabaseAdmin } from "../../shared/lib/supabase.ts";
 import { AppError } from "../../shared/utils/AppError.ts";
 import { logger } from "../../shared/utils/logger.ts";
 import { config } from "../../shared/config/index.ts";
 
 const ALLOWED_MIME_TYPES = /^image\/(jpeg|png|gif|webp|svg\+xml|bmp|tiff)$/i;
+
+const storageFetch = async (
+    method: string,
+    path: string,
+    body?: BodyInit,
+    contentType?: string,
+): Promise<Response> => {
+    const url = `${config.supabaseUrl}/storage/v1${path}`;
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${config.supabaseSecretKey}`,
+        apikey: config.supabaseSecretKey,
+    };
+    if (contentType) headers["Content-Type"] = contentType;
+
+    const res = await fetch(url, { method, headers, body });
+    if (!res.ok && method !== "HEAD") {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+            `Storage ${method} ${path} failed (${res.status}): ${text}`,
+        );
+    }
+    return res;
+};
 
 export interface UploadResult {
     path: string;
@@ -18,29 +40,17 @@ export class StorageService {
         const ext = this.mimeToExt(file.mimetype);
         const filename = `${randomUUID()}.${ext}`;
         const storagePath = `uploads/${filename}`;
+        const bucket = config.storageBucketName;
 
-        const { error } = await supabaseAdmin.storage
-            .from(config.storageBucketName)
-            .upload(storagePath, file.buffer, {
-                contentType: file.mimetype,
-                upsert: false,
-            });
+        await storageFetch(
+            "POST",
+            `/object/${bucket}/${storagePath}`,
+            new Uint8Array(file.buffer),
+            file.mimetype,
+        );
 
-        if (error) {
-            logger.error(
-                { error, filename },
-                "Failed to upload file to Supabase Storage",
-            );
-            throw AppError.internal("Failed to upload file");
-        }
-
-        const {
-            data: { publicUrl },
-        } = supabaseAdmin.storage
-            .from(config.storageBucketName)
-            .getPublicUrl(storagePath);
-
-        return { path: storagePath, url: publicUrl };
+        const url = this.getPublicUrl(storagePath);
+        return { path: storagePath, url };
     }
 
     async delete(path: string): Promise<void> {
@@ -49,30 +59,28 @@ export class StorageService {
             throw AppError.notFound("File not found");
         }
 
-        const { error } = await supabaseAdmin.storage
-            .from(config.storageBucketName)
-            .remove([path]);
-
-        if (error) {
-            logger.error(
-                { error, path },
-                "Failed to delete file from Supabase Storage",
-            );
-            throw AppError.internal("Failed to delete file");
-        }
+        const bucket = config.storageBucketName;
+        await storageFetch("DELETE", `/object/${bucket}/${path}`);
     }
 
     async fileExists(path: string): Promise<boolean> {
+        const bucket = config.storageBucketName;
         const lastSlash = path.lastIndexOf("/");
         const folder = lastSlash === -1 ? "" : path.substring(0, lastSlash);
         const filename =
             lastSlash === -1 ? path : path.substring(lastSlash + 1);
 
-        const { data } = await supabaseAdmin.storage
-            .from(config.storageBucketName)
-            .list(folder);
+        const res = await storageFetch(
+            "POST",
+            `/object/list/${bucket}`,
+            JSON.stringify({ prefix: folder, limit: 1000 }),
+            "application/json",
+        );
 
-        return (data ?? []).some((f) => f.name === filename);
+        const data = await res.json().catch(() => []);
+        return (Array.isArray(data) ? data : []).some(
+            (f: { name: string }) => f.name === filename,
+        );
     }
 
     parseStoragePath(url: string): string {
@@ -88,13 +96,8 @@ export class StorageService {
     }
 
     getPublicUrl(path: string): string {
-        const {
-            data: { publicUrl },
-        } = supabaseAdmin.storage
-            .from(config.storageBucketName)
-            .getPublicUrl(path);
-
-        return publicUrl;
+        const bucket = config.storageBucketName;
+        return `${config.supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
     }
 
     private validateFile(file: Express.Multer.File) {

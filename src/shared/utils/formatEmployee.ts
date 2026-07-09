@@ -8,7 +8,7 @@ export const formatEmployee = (
     id: employee.id,
     role: employee.role,
     name: employee.name,
-    supabaseUid: employee.supabaseUid,
+    clerkUserId: employee.clerkUserId,
     isActive: employee.isActive,
     ...(email !== undefined && { email }),
 });

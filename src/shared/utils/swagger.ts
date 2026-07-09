@@ -49,6 +49,15 @@ const options: swaggerJsdoc.Options = {
                         "createdAt",
                     ],
                 },
+                ExpenseCategory: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        createdAt: { type: "string", format: "date-time" },
+                    },
+                    required: ["id", "name", "createdAt"],
+                },
                 Employee: {
                     type: "object",
                     properties: {
@@ -58,14 +67,14 @@ const options: swaggerJsdoc.Options = {
                             enum: ["barista", "manager", "owner"],
                         },
                         name: { type: "string" },
-                        supabaseUid: {
+                        clerkUserId: {
                             type: "string",
-                            format: "uuid",
                             nullable: true,
                         },
+                        isActive: { type: "boolean" },
                         email: { type: "string", format: "email" },
                     },
-                    required: ["id", "role", "name", "supabaseUid"],
+                    required: ["id", "role", "name", "clerkUserId"],
                 },
                 Ingredient: {
                     type: "object",
@@ -78,8 +87,6 @@ const options: swaggerJsdoc.Options = {
                         },
                         stockQuantity: { type: "number" },
                         lowStockThreshold: { type: "number" },
-                        createdAt: { type: "string", format: "date-time" },
-                        updatedAt: { type: "string", format: "date-time" },
                     },
                     required: [
                         "id",
@@ -87,8 +94,6 @@ const options: swaggerJsdoc.Options = {
                         "unit",
                         "stockQuantity",
                         "lowStockThreshold",
-                        "createdAt",
-                        "updatedAt",
                     ],
                 },
                 Category: {
@@ -97,21 +102,18 @@ const options: swaggerJsdoc.Options = {
                         id: { type: "string", format: "uuid" },
                         name: { type: "string" },
                         sortOrder: { type: "integer", minimum: 0 },
-                        createdAt: { type: "string", format: "date-time" },
-                        updatedAt: { type: "string", format: "date-time" },
                     },
-                    required: [
-                        "id",
-                        "name",
-                        "sortOrder",
-                        "createdAt",
-                        "updatedAt",
-                    ],
+                    required: ["id", "name", "sortOrder"],
                 },
                 ModifierGroup: {
                     type: "object",
                     properties: {
                         id: { type: "string", format: "uuid" },
+                        menuItemId: {
+                            type: "string",
+                            format: "uuid",
+                            nullable: true,
+                        },
                         name: { type: "string" },
                         selectionType: {
                             type: "string",
@@ -188,7 +190,16 @@ const options: swaggerJsdoc.Options = {
                         ingredientName: { type: "string" },
                         ingredientUnit: { type: "string" },
                         quantityChange: { type: "string" },
-                        reason: { type: "string" },
+                        reason: {
+                            type: "string",
+                            enum: [
+                                "order_placed",
+                                "order_voided",
+                                "manual_restock",
+                                "manual_deduction",
+                                "manual_adjustment",
+                            ],
+                        },
                         referenceOrderId: {
                             type: "string",
                             format: "uuid",
@@ -293,8 +304,6 @@ const options: swaggerJsdoc.Options = {
                         "name",
                         "basePrice",
                         "isAvailable",
-                        "imageUrl",
-                        "imagePath",
                         "category",
                         "modifierGroups",
                         "recipes",
@@ -330,8 +339,6 @@ const options: swaggerJsdoc.Options = {
                         "name",
                         "basePrice",
                         "isAvailable",
-                        "imageUrl",
-                        "imagePath",
                         "category",
                     ],
                 },
@@ -549,6 +556,9 @@ const options: swaggerJsdoc.Options = {
                         createdBy: {
                             $ref: "#/components/schemas/OrderEmployee",
                         },
+                        confirmedBy: {
+                            $ref: "#/components/schemas/OrderEmployee",
+                        },
                         voidRequestedBy: {
                             allOf: [
                                 {
@@ -616,6 +626,7 @@ const options: swaggerJsdoc.Options = {
                         "total",
                         "paymentStatus",
                         "createdBy",
+                        "confirmedBy",
                         "items",
                         "payments",
                         "createdAt",
@@ -633,6 +644,12 @@ const options: swaggerJsdoc.Options = {
                         discount_id: {
                             type: "string",
                             format: "uuid",
+                        },
+                        confirmed_by: {
+                            type: "string",
+                            format: "uuid",
+                            description:
+                                "Optional - employee confirming the order on behalf of another",
                         },
                         items: {
                             type: "array",
@@ -788,7 +805,7 @@ const options: swaggerJsdoc.Options = {
                         },
                         status: {
                             type: "string",
-                            enum: ["pending", "completed", "refunded"],
+                            enum: ["pending", "paid", "refunded"],
                         },
                         createdBy: {
                             $ref: "#/components/schemas/OrderEmployee",

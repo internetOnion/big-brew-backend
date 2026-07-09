@@ -7,7 +7,7 @@ export interface InsertEmployee {
     name: string;
     role: EmployeeRole;
     pin: string;
-    supabaseUid: string;
+    clerkUserId: string;
 }
 
 export interface UpdateEmployee {
@@ -21,7 +21,7 @@ export interface Employee {
     role: EmployeeRole;
     name: string;
     pin: string;
-    supabaseUid: string | null;
+    clerkUserId: string | null;
     isActive: boolean;
     deletedAt: Date | null;
     createdAt: Date;
@@ -36,9 +36,9 @@ export class EmployeeRepository {
         return result ?? null;
     }
 
-    async findBySupabaseUid(supabaseUid: string): Promise<Employee | null> {
+    async findByClerkUserId(clerkUserId: string): Promise<Employee | null> {
         const result = await db.query.employeesTable.findFirst({
-            where: eq(employeesTable.supabaseUid, supabaseUid),
+            where: eq(employeesTable.clerkUserId, clerkUserId),
         });
         return result ?? null;
     }

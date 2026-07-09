@@ -2,7 +2,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createHash } from "crypto";
 import type { StringValue } from "ms";
-import { supabaseAdmin, supabaseAuth } from "../../shared/lib/supabase.ts";
+
+import { clerkClient } from "../../shared/lib/clerk.ts";
 import { config } from "../../shared/config/index.ts";
 import { AppError } from "../../shared/utils/AppError.ts";
 import { logger } from "../../shared/utils/logger.ts";
@@ -43,7 +44,7 @@ const hashToken = (token: string): string =>
 const generateAccessToken = (employee: Employee): string =>
     jwt.sign(
         {
-            sub: employee.supabaseUid,
+            sub: employee.id,
             role: employee.role,
             employeeId: employee.id,
         },
@@ -54,7 +55,7 @@ const generateAccessToken = (employee: Employee): string =>
 const generateRefreshToken = (employee: Employee): string =>
     jwt.sign(
         {
-            sub: employee.supabaseUid,
+            sub: employee.id,
             employeeId: employee.id,
         },
         config.jwtSecret,
@@ -102,38 +103,41 @@ export class AuthService {
             pinHash = await bcrypt.hash(pin, SALT_ROUNDS);
         }
 
-        const { data: authData, error: authError } =
-            await supabaseAdmin.auth.admin.createUser({
-                email,
+        let clerkUser;
+        try {
+            clerkUser = await clerkClient.users.createUser({
+                emailAddress: [email],
                 password,
-                email_confirm: true,
             });
-
-        if (authError) {
-            if (authError.status === 422) {
+        } catch (err: any) {
+            if (err?.errors?.[0]?.code === "form_identifier_exists") {
                 throw AppError.conflict("Email already registered");
             }
+            logger.error(err as Error, "Failed to create Clerk user");
             throw AppError.internal("Failed to create auth user");
         }
-
-        const supabaseUid = authData.user.id;
 
         try {
             const employee = await employeeRepository.insert({
                 name,
                 role: assignedRole,
                 pin: pinHash ?? "",
-                supabaseUid,
+                clerkUserId: clerkUser.id,
             });
 
-            return { employee: formatEmployee(employee, authData.user.email) };
+            const primaryEmail =
+                clerkUser.emailAddresses?.find(
+                    (e) => e.id === clerkUser.primaryEmailAddressId,
+                )?.emailAddress ?? email;
+
+            return { employee: formatEmployee(employee, primaryEmail) };
         } catch (err) {
             try {
-                await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
+                await clerkClient.users.deleteUser(clerkUser.id);
             } catch (deleteErr) {
                 logger.error(
                     deleteErr as Error,
-                    "Failed to rollback Supabase auth user after DB insert failure",
+                    "Failed to rollback Clerk user after DB insert failure",
                 );
             }
             throw err;
@@ -147,19 +151,26 @@ export class AuthService {
     }> {
         const { email, password } = input;
 
-        const { data: sessionData, error: sessionError } =
-            await supabaseAuth.auth.signInWithPassword({ email, password });
-
-        if (sessionError) {
-            logger.error(
-                { message: sessionError.message, status: sessionError.status },
-                "Supabase signInWithPassword error",
-            );
+        const users = await clerkClient.users.getUserList({
+            emailAddress: [email],
+        });
+        if (users.data.length === 0) {
             throw AppError.unauthorized("Invalid email or password");
         }
 
-        const employee = await employeeRepository.findBySupabaseUid(
-            sessionData.user.id,
+        const clerkUser = users.data[0];
+
+        try {
+            await clerkClient.users.verifyPassword({
+                userId: clerkUser.id,
+                password,
+            });
+        } catch {
+            throw AppError.unauthorized("Invalid email or password");
+        }
+
+        const employee = await employeeRepository.findByClerkUserId(
+            clerkUser.id,
         );
         if (!employee) {
             throw AppError.unauthorized("Employee record not found");
@@ -170,10 +181,14 @@ export class AuthService {
 
         const { accessToken, refreshToken } = await createTokenPair(employee);
 
+        const emailStr = clerkUser.emailAddresses?.find(
+            (e) => e.id === clerkUser.primaryEmailAddressId,
+        )?.emailAddress;
+
         return {
             accessToken,
             refreshToken,
-            employee: formatEmployee(employee, sessionData.user.email),
+            employee: formatEmployee(employee, emailStr),
         };
     }
 
@@ -214,8 +229,8 @@ export class AuthService {
                 throw AppError.unauthorized("Refresh token expired");
             }
 
-            const employee = await employeeRepository.findBySupabaseUid(
-                payload.sub,
+            const employee = await employeeRepository.findById(
+                payload.employeeId,
             );
             if (!employee || !employee.isActive) {
                 throw AppError.unauthorized("Employee not found or inactive");

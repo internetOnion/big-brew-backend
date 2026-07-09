@@ -2,7 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { db } from "./index.ts";
-import { supabaseAdmin } from "../lib/supabase.ts";
+import { clerkClient } from "../lib/clerk.ts";
 import {
     employeesTable,
     categoriesTable,
@@ -37,7 +37,7 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
         id: "dc194edc-71fe-49e5-a710-482680f8436a",
         name: "Dev Team",
         role: "owner",
-        email: "dev@bigbrew.local",
+        email: "dev@bigbrew.com",
         password: "DevPass123",
         pin: "000000",
     },
@@ -45,7 +45,7 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
         id: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
         name: "Cafe Owner",
         role: "owner",
-        email: "owner@bigbrew.local",
+        email: "owner@bigbrew.com",
         password: "OwnerPass123",
         pin: "111111",
     },
@@ -53,7 +53,7 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
         id: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
         name: "Alice (Manager)",
         role: "manager",
-        email: "alice@bigbrew.local",
+        email: "alice@bigbrew.com",
         password: "AlicePass123",
         pin: "222222",
     },
@@ -61,7 +61,7 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
         id: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
         name: "Bob",
         role: "barista",
-        email: "bob@bigbrew.local",
+        email: "bob@bigbrew.com",
         password: "BobPass123",
         pin: "333333",
     },
@@ -69,7 +69,7 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
         id: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
         name: "Cindy",
         role: "barista",
-        email: "cindy@bigbrew.local",
+        email: "cindy@bigbrew.com",
         password: "CindyPass123",
         pin: "444444",
     },
@@ -86,25 +86,22 @@ const getOrCreateAuthUser = async (
     email: string,
     password: string,
 ): Promise<string> => {
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-    });
-
-    if (!error) {
-        return data.user.id;
+    try {
+        const user = await clerkClient.users.createUser({
+            emailAddress: [email],
+            password,
+        });
+        return user.id;
+    } catch (err: any) {
+        if (err?.errors?.[0]?.code === "form_identifier_exists") {
+            const users = await clerkClient.users.getUserList({
+                emailAddress: [email],
+            });
+            if (users.data.length > 0) return users.data[0].id;
+        }
+        console.error("Clerk error:", err?.errors ?? err?.message ?? err);
+        throw new Error(`Failed to create/find auth user for ${email}`);
     }
-
-    if (error.status === 422) {
-        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-        const existing = usersData.users.find(
-            (u: { email?: string }) => u.email === email,
-        );
-        if (existing) return existing.id;
-    }
-
-    throw new Error(`Failed to create/find auth user for ${email}`);
 };
 
 const SALT_ROUNDS = 10;
@@ -119,9 +116,10 @@ const requireEnv = (name: string): string => {
 };
 
 export const seed = async () => {
-    requireEnv("SUPABASE_DATABASE_URL");
+    requireEnv("NEON_DATABASE_URL");
     requireEnv("SUPABASE_URL");
     requireEnv("SUPABASE_SECRET_KEY");
+    requireEnv("CLERK_SECRET_KEY");
 
     console.log("Seeding database... (idempotent — safe to re-run)");
 
@@ -129,7 +127,7 @@ export const seed = async () => {
     const seedEmployees = getSeedEmployees();
 
     for (const emp of seedEmployees) {
-        const supabaseUid = await getOrCreateAuthUser(emp.email, emp.password);
+        const clerkUserId = await getOrCreateAuthUser(emp.email, emp.password);
         const pinHash = await bcrypt.hash(emp.pin, SALT_ROUNDS);
 
         await db
@@ -139,7 +137,7 @@ export const seed = async () => {
                 role: emp.role,
                 name: emp.name,
                 pin: pinHash,
-                supabaseUid,
+                clerkUserId,
                 isActive: true,
             })
             .onConflictDoNothing();
@@ -3713,7 +3711,8 @@ export const seed = async () => {
             },
             {
                 id: "d1000001-0000-4000-8000-000000000015",
-                description: "Specialty syrup restock (vanilla, caramel, hazelnut)",
+                description:
+                    "Specialty syrup restock (vanilla, caramel, hazelnut)",
                 amount: "185.00",
                 category: "Ingredients",
                 recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
@@ -3721,7 +3720,8 @@ export const seed = async () => {
             },
             {
                 id: "d1000001-0000-4000-8000-000000000016",
-                description: "Pastry ingredients bulk order (flour, butter, sugar)",
+                description:
+                    "Pastry ingredients bulk order (flour, butter, sugar)",
                 amount: "320.00",
                 category: "Ingredients",
                 recordedBy: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
