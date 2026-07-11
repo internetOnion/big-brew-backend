@@ -43,9 +43,8 @@ const createDiscountSchema = z
             if (data.type === "bogo") {
                 return (
                     data.value === null &&
-                    data.buy_item_id !== null &&
-                    data.free_item_id !== null &&
                     data.applies_to === "item" &&
+                    (data.buy_item_id !== null || data.free_item_id !== null) &&
                     (data.item_id === null || data.item_id === undefined)
                 );
             }

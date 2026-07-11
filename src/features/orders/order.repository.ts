@@ -151,22 +151,53 @@ export class OrderRepository {
                                 discountAmount = parseFloat(d.value!);
                             }
                         } else if (d.type === "bogo") {
-                            const buyItem = input.items.find(
-                                (i) => i.menuItemId === d.buyItemId,
+                            const allItems = input.items;
+                            const buyItems = d.buyItemId
+                                ? allItems.filter(
+                                      (i) => i.menuItemId === d.buyItemId,
+                                  )
+                                : allItems;
+                            const buyQty = buyItems.reduce(
+                                (sum, i) => sum + i.quantity,
+                                0,
                             );
-                            if (buyItem) {
+
+                            if (d.buyItemId && d.freeItemId) {
+                                // Both specific
                                 if (d.buyItemId === d.freeItemId) {
-                                    // Same-item BOGO: need >= 2
-                                    if (buyItem.quantity >= 2) {
-                                        discountAmount = buyItem.unitPrice;
+                                    if (buyQty >= 2) {
+                                        discountAmount =
+                                            Math.floor(buyQty / 2) *
+                                            buyItems[0].unitPrice;
                                     }
                                 } else {
-                                    // Different-item BOGO: free item must be in cart
-                                    const freeItem = input.items.find(
+                                    const freeItem = allItems.find(
                                         (i) => i.menuItemId === d.freeItemId,
                                     );
-                                    if (freeItem) {
+                                    if (freeItem && buyQty > 0) {
                                         discountAmount = freeItem.unitPrice;
+                                    }
+                                }
+                            } else if (d.freeItemId) {
+                                // Buy any, get specific free
+                                const freeItem = allItems.find(
+                                    (i) => i.menuItemId === d.freeItemId,
+                                );
+                                if (freeItem && buyQty >= 2) {
+                                    discountAmount = freeItem.unitPrice;
+                                }
+                            } else {
+                                // Buy specific or any, get cheapest free
+                                if (buyQty > 0) {
+                                    const cheapest = [...allItems].sort(
+                                        (a, b) => a.unitPrice - b.unitPrice,
+                                    )[0];
+                                    if (cheapest) {
+                                        discountAmount = d.buyItemId
+                                            ? cheapest.unitPrice
+                                            : buyQty >= 2
+                                              ? cheapest.unitPrice
+                                              : 0;
                                     }
                                 }
                             }

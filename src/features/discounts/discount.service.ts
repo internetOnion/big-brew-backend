@@ -94,14 +94,9 @@ export class DiscountService {
                 );
             }
         } else if (type === "bogo") {
-            if (!fields.buyItemId) {
+            if (!fields.buyItemId && !fields.freeItemId) {
                 throw AppError.badRequest(
-                    "BOGO discounts require a buy_item_id",
-                );
-            }
-            if (!fields.freeItemId) {
-                throw AppError.badRequest(
-                    "BOGO discounts require a free_item_id",
+                    "BOGO discounts require at least a buy_item_id or free_item_id",
                 );
             }
             if (fields.value !== null && fields.value !== undefined) {

@@ -61,7 +61,7 @@ export const discountsTable = pgTable(
             "chk_discount_bogo_items",
             sql`(
                 ${t.type} != 'bogo' OR
-                (${t.buyItemId} IS NOT NULL AND ${t.freeItemId} IS NOT NULL)
+                (${t.buyItemId} IS NOT NULL OR ${t.freeItemId} IS NOT NULL)
             )`,
         ),
         check(
