@@ -36,9 +36,9 @@ export const menuItemsTable = pgTable(
     },
     (t) => [
         index("idx_menu_items_category").on(t.categoryId),
-        index("idx_menu_items_deleted")
+        index("idx_menu_items_active")
             .on(t.deletedAt)
-            .where(sql`${t.deletedAt} IS NOT NULL`),
+            .where(isNull(t.deletedAt)),
         check("chk_base_price_positive", sql`${t.basePrice} >= 0`),
         uniqueIndex("menu_items_name_unique")
             .on(t.name)

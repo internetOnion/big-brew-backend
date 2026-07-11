@@ -23,6 +23,9 @@ export class DiscountController {
             name,
             type,
             value,
+            max_discount_amount,
+            applies_to,
+            item_id,
             buy_item_id,
             free_item_id,
             is_active,
@@ -34,6 +37,12 @@ export class DiscountController {
             name,
             type,
             value: value !== undefined && value !== null ? String(value) : null,
+            maxDiscountAmount:
+                max_discount_amount !== undefined && max_discount_amount !== null
+                    ? String(max_discount_amount)
+                    : null,
+            appliesTo: applies_to ?? "order",
+            itemId: item_id ?? null,
             buyItemId: buy_item_id ?? null,
             freeItemId: free_item_id ?? null,
             isActive: is_active,
@@ -50,6 +59,9 @@ export class DiscountController {
             name,
             type,
             value,
+            max_discount_amount,
+            applies_to,
+            item_id,
             buy_item_id,
             free_item_id,
             is_active,
@@ -62,6 +74,13 @@ export class DiscountController {
         if (type !== undefined) input.type = type;
         if (value !== undefined)
             input.value = value !== null ? String(value) : null;
+        if (max_discount_amount !== undefined)
+            input.maxDiscountAmount =
+                max_discount_amount !== null
+                    ? String(max_discount_amount)
+                    : null;
+        if (applies_to !== undefined) input.appliesTo = applies_to;
+        if (item_id !== undefined) input.itemId = item_id;
         if (buy_item_id !== undefined) input.buyItemId = buy_item_id;
         if (free_item_id !== undefined) input.freeItemId = free_item_id;
         if (is_active !== undefined) input.isActive = is_active;

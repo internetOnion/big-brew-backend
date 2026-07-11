@@ -7,6 +7,7 @@ import {
     timestamp,
     index,
 } from "drizzle-orm/pg-core";
+import { isNull } from "drizzle-orm";
 import { selectionTypeEnum, selectionTypeEnumSchema } from "./enums.ts";
 import { menuItemsTable } from "./menu-items.ts";
 import { createInsertSchema } from "drizzle-zod";
@@ -28,7 +29,11 @@ export const modifierGroupsTable = pgTable(
             .notNull()
             .defaultNow(),
     },
-    (t) => [index("idx_modifier_groups_menu_item").on(t.menuItemId)],
+    (t) => [
+        index("idx_modifier_groups_active")
+            .on(t.menuItemId)
+            .where(isNull(t.deletedAt)),
+    ],
 );
 
 export const baseModifierGroupSchema = createInsertSchema(modifierGroupsTable, {

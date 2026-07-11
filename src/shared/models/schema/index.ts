@@ -2,6 +2,7 @@ export {
     employeeRoleEnum,
     ingredientUnitEnum,
     discountTypeEnum,
+    discountAppliesToEnum,
     orderStatusEnum,
     diningOptionEnum,
     paymentMethodEnum,

@@ -110,20 +110,103 @@ export class OrderRepository {
                     .limit(1);
 
                 if (discount[0] && discount[0].isActive) {
+                    const d = discount[0];
                     const now = new Date();
-                    const startsAt = discount[0].startsAt;
-                    const endsAt = discount[0].endsAt;
+                    const startsAt = d.startsAt;
+                    const endsAt = d.endsAt;
 
                     if (
                         (!startsAt || now >= startsAt) &&
                         (!endsAt || now <= endsAt)
                     ) {
-                        if (discount[0].type === "percentage") {
-                            discountAmount =
-                                subtotal *
-                                (parseFloat(discount[0].value!) / 100);
-                        } else if (discount[0].type === "fixed_amount") {
-                            discountAmount = parseFloat(discount[0].value!);
+                        if (d.type === "percentage") {
+                            if (d.appliesTo === "item" && d.itemId) {
+                                const itemTotal = input.items
+                                    .filter((i) => i.menuItemId === d.itemId)
+                                    .reduce(
+                                        (sum, i) =>
+                                            sum + i.unitPrice * i.quantity,
+                                        0,
+                                    );
+                                discountAmount =
+                                    itemTotal * (parseFloat(d.value!) / 100);
+                            } else {
+                                discountAmount =
+                                    subtotal * (parseFloat(d.value!) / 100);
+                            }
+                            if (d.maxDiscountAmount) {
+                                discountAmount = Math.min(
+                                    discountAmount,
+                                    parseFloat(d.maxDiscountAmount),
+                                );
+                            }
+                        } else if (d.type === "fixed_amount") {
+                            if (d.appliesTo === "item" && d.itemId) {
+                                const itemTotal = input.items
+                                    .filter((i) => i.menuItemId === d.itemId)
+                                    .reduce(
+                                        (sum, i) =>
+                                            sum + i.unitPrice * i.quantity,
+                                        0,
+                                    );
+                                discountAmount = Math.min(
+                                    parseFloat(d.value!),
+                                    itemTotal,
+                                );
+                            } else {
+                                discountAmount = parseFloat(d.value!);
+                            }
+                        } else if (d.type === "bogo") {
+                            const allItems = input.items;
+                            const buyItems = d.buyItemId
+                                ? allItems.filter(
+                                      (i) => i.menuItemId === d.buyItemId,
+                                  )
+                                : allItems;
+                            const buyQty = buyItems.reduce(
+                                (sum, i) => sum + i.quantity,
+                                0,
+                            );
+
+                            if (d.buyItemId && d.freeItemId) {
+                                // Both specific
+                                if (d.buyItemId === d.freeItemId) {
+                                    if (buyQty >= 2) {
+                                        discountAmount =
+                                            Math.floor(buyQty / 2) *
+                                            buyItems[0].unitPrice;
+                                    }
+                                } else {
+                                    const freeItem = allItems.find(
+                                        (i) => i.menuItemId === d.freeItemId,
+                                    );
+                                    if (freeItem && buyQty > 0) {
+                                        discountAmount = freeItem.unitPrice;
+                                    }
+                                }
+                            } else if (d.freeItemId) {
+                                // Buy any, get specific free
+                                const freeItem = allItems.find(
+                                    (i) => i.menuItemId === d.freeItemId,
+                                );
+                                if (freeItem && buyQty >= 2) {
+                                    discountAmount = freeItem.unitPrice;
+                                }
+                            } else {
+                                // Buy specific or any, get cheapest free
+                                if (buyQty > 0) {
+                                    const cheapest = [...allItems].sort(
+                                        (a, b) => a.unitPrice - b.unitPrice,
+                                    )[0];
+                                    if (cheapest) {
+                                        discountAmount = d.buyItemId
+                                            ? cheapest.unitPrice
+                                            : buyQty >= 2
+                                              ? cheapest.unitPrice
+                                              : 0;
+                                    }
+                                }
+                            }
                         }
                     }
                 }

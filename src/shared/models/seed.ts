@@ -3581,6 +3581,8 @@ export const seed = async () => {
                 name: "Happy Hour 20% Off",
                 type: "percentage",
                 value: "20",
+                maxDiscountAmount: "10.00",
+                appliesTo: "order",
                 isActive: true,
             },
             {
@@ -3588,6 +3590,9 @@ export const seed = async () => {
                 name: "Buy 1 Get 1 Free",
                 type: "bogo",
                 value: null,
+                appliesTo: "item",
+                buyItemId: "257f7064-9fd9-466f-afb0-7218e514f67f",
+                freeItemId: "257f7064-9fd9-466f-afb0-7218e514f67f",
                 isActive: true,
             },
         ])

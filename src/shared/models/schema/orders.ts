@@ -67,9 +67,7 @@ export const ordersTable = pgTable(
             .defaultNow(),
     },
     (t) => [
-        index("idx_orders_status").on(t.status),
-        index("idx_orders_created_at").on(t.createdAt),
-        index("idx_orders_order_number").on(t.orderNumber),
+        index("idx_orders_status_created").on(t.status, t.createdAt),
         index("idx_orders_created_by").on(t.createdBy),
         check("chk_subtotal_non_negative", sql`${t.subtotal} >= 0`),
         check("chk_total_non_negative", sql`${t.total} >= 0`),

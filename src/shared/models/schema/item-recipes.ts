@@ -26,7 +26,6 @@ export const itemRecipesTable = pgTable(
     },
     (t) => [
         unique().on(t.itemId, t.ingredientId),
-        index("idx_item_recipes_item").on(t.itemId),
         index("idx_item_recipes_ingredient").on(t.ingredientId),
         check("chk_recipe_quantity_positive", sql`${t.quantity} > 0`),
     ],

@@ -39,11 +39,18 @@ export class DiscountService {
         if (
             input.type ||
             input.value !== undefined ||
+            input.maxDiscountAmount !== undefined ||
+            input.appliesTo !== undefined ||
+            input.itemId !== undefined ||
             input.buyItemId !== undefined ||
             input.freeItemId !== undefined
         ) {
             this.validateDiscountFields(type, {
                 value: input.value ?? existing.value,
+                maxDiscountAmount:
+                    input.maxDiscountAmount ?? existing.maxDiscountAmount,
+                appliesTo: input.appliesTo ?? existing.appliesTo,
+                itemId: input.itemId ?? existing.itemId,
                 buyItemId: input.buyItemId ?? existing.buyItemId,
                 freeItemId: input.freeItemId ?? existing.freeItemId,
             });
@@ -61,6 +68,9 @@ export class DiscountService {
         type: string,
         fields: {
             value?: string | null;
+            maxDiscountAmount?: string | null;
+            appliesTo?: "order" | "item";
+            itemId?: string | null;
             buyItemId?: string | null;
             freeItemId?: string | null;
         },
@@ -71,21 +81,53 @@ export class DiscountService {
                     "Percentage discounts require a value",
                 );
             }
+            if (
+                fields.maxDiscountAmount !== undefined &&
+                fields.maxDiscountAmount !== null
+            ) {
+                const cap = parseFloat(fields.maxDiscountAmount);
+                if (isNaN(cap) || cap <= 0) {
+                    throw AppError.badRequest(
+                        "Max discount amount must be a positive number",
+                    );
+                }
+            }
+            if (fields.appliesTo === "item" && !fields.itemId) {
+                throw AppError.badRequest(
+                    "Item-level percentage discounts require an item_id",
+                );
+            }
         } else if (type === "fixed_amount") {
             if (fields.value === null || fields.value === undefined) {
                 throw AppError.badRequest(
                     "Fixed amount discounts require a value",
                 );
             }
-        } else if (type === "bogo") {
-            if (!fields.buyItemId) {
+            if (
+                fields.maxDiscountAmount !== undefined &&
+                fields.maxDiscountAmount !== null
+            ) {
                 throw AppError.badRequest(
-                    "BOGO discounts require a buy_item_id",
+                    "max_discount_amount is only valid for percentage discounts",
                 );
             }
-            if (!fields.freeItemId) {
+            if (fields.appliesTo === "item" && !fields.itemId) {
                 throw AppError.badRequest(
-                    "BOGO discounts require a free_item_id",
+                    "Item-level fixed amount discounts require an item_id",
+                );
+            }
+        } else if (type === "bogo") {
+            if (!fields.buyItemId && !fields.freeItemId) {
+                throw AppError.badRequest(
+                    "BOGO discounts require at least a buy_item_id or free_item_id",
+                );
+            }
+            if (
+                fields.maxDiscountAmount !== undefined &&
+                fields.maxDiscountAmount !== null
+            ) {
+                throw AppError.badRequest(
+                    "max_discount_amount is only valid for percentage discounts",
                 );
             }
             if (fields.value !== null && fields.value !== undefined) {

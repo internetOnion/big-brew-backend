@@ -1,0 +1,1 @@
+ALTER TABLE "discounts" ADD COLUMN "max_discount_amount" numeric(10, 2);

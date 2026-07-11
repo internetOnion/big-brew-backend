@@ -13,6 +13,9 @@ const makeDiscount = (overrides = {}) => ({
     name: "Summer Sale",
     type: "percentage" as const,
     value: "10.00",
+    maxDiscountAmount: null,
+    appliesTo: "order" as const,
+    itemId: null,
     buyItemId: null,
     freeItemId: null,
     isActive: true,
@@ -20,6 +23,7 @@ const makeDiscount = (overrides = {}) => ({
     endsAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
     ...overrides,
 });
 
@@ -107,7 +111,7 @@ describe("DiscountService", () => {
             expect(result.type).toBe("fixed_amount");
         });
 
-        it("creates a bogo discount", async () => {
+        it("creates a bogo discount with specific buy item and any free item", async () => {
             mockRepo.insert.mockResolvedValue(makeDiscount({ type: "bogo" }));
 
             const result = await discountService.createDiscount({
@@ -115,6 +119,20 @@ describe("DiscountService", () => {
                 type: "bogo",
                 value: null,
                 buyItemId: "item-1",
+                freeItemId: null,
+            });
+
+            expect(result.type).toBe("bogo");
+        });
+
+        it("creates a bogo discount with any buy item and specific free item", async () => {
+            mockRepo.insert.mockResolvedValue(makeDiscount({ type: "bogo" }));
+
+            const result = await discountService.createDiscount({
+                name: "BOGO",
+                type: "bogo",
+                value: null,
+                buyItemId: null,
                 freeItemId: "item-2",
             });
 
@@ -133,28 +151,18 @@ describe("DiscountService", () => {
             ).rejects.toThrow("Percentage discounts require a value");
         });
 
-        it("throws badRequest when bogo discount is missing buyItemId", async () => {
+        it("throws badRequest when bogo discount is missing both items", async () => {
             await expect(
                 discountService.createDiscount({
                     name: "Bad",
                     type: "bogo",
                     value: null,
                     buyItemId: null,
-                    freeItemId: "item-2",
-                }),
-            ).rejects.toThrow("BOGO discounts require a buy_item_id");
-        });
-
-        it("throws badRequest when bogo discount is missing freeItemId", async () => {
-            await expect(
-                discountService.createDiscount({
-                    name: "Bad",
-                    type: "bogo",
-                    value: null,
-                    buyItemId: "item-1",
                     freeItemId: null,
                 }),
-            ).rejects.toThrow("BOGO discounts require a free_item_id");
+            ).rejects.toThrow(
+                "BOGO discounts require at least a buy_item_id or free_item_id",
+            );
         });
 
         it("throws badRequest when bogo discount has a value", async () => {
@@ -203,7 +211,9 @@ describe("DiscountService", () => {
                     buyItemId: null,
                     freeItemId: null,
                 }),
-            ).rejects.toThrow("BOGO discounts require a buy_item_id");
+            ).rejects.toThrow(
+                "BOGO discounts require at least a buy_item_id or free_item_id",
+            );
         });
     });
 
@@ -211,7 +221,7 @@ describe("DiscountService", () => {
         it("deactivates when id exists", async () => {
             mockRepo.findById.mockResolvedValue(makeDiscount());
             mockRepo.deactivate.mockResolvedValue(
-                makeDiscount({ isActive: false }),
+                makeDiscount({ deletedAt: new Date() }),
             );
 
             await discountService.deleteDiscount("disc-1");
