@@ -3581,6 +3581,7 @@ export const seed = async () => {
                 name: "Happy Hour 20% Off",
                 type: "percentage",
                 value: "20",
+                maxDiscountAmount: "10.00",
                 appliesTo: "order",
                 isActive: true,
             },

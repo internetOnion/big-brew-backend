@@ -22,6 +22,10 @@ export const discountsTable = pgTable(
         appliesTo: discountAppliesToEnum("applies_to")
             .notNull()
             .default("order"),
+        maxDiscountAmount: decimal("max_discount_amount", {
+            precision: 10,
+            scale: 2,
+        }),
         itemId: uuid("item_id").references(() => menuItemsTable.id),
         buyItemId: uuid("buy_item_id").references(() => menuItemsTable.id),
         freeItemId: uuid("free_item_id").references(() => menuItemsTable.id),

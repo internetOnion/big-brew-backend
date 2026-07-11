@@ -134,6 +134,12 @@ export class OrderRepository {
                                 discountAmount =
                                     subtotal * (parseFloat(d.value!) / 100);
                             }
+                            if (d.maxDiscountAmount) {
+                                discountAmount = Math.min(
+                                    discountAmount,
+                                    parseFloat(d.maxDiscountAmount),
+                                );
+                            }
                         } else if (d.type === "fixed_amount") {
                             if (d.appliesTo === "item" && d.itemId) {
                                 const itemTotal = input.items

@@ -18,6 +18,7 @@ const createDiscountSchema = z
         name: z.string().min(1).max(100),
         type: z.enum(["percentage", "fixed_amount", "bogo"]),
         value: z.number().positive().nullable(),
+        max_discount_amount: z.number().positive().nullable().optional(),
         applies_to: z.enum(["order", "item"]).default("order"),
         item_id: z.uuid().nullable().optional(),
         buy_item_id: z.uuid().nullable(),
@@ -27,6 +28,15 @@ const createDiscountSchema = z
         ends_at: z.iso.datetime().nullable().optional(),
     })
     .strict()
+    .refine(
+        (data) => {
+            if (data.max_discount_amount !== undefined && data.max_discount_amount !== null) {
+                return data.type === "percentage";
+            }
+            return true;
+        },
+        { message: "max_discount_amount is only valid for percentage discounts" },
+    )
     .refine(
         (data) => {
             if (data.type === "percentage" || data.type === "fixed_amount") {
@@ -58,6 +68,7 @@ const updateDiscountSchema = z
         name: z.string().min(1).max(100).optional(),
         type: z.enum(["percentage", "fixed_amount", "bogo"]).optional(),
         value: z.number().positive().nullable().optional(),
+        max_discount_amount: z.number().positive().nullable().optional(),
         applies_to: z.enum(["order", "item"]).optional(),
         item_id: z.uuid().nullable().optional(),
         buy_item_id: z.uuid().nullable().optional(),
@@ -67,6 +78,15 @@ const updateDiscountSchema = z
         ends_at: z.iso.datetime().nullable().optional(),
     })
     .strict()
+    .refine(
+        (data) => {
+            if (data.max_discount_amount !== undefined && data.max_discount_amount !== null) {
+                return data.type === undefined || data.type === "percentage";
+            }
+            return true;
+        },
+        { message: "max_discount_amount is only valid for percentage discounts" },
+    )
     .refine((data) => Object.keys(data).length > 0, {
         message: "At least one field must be provided",
     });

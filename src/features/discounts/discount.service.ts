@@ -39,6 +39,7 @@ export class DiscountService {
         if (
             input.type ||
             input.value !== undefined ||
+            input.maxDiscountAmount !== undefined ||
             input.appliesTo !== undefined ||
             input.itemId !== undefined ||
             input.buyItemId !== undefined ||
@@ -46,6 +47,8 @@ export class DiscountService {
         ) {
             this.validateDiscountFields(type, {
                 value: input.value ?? existing.value,
+                maxDiscountAmount:
+                    input.maxDiscountAmount ?? existing.maxDiscountAmount,
                 appliesTo: input.appliesTo ?? existing.appliesTo,
                 itemId: input.itemId ?? existing.itemId,
                 buyItemId: input.buyItemId ?? existing.buyItemId,
@@ -65,6 +68,7 @@ export class DiscountService {
         type: string,
         fields: {
             value?: string | null;
+            maxDiscountAmount?: string | null;
             appliesTo?: "order" | "item";
             itemId?: string | null;
             buyItemId?: string | null;
@@ -77,6 +81,17 @@ export class DiscountService {
                     "Percentage discounts require a value",
                 );
             }
+            if (
+                fields.maxDiscountAmount !== undefined &&
+                fields.maxDiscountAmount !== null
+            ) {
+                const cap = parseFloat(fields.maxDiscountAmount);
+                if (isNaN(cap) || cap <= 0) {
+                    throw AppError.badRequest(
+                        "Max discount amount must be a positive number",
+                    );
+                }
+            }
             if (fields.appliesTo === "item" && !fields.itemId) {
                 throw AppError.badRequest(
                     "Item-level percentage discounts require an item_id",
@@ -88,6 +103,14 @@ export class DiscountService {
                     "Fixed amount discounts require a value",
                 );
             }
+            if (
+                fields.maxDiscountAmount !== undefined &&
+                fields.maxDiscountAmount !== null
+            ) {
+                throw AppError.badRequest(
+                    "max_discount_amount is only valid for percentage discounts",
+                );
+            }
             if (fields.appliesTo === "item" && !fields.itemId) {
                 throw AppError.badRequest(
                     "Item-level fixed amount discounts require an item_id",
@@ -97,6 +120,14 @@ export class DiscountService {
             if (!fields.buyItemId && !fields.freeItemId) {
                 throw AppError.badRequest(
                     "BOGO discounts require at least a buy_item_id or free_item_id",
+                );
+            }
+            if (
+                fields.maxDiscountAmount !== undefined &&
+                fields.maxDiscountAmount !== null
+            ) {
+                throw AppError.badRequest(
+                    "max_discount_amount is only valid for percentage discounts",
                 );
             }
             if (fields.value !== null && fields.value !== undefined) {
