@@ -8,6 +8,7 @@ import {
     timestamp,
     index,
 } from "drizzle-orm/pg-core";
+import { isNull } from "drizzle-orm";
 import { modifierGroupsTable } from "./modifier-groups.ts";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -30,7 +31,11 @@ export const modifierOptionsTable = pgTable(
             .notNull()
             .defaultNow(),
     },
-    (t) => [index("idx_modifier_options_group").on(t.modifierGroupId)],
+    (t) => [
+        index("idx_modifier_options_active")
+            .on(t.modifierGroupId)
+            .where(isNull(t.deletedAt)),
+    ],
 );
 
 export const baseModifierOptionSchema = createInsertSchema(

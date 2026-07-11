@@ -31,8 +31,10 @@ export const stockMovementsTable = pgTable(
             .defaultNow(),
     },
     (t) => [
-        index("idx_stock_movements_ingredient").on(t.ingredientId),
-        index("idx_stock_movements_created").on(t.createdAt),
+        index("idx_stock_movements_ingredient_created").on(
+            t.ingredientId,
+            t.createdAt,
+        ),
         index("idx_stock_movements_order").on(t.referenceOrderId),
     ],
 );

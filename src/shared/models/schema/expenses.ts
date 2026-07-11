@@ -7,7 +7,7 @@ import {
     index,
     check,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, isNull } from "drizzle-orm";
 import { employeesTable } from "./employees.ts";
 
 export const expensesTable = pgTable(
@@ -29,8 +29,10 @@ export const expensesTable = pgTable(
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (t) => [
-        index("idx_expenses_recorded_at").on(t.recordedAt),
-        index("idx_expenses_category").on(t.category),
+        index("idx_expenses_active_recorded")
+            .on(t.recordedAt)
+            .where(isNull(t.deletedAt)),
+        index("idx_expenses_category_recorded").on(t.category, t.recordedAt),
         check("chk_expense_amount_positive", sql`${t.amount} > 0`),
     ],
 );
