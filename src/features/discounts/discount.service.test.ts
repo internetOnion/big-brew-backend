@@ -20,6 +20,7 @@ const makeDiscount = (overrides = {}) => ({
     endsAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
     ...overrides,
 });
 
@@ -211,7 +212,7 @@ describe("DiscountService", () => {
         it("deactivates when id exists", async () => {
             mockRepo.findById.mockResolvedValue(makeDiscount());
             mockRepo.deactivate.mockResolvedValue(
-                makeDiscount({ isActive: false }),
+                makeDiscount({ deletedAt: new Date() }),
             );
 
             await discountService.deleteDiscount("disc-1");

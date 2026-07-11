@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull } from "drizzle-orm";
 import { db } from "../../shared/models/index.ts";
 import { discountsTable } from "../../shared/models/schema/index.ts";
 
@@ -14,6 +14,7 @@ export interface Discount {
     endsAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    deletedAt: Date | null;
 }
 
 export interface InsertDiscount {
@@ -45,7 +46,12 @@ export class DiscountRepository {
         const results = await db
             .select()
             .from(discountsTable)
-            .where(eq(discountsTable.isActive, true));
+            .where(
+                and(
+                    eq(discountsTable.isActive, true),
+                    isNull(discountsTable.deletedAt),
+                ),
+            );
 
         return results.filter((discount) => {
             if (discount.startsAt && discount.startsAt > now) return false;
@@ -58,6 +64,7 @@ export class DiscountRepository {
         return db
             .select()
             .from(discountsTable)
+            .where(isNull(discountsTable.deletedAt))
             .orderBy(desc(discountsTable.createdAt));
     }
 
@@ -65,7 +72,12 @@ export class DiscountRepository {
         const result = await db
             .select()
             .from(discountsTable)
-            .where(eq(discountsTable.id, id))
+            .where(
+                and(
+                    eq(discountsTable.id, id),
+                    isNull(discountsTable.deletedAt),
+                ),
+            )
             .limit(1);
 
         return result[0] ?? null;
@@ -106,7 +118,7 @@ export class DiscountRepository {
     async deactivate(id: string): Promise<Discount> {
         const result = await db
             .update(discountsTable)
-            .set({ isActive: false, updatedAt: new Date() })
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
             .where(eq(discountsTable.id, id))
             .returning();
 

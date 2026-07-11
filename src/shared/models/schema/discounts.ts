@@ -30,10 +30,12 @@ export const discountsTable = pgTable(
         updatedAt: timestamp("updated_at", { withTimezone: true })
             .notNull()
             .defaultNow(),
+        deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (t) => [
         index("idx_discounts_buy_item").on(t.buyItemId),
         index("idx_discounts_free_item").on(t.freeItemId),
+        index("idx_discounts_deleted").on(t.deletedAt),
         check(
             "chk_discount_value",
             sql`(
