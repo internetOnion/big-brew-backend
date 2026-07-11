@@ -18,6 +18,8 @@ const createDiscountSchema = z
         name: z.string().min(1).max(100),
         type: z.enum(["percentage", "fixed_amount", "bogo"]),
         value: z.number().positive().nullable(),
+        applies_to: z.enum(["order", "item"]).default("order"),
+        item_id: z.uuid().nullable().optional(),
         buy_item_id: z.uuid().nullable(),
         free_item_id: z.uuid().nullable(),
         is_active: z.boolean().default(true),
@@ -28,17 +30,23 @@ const createDiscountSchema = z
     .refine(
         (data) => {
             if (data.type === "percentage" || data.type === "fixed_amount") {
-                return (
+                const validValue =
                     data.value !== null &&
                     data.buy_item_id === null &&
-                    data.free_item_id === null
-                );
+                    data.free_item_id === null;
+                if (!validValue) return false;
+                if (data.applies_to === "item") {
+                    return data.item_id !== null && data.item_id !== undefined;
+                }
+                return data.item_id === null || data.item_id === undefined;
             }
             if (data.type === "bogo") {
                 return (
                     data.value === null &&
                     data.buy_item_id !== null &&
-                    data.free_item_id !== null
+                    data.free_item_id !== null &&
+                    data.applies_to === "item" &&
+                    (data.item_id === null || data.item_id === undefined)
                 );
             }
             return false;
@@ -51,6 +59,8 @@ const updateDiscountSchema = z
         name: z.string().min(1).max(100).optional(),
         type: z.enum(["percentage", "fixed_amount", "bogo"]).optional(),
         value: z.number().positive().nullable().optional(),
+        applies_to: z.enum(["order", "item"]).optional(),
+        item_id: z.uuid().nullable().optional(),
         buy_item_id: z.uuid().nullable().optional(),
         free_item_id: z.uuid().nullable().optional(),
         is_active: z.boolean().optional(),
@@ -92,6 +102,31 @@ router.get(
     requireRole("owner", "manager"),
     (req: Request, res: Response) =>
         discountController.listAllDiscounts(req, res),
+);
+
+/**
+ * @openapi
+ * /api/discounts/active:
+ *   get:
+ *     tags: [Discounts]
+ *     summary: List active discounts (for POS)
+ *     description: Returns only currently active, date-valid discounts. Any authenticated role.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active discounts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: "#/components/schemas/Discount"
+ *       401:
+ *         $ref: "#/components/responses/Unauthorized"
+ */
+router.get("/active", (req: Request, res: Response) =>
+    discountController.getActiveDiscounts(req, res),
 );
 
 /**
@@ -159,6 +194,14 @@ router.get(
  *                 enum: [percentage, fixed_amount, bogo]
  *               value:
  *                 type: number
+ *                 nullable: true
+ *               applies_to:
+ *                 type: string
+ *                 enum: [order, item]
+ *                 default: order
+ *               item_id:
+ *                 type: string
+ *                 format: uuid
  *                 nullable: true
  *               buy_item_id:
  *                 type: string

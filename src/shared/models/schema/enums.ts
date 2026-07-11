@@ -16,6 +16,11 @@ export const discountTypeEnum = pgEnum("discount_type", [
     "bogo",
 ]);
 
+export const discountAppliesToEnum = pgEnum("discount_applies_to", [
+    "order",
+    "item",
+]);
+
 export const orderStatusEnum = pgEnum("order_status", [
     "pending",
     "completed",

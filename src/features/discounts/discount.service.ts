@@ -39,11 +39,15 @@ export class DiscountService {
         if (
             input.type ||
             input.value !== undefined ||
+            input.appliesTo !== undefined ||
+            input.itemId !== undefined ||
             input.buyItemId !== undefined ||
             input.freeItemId !== undefined
         ) {
             this.validateDiscountFields(type, {
                 value: input.value ?? existing.value,
+                appliesTo: input.appliesTo ?? existing.appliesTo,
+                itemId: input.itemId ?? existing.itemId,
                 buyItemId: input.buyItemId ?? existing.buyItemId,
                 freeItemId: input.freeItemId ?? existing.freeItemId,
             });
@@ -61,6 +65,8 @@ export class DiscountService {
         type: string,
         fields: {
             value?: string | null;
+            appliesTo?: "order" | "item";
+            itemId?: string | null;
             buyItemId?: string | null;
             freeItemId?: string | null;
         },
@@ -71,10 +77,20 @@ export class DiscountService {
                     "Percentage discounts require a value",
                 );
             }
+            if (fields.appliesTo === "item" && !fields.itemId) {
+                throw AppError.badRequest(
+                    "Item-level percentage discounts require an item_id",
+                );
+            }
         } else if (type === "fixed_amount") {
             if (fields.value === null || fields.value === undefined) {
                 throw AppError.badRequest(
                     "Fixed amount discounts require a value",
+                );
+            }
+            if (fields.appliesTo === "item" && !fields.itemId) {
+                throw AppError.badRequest(
+                    "Item-level fixed amount discounts require an item_id",
                 );
             }
         } else if (type === "bogo") {

@@ -7,6 +7,8 @@ export interface Discount {
     name: string;
     type: "percentage" | "fixed_amount" | "bogo";
     value: string | null;
+    appliesTo: "order" | "item";
+    itemId: string | null;
     buyItemId: string | null;
     freeItemId: string | null;
     isActive: boolean;
@@ -21,6 +23,8 @@ export interface InsertDiscount {
     name: string;
     type: "percentage" | "fixed_amount" | "bogo";
     value: string | null;
+    appliesTo?: "order" | "item";
+    itemId?: string | null;
     buyItemId: string | null;
     freeItemId: string | null;
     isActive?: boolean;
@@ -32,6 +36,8 @@ export interface UpdateDiscount {
     name?: string;
     type?: "percentage" | "fixed_amount" | "bogo";
     value?: string | null;
+    appliesTo?: "order" | "item";
+    itemId?: string | null;
     buyItemId?: string | null;
     freeItemId?: string | null;
     isActive?: boolean;
@@ -90,6 +96,8 @@ export class DiscountRepository {
                 name: data.name,
                 type: data.type,
                 value: data.value,
+                appliesTo: data.appliesTo ?? "order",
+                itemId: data.itemId ?? null,
                 buyItemId: data.buyItemId,
                 freeItemId: data.freeItemId,
                 ...(data.isActive !== undefined && {

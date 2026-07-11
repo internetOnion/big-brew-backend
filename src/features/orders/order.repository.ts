@@ -110,20 +110,66 @@ export class OrderRepository {
                     .limit(1);
 
                 if (discount[0] && discount[0].isActive) {
+                    const d = discount[0];
                     const now = new Date();
-                    const startsAt = discount[0].startsAt;
-                    const endsAt = discount[0].endsAt;
+                    const startsAt = d.startsAt;
+                    const endsAt = d.endsAt;
 
                     if (
                         (!startsAt || now >= startsAt) &&
                         (!endsAt || now <= endsAt)
                     ) {
-                        if (discount[0].type === "percentage") {
-                            discountAmount =
-                                subtotal *
-                                (parseFloat(discount[0].value!) / 100);
-                        } else if (discount[0].type === "fixed_amount") {
-                            discountAmount = parseFloat(discount[0].value!);
+                        if (d.type === "percentage") {
+                            if (d.appliesTo === "item" && d.itemId) {
+                                const itemTotal = input.items
+                                    .filter((i) => i.menuItemId === d.itemId)
+                                    .reduce(
+                                        (sum, i) =>
+                                            sum + i.unitPrice * i.quantity,
+                                        0,
+                                    );
+                                discountAmount =
+                                    itemTotal * (parseFloat(d.value!) / 100);
+                            } else {
+                                discountAmount =
+                                    subtotal * (parseFloat(d.value!) / 100);
+                            }
+                        } else if (d.type === "fixed_amount") {
+                            if (d.appliesTo === "item" && d.itemId) {
+                                const itemTotal = input.items
+                                    .filter((i) => i.menuItemId === d.itemId)
+                                    .reduce(
+                                        (sum, i) =>
+                                            sum + i.unitPrice * i.quantity,
+                                        0,
+                                    );
+                                discountAmount = Math.min(
+                                    parseFloat(d.value!),
+                                    itemTotal,
+                                );
+                            } else {
+                                discountAmount = parseFloat(d.value!);
+                            }
+                        } else if (d.type === "bogo") {
+                            const buyItem = input.items.find(
+                                (i) => i.menuItemId === d.buyItemId,
+                            );
+                            if (buyItem) {
+                                if (d.buyItemId === d.freeItemId) {
+                                    // Same-item BOGO: need >= 2
+                                    if (buyItem.quantity >= 2) {
+                                        discountAmount = buyItem.unitPrice;
+                                    }
+                                } else {
+                                    // Different-item BOGO: free item must be in cart
+                                    const freeItem = input.items.find(
+                                        (i) => i.menuItemId === d.freeItemId,
+                                    );
+                                    if (freeItem) {
+                                        discountAmount = freeItem.unitPrice;
+                                    }
+                                }
+                            }
                         }
                     }
                 }

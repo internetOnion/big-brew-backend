@@ -13,6 +13,8 @@ const makeDiscount = (overrides = {}) => ({
     name: "Summer Sale",
     type: "percentage" as const,
     value: "10.00",
+    appliesTo: "order" as const,
+    itemId: null,
     buyItemId: null,
     freeItemId: null,
     isActive: true,
