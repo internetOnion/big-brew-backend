@@ -76,6 +76,16 @@ const options: swaggerJsdoc.Options = {
                     },
                     required: ["id", "role", "name", "clerkUserId"],
                 },
+                Terminal: {
+                    type: "object",
+                    properties: {
+                        id: { type: "string", format: "uuid" },
+                        name: { type: "string" },
+                        email: { type: "string", format: "email" },
+                        isActive: { type: "boolean" },
+                    },
+                    required: ["id", "name", "email", "isActive"],
+                },
                 Ingredient: {
                     type: "object",
                     properties: {

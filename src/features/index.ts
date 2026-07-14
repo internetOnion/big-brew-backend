@@ -30,6 +30,7 @@ import expenseRoutes from "./expenses/expense.routes.ts";
 import expenseCategoryRoutes from "./expenses/expense-category.routes.ts";
 import stockMovementRoutes from "./stock/stockMovement.routes.ts";
 import analyticsRoutes from "./analytics/analytics.routes.ts";
+import terminalRoutes from "./terminals/terminal.routes.ts";
 
 const router = Router();
 
@@ -85,5 +86,6 @@ router.use("/expenses/categories", expenseCategoryRoutes);
 router.use("/expenses", expenseRoutes);
 router.use("/stock-movements", stockMovementRoutes);
 router.use("/analytics", analyticsRoutes);
+router.use("/terminals", terminalRoutes);
 
 export default router;
