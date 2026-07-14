@@ -63,18 +63,24 @@ const generateRefreshToken = (employee: Employee): string =>
     );
 
 const storeRefreshToken = async (
-    employeeId: string,
+    entityId: string,
+    entityType: "employee" | "terminal",
     token: string,
 ): Promise<void> => {
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await refreshTokenRepository.insert({ employeeId, tokenHash, expiresAt });
+    await refreshTokenRepository.insert({
+        entityId,
+        entityType,
+        tokenHash,
+        expiresAt,
+    });
 };
 
 const createTokenPair = async (employee: Employee): Promise<TokenPair> => {
     const accessToken = generateAccessToken(employee);
     const refreshToken = generateRefreshToken(employee);
-    await storeRefreshToken(employee.id, refreshToken);
+    await storeRefreshToken(employee.id, "employee", refreshToken);
     return { accessToken, refreshToken };
 };
 
@@ -245,8 +251,11 @@ export class AuthService {
         }
     }
 
-    async logout(employeeId: string): Promise<void> {
-        await refreshTokenRepository.revokeAllForEmployee(employeeId);
+    async logout(
+        entityId: string,
+        entityType: "employee" | "terminal" = "employee",
+    ): Promise<void> {
+        await refreshTokenRepository.revokeAllForEntity(entityId, entityType);
     }
 }
 

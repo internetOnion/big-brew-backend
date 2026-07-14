@@ -82,7 +82,8 @@ const makeClerkUser = (overrides = {}) => ({
 
 const makeRefreshToken = (overrides = {}) => ({
     id: "rt-1",
-    employeeId: "emp-1",
+    entityId: "emp-1",
+    entityType: "employee" as const,
     tokenHash: "hashed-token",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     revoked: false,
@@ -388,12 +389,13 @@ describe("AuthService", () => {
 
     describe("logout", () => {
         it("revokes all refresh tokens for employee", async () => {
-            mockRefreshRepo.revokeAllForEmployee.mockResolvedValue(undefined);
+            mockRefreshRepo.revokeAllForEntity.mockResolvedValue(undefined);
 
             await authService.logout("emp-1");
 
-            expect(mockRefreshRepo.revokeAllForEmployee).toHaveBeenCalledWith(
+            expect(mockRefreshRepo.revokeAllForEntity).toHaveBeenCalledWith(
                 "emp-1",
+                "employee",
             );
         });
     });

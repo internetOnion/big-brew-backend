@@ -10,6 +10,7 @@ export {
     stockReasonEnum,
     selectionTypeEnum,
 } from "./enums.ts";
+export { entityTypeEnum } from "./refresh-tokens.ts";
 export { employeesTable } from "./employees.ts";
 export { categoriesTable } from "./categories.ts";
 export { menuItemsTable } from "./menu-items.ts";
@@ -29,3 +30,4 @@ export { expensesTable } from "./expenses.ts";
 export { expenseCategoriesTable } from "./expense-categories.ts";
 export { settingsTable } from "./settings.ts";
 export { refreshTokensTable } from "./refresh-tokens.ts";
+export { terminalsTable } from "./terminals.ts";

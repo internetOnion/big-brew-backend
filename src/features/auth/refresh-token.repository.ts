@@ -2,15 +2,19 @@ import { eq, and, lt } from "drizzle-orm";
 import { db } from "../../shared/models/index.ts";
 import { refreshTokensTable } from "../../shared/models/schema/index.ts";
 
+export type EntityType = "employee" | "terminal";
+
 export interface InsertRefreshToken {
-    employeeId: string;
+    entityId: string;
+    entityType: EntityType;
     tokenHash: string;
     expiresAt: Date;
 }
 
 export interface RefreshToken {
     id: string;
-    employeeId: string;
+    entityId: string;
+    entityType: EntityType;
     tokenHash: string;
     expiresAt: Date;
     revoked: boolean;
@@ -43,11 +47,19 @@ export class RefreshTokenRepository {
             .where(eq(refreshTokensTable.id, id));
     }
 
-    async revokeAllForEmployee(employeeId: string): Promise<void> {
+    async revokeAllForEntity(
+        entityId: string,
+        entityType: EntityType,
+    ): Promise<void> {
         await db
             .update(refreshTokensTable)
             .set({ revoked: true })
-            .where(eq(refreshTokensTable.employeeId, employeeId));
+            .where(
+                and(
+                    eq(refreshTokensTable.entityId, entityId),
+                    eq(refreshTokensTable.entityType, entityType),
+                ),
+            );
     }
 
     async deleteExpired(): Promise<void> {

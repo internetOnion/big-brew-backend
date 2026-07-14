@@ -7,7 +7,7 @@ export interface InsertEmployee {
     name: string;
     role: EmployeeRole;
     pin: string;
-    clerkUserId: string;
+    clerkUserId: string | null;
 }
 
 export interface UpdateEmployee {
