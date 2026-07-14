@@ -5,6 +5,7 @@ import {
     orderItemsTable,
     menuItemsTable,
     expensesTable,
+    expenseCategoriesTable,
 } from "../../shared/models/schema/index.ts";
 
 export type GroupBy = "day" | "week" | "month" | "year";
@@ -108,18 +109,22 @@ export class AnalyticsRepository {
     ): Promise<ExpenseCategoryTotal[]> {
         const results = await db
             .select({
-                category: expensesTable.category,
+                category: expenseCategoriesTable.name,
                 total: sql<string>`SUM(${expensesTable.amount})::text`,
                 count: sql<number>`COUNT(*)::int`,
             })
             .from(expensesTable)
+            .leftJoin(
+                expenseCategoriesTable,
+                eq(expensesTable.expenseCategoryId, expenseCategoriesTable.id),
+            )
             .where(
                 and(
                     gte(expensesTable.recordedAt, from),
                     lte(expensesTable.recordedAt, to),
                 ),
             )
-            .groupBy(expensesTable.category)
+            .groupBy(expenseCategoriesTable.name)
             .orderBy(sql`SUM(${expensesTable.amount}) DESC`);
 
         return results;

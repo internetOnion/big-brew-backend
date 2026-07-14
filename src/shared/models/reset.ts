@@ -28,6 +28,7 @@ const reset = async () => {
             modifier_option_ingredients,
             item_recipes,
             expenses,
+            expense_categories,
             modifier_options,
             modifier_groups,
             menu_items,

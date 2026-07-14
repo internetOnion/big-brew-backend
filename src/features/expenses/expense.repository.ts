@@ -2,6 +2,7 @@ import { eq, and, gte, lte, desc, sql, isNull, count } from "drizzle-orm";
 import { db } from "../../shared/models/index.ts";
 import {
     expensesTable,
+    expenseCategoriesTable,
     employeesTable,
 } from "../../shared/models/schema/index.ts";
 
@@ -52,6 +53,15 @@ export interface ExpenseSummaryRow {
 }
 
 export class ExpenseRepository {
+    #categoryNameToId = async (name: string): Promise<string | undefined> => {
+        const [row] = await db
+            .select({ id: expenseCategoriesTable.id })
+            .from(expenseCategoriesTable)
+            .where(eq(expenseCategoriesTable.name, name))
+            .limit(1);
+        return row?.id;
+    };
+
     async findAll(filters: ExpenseFilters): Promise<PaginatedExpensesResult> {
         const conditions = [isNull(expensesTable.deletedAt)];
 
@@ -62,7 +72,12 @@ export class ExpenseRepository {
             conditions.push(lte(expensesTable.recordedAt, filters.to));
         }
         if (filters.category) {
-            conditions.push(eq(expensesTable.category, filters.category));
+            const categoryId = await this.#categoryNameToId(filters.category);
+            if (categoryId) {
+                conditions.push(
+                    eq(expensesTable.expenseCategoryId, categoryId),
+                );
+            }
         }
 
         const whereClause =
@@ -81,13 +96,20 @@ export class ExpenseRepository {
                     id: expensesTable.id,
                     description: expensesTable.description,
                     amount: expensesTable.amount,
-                    category: expensesTable.category,
+                    category: expenseCategoriesTable.name,
                     recordedBy: expensesTable.recordedBy,
                     recordedByName: employeesTable.name,
                     recordedAt: expensesTable.recordedAt,
                     createdAt: expensesTable.createdAt,
                 })
                 .from(expensesTable)
+                .leftJoin(
+                    expenseCategoriesTable,
+                    eq(
+                        expensesTable.expenseCategoryId,
+                        expenseCategoriesTable.id,
+                    ),
+                )
                 .leftJoin(
                     employeesTable,
                     eq(expensesTable.recordedBy, employeesTable.id),
@@ -114,13 +136,17 @@ export class ExpenseRepository {
                 id: expensesTable.id,
                 description: expensesTable.description,
                 amount: expensesTable.amount,
-                category: expensesTable.category,
+                category: expenseCategoriesTable.name,
                 recordedBy: expensesTable.recordedBy,
                 recordedByName: employeesTable.name,
                 recordedAt: expensesTable.recordedAt,
                 createdAt: expensesTable.createdAt,
             })
             .from(expensesTable)
+            .leftJoin(
+                expenseCategoriesTable,
+                eq(expensesTable.expenseCategoryId, expenseCategoriesTable.id),
+            )
             .leftJoin(
                 employeesTable,
                 eq(expensesTable.recordedBy, employeesTable.id),
@@ -134,12 +160,17 @@ export class ExpenseRepository {
     }
 
     async insert(data: InsertExpense): Promise<Expense> {
+        const expenseCategoryId = await this.#categoryNameToId(data.category);
+        if (!expenseCategoryId) {
+            throw new Error(`Unknown expense category: ${data.category}`);
+        }
+
         const result = await db
             .insert(expensesTable)
             .values({
                 description: data.description,
                 amount: data.amount,
-                category: data.category,
+                expenseCategoryId,
                 recordedBy: data.recordedBy,
                 ...(data.recordedAt && { recordedAt: data.recordedAt }),
             })
@@ -149,9 +180,23 @@ export class ExpenseRepository {
     }
 
     async update(id: string, data: UpdateExpense): Promise<Expense> {
+        const updateData: Record<string, unknown> = {};
+        if (data.description !== undefined)
+            updateData.description = data.description;
+        if (data.amount !== undefined) updateData.amount = data.amount;
+        if (data.category !== undefined) {
+            const expenseCategoryId = await this.#categoryNameToId(
+                data.category,
+            );
+            if (!expenseCategoryId) {
+                throw new Error(`Unknown expense category: ${data.category}`);
+            }
+            updateData.expenseCategoryId = expenseCategoryId;
+        }
+
         await db
             .update(expensesTable)
-            .set(data)
+            .set(updateData)
             .where(eq(expensesTable.id, id));
 
         return this.findById(id) as Promise<Expense>;
@@ -167,11 +212,15 @@ export class ExpenseRepository {
     async getSummary(from: Date, to: Date): Promise<ExpenseSummaryRow[]> {
         const results = await db
             .select({
-                category: expensesTable.category,
+                category: expenseCategoriesTable.name,
                 total: sql<string>`SUM(${expensesTable.amount})::text`,
                 count: sql<number>`COUNT(*)::int`,
             })
             .from(expensesTable)
+            .leftJoin(
+                expenseCategoriesTable,
+                eq(expensesTable.expenseCategoryId, expenseCategoriesTable.id),
+            )
             .where(
                 and(
                     gte(expensesTable.recordedAt, from),
@@ -179,7 +228,7 @@ export class ExpenseRepository {
                     isNull(expensesTable.deletedAt),
                 ),
             )
-            .groupBy(expensesTable.category);
+            .groupBy(expenseCategoriesTable.name);
 
         return results;
     }
