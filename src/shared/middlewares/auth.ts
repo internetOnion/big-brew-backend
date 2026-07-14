@@ -3,12 +3,18 @@ import jwt from "jsonwebtoken";
 import { AppError } from "../utils/AppError.ts";
 import { config } from "../config/index.ts";
 import { employeeRepository } from "../../features/employees/employee.repository.ts";
+import { terminalRepository } from "../../features/terminals/terminal.repository.ts";
 import type { EmployeeRole } from "../types/index.ts";
 
-interface LocalJwtPayload {
+interface EmployeeJwtPayload {
     sub: string;
     role: EmployeeRole;
     employeeId: string;
+}
+
+interface TerminalJwtPayload {
+    sub: string;
+    terminalId: string;
 }
 
 const extractBearerToken = (req: Request): string => {
@@ -26,9 +32,11 @@ export const authenticate = async (
 ) => {
     const token = extractBearerToken(req);
 
-    let payload: LocalJwtPayload;
+    let payload: EmployeeJwtPayload | TerminalJwtPayload;
     try {
-        payload = jwt.verify(token, config.jwtSecret) as LocalJwtPayload;
+        payload = jwt.verify(token, config.jwtSecret) as
+            | EmployeeJwtPayload
+            | TerminalJwtPayload;
     } catch (err) {
         if (err instanceof jwt.TokenExpiredError) {
             throw AppError.unauthorized("Access token expired", {
@@ -38,6 +46,24 @@ export const authenticate = async (
         throw AppError.unauthorized("Invalid or expired token");
     }
 
+    // Terminal JWT
+    if ("terminalId" in payload) {
+        const terminal = await terminalRepository.findById(payload.terminalId);
+        if (!terminal) {
+            throw AppError.unauthorized("Terminal not found");
+        }
+        if (!terminal.isActive) {
+            throw AppError.unauthorized("Terminal is inactive");
+        }
+        req.terminal = {
+            id: terminal.id,
+            name: terminal.name,
+            isActive: terminal.isActive,
+        };
+        return next();
+    }
+
+    // Employee JWT
     const employee = await employeeRepository.findById(payload.employeeId);
     if (!employee) {
         throw AppError.unauthorized("Employee not found");

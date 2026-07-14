@@ -13,13 +13,14 @@ const router = Router();
 
 const signupSchema = z
     .object({
-        email: z.email(),
+        email: z.string().email().optional(),
         password: z
             .string()
             .regex(
                 /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,25}$/,
                 "Password must be 8-25 characters with at least one uppercase, one lowercase, and one number",
-            ),
+            )
+            .optional(),
         name: z.string().min(1).max(100),
         pin: z
             .string()
@@ -54,6 +55,7 @@ const verifyPinSchema = z
  *   post:
  *     tags: [Auth]
  *     summary: Create a new employee account
+ *     description: For barista role, only name and pin are required. For manager role, email and password are also required.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -62,16 +64,17 @@ const verifyPinSchema = z
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, password, name]
+ *             required: [name]
  *             properties:
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: Required for manager role
  *               password:
  *                 type: string
  *                 minLength: 8
  *                 maxLength: 25
- *                 description: Must contain uppercase, lowercase, and a digit
+ *                 description: Required for manager role. Must contain uppercase, lowercase, and a digit
  *               name:
  *                 type: string
  *                 minLength: 1
@@ -124,7 +127,7 @@ router.post(
  * /api/auth/login:
  *   post:
  *     tags: [Auth]
- *     summary: Login with email and password
+ *     summary: Login with email and password (employee)
  *     requestBody:
  *       required: true
  *       content:
@@ -167,10 +170,71 @@ router.post(
 
 /**
  * @openapi
+ * /api/auth/terminal-login:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Login with email and password (terminal)
+ *     description: Authenticates a terminal and returns an access token with terminal identity.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 maxLength: 25
+ *     responses:
+ *       200:
+ *         description: Terminal login successful
+ *         headers:
+ *           Set-Cookie:
+ *             schema:
+ *               type: string
+ *             description: HttpOnly refresh token cookie (path=/api/auth)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                     terminal:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Error"
+ */
+router.post(
+    "/terminal-login",
+    validateBody(loginSchema),
+    (req: Request, res: Response) => authController.terminalLogin(req, res),
+);
+
+/**
+ * @openapi
  * /api/auth/verify-pin:
  *   post:
  *     tags: [Auth]
- *     summary: Verify a 6-digit PIN and return employee info (no tokens issued)
+ *     summary: Verify a 6-digit PIN and return barista info (no tokens issued)
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -231,7 +295,16 @@ router.post(
  *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/RefreshResponse"
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                     entity_type:
+ *                       type: string
+ *                       enum: [employee, terminal]
  *       401:
  *         description: Invalid or expired refresh token
  *         content:
@@ -266,19 +339,20 @@ router.post("/logout", authenticate, (req: Request, res: Response) =>
  * /api/auth/me:
  *   get:
  *     tags: [Auth]
- *     summary: Get current authenticated employee profile
+ *     summary: Get current authenticated entity profile
+ *     description: Returns employee or terminal profile depending on the JWT type.
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Current employee profile
+ *         description: Current profile
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 data:
- *                   $ref: "#/components/schemas/Employee"
+ *                   type: object
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  */

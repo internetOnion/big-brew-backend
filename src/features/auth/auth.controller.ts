@@ -33,6 +33,21 @@ export class AuthController {
         });
     }
 
+    async terminalLogin(req: Request, res: Response) {
+        const { email, password } = req.body;
+
+        const result = await authService.terminalLogin({ email, password });
+
+        res.cookie("refresh_token", result.refreshToken, config.cookie);
+
+        return res.json({
+            data: {
+                access_token: result.accessToken,
+                terminal: result.terminal,
+            },
+        });
+    }
+
     async verifyPin(req: Request, res: Response) {
         const { pin } = req.body;
 
@@ -49,18 +64,21 @@ export class AuthController {
             throw AppError.unauthorized("No refresh token provided");
         }
 
-        const accessToken = await authService.refresh(refreshToken);
+        const result = await authService.refresh(refreshToken);
 
         return res.json({
             data: {
-                access_token: accessToken,
+                access_token: result.accessToken,
+                entity_type: result.entityType,
             },
         });
     }
 
     async logout(req: Request, res: Response) {
         if (req.employee) {
-            await authService.logout(req.employee.id);
+            await authService.logout(req.employee.id, "employee");
+        } else if (req.terminal) {
+            await authService.logout(req.terminal.id, "terminal");
         }
 
         res.clearCookie("refresh_token", { path: "/api/auth" });
@@ -69,10 +87,20 @@ export class AuthController {
     }
 
     async me(req: Request, res: Response) {
+        if (req.terminal) {
+            return res.json({
+                data: {
+                    id: req.terminal.id,
+                    name: req.terminal.name,
+                    type: "terminal",
+                },
+            });
+        }
+
         const result = await employeeService.getEmployeeById(req.employee!.id);
 
         return res.json({
-            data: result,
+            data: { ...result, type: "employee" },
         });
     }
 }
