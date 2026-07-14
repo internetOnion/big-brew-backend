@@ -81,7 +81,7 @@ const topItemsQuerySchema = dateRangeSchema
 router.get(
     "/revenue",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateQuery(revenueQuerySchema),
     (req: Request, res: Response) => analyticsController.getRevenue(req, res),
 );
@@ -147,7 +147,7 @@ router.get(
 router.get(
     "/top-items",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateQuery(topItemsQuerySchema),
     (req: Request, res: Response) => analyticsController.getTopItems(req, res),
 );
@@ -198,7 +198,7 @@ router.get(
 router.get(
     "/expenses",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateQuery(dateRangeSchema),
     (req: Request, res: Response) =>
         analyticsController.getExpenseBreakdown(req, res),
@@ -251,7 +251,7 @@ router.get(
 router.get(
     "/summary",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateQuery(dateRangeSchema),
     (req: Request, res: Response) => analyticsController.getSummary(req, res),
 );

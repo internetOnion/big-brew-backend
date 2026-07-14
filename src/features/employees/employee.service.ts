@@ -190,9 +190,6 @@ export class EmployeeService {
         if (!employee) {
             throw AppError.notFound("Employee not found");
         }
-        if (employee.role === "owner") {
-            throw AppError.forbidden("Cannot delete owner account");
-        }
         await employeeRepository.delete(id);
 
         if (employee.clerkUserId) {

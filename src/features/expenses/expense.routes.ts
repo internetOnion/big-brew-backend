@@ -103,7 +103,7 @@ const summaryQuerySchema = z
 router.get(
     "/",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateQuery(listQuerySchema),
     (req: Request, res: Response) => expenseController.listExpenses(req, res),
 );
@@ -159,7 +159,7 @@ router.get(
 router.get(
     "/summary",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateQuery(summaryQuerySchema),
     (req: Request, res: Response) => expenseController.getSummary(req, res),
 );
@@ -200,7 +200,7 @@ router.get(
 router.get(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req: Request, res: Response) => expenseController.getExpense(req, res),
 );
@@ -255,7 +255,7 @@ router.get(
 router.post(
     "/",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateBody(createExpenseSchema),
     (req: Request, res: Response) => expenseController.createExpense(req, res),
 );
@@ -320,7 +320,7 @@ router.post(
 router.patch(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     validateBody(updateExpenseSchema),
     (req: Request, res: Response) => expenseController.updateExpense(req, res),
@@ -358,7 +358,7 @@ router.patch(
 router.delete(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req: Request, res: Response) => expenseController.deleteExpense(req, res),
 );

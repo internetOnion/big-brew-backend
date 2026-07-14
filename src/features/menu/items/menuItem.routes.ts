@@ -262,7 +262,7 @@ router.get("/", authenticate, async (req: Request, res: Response) => {
 router.post(
     "/",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateBody(insertMenuItemBatchSchema),
     async (req: Request, res: Response) => {
         await menuItemController.addMenuItem(req, res);
@@ -377,7 +377,7 @@ router.get(
 router.put(
     "/:id",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     validateBody(updateMenuItemValidationSchema),
     async (req: Request, res: Response) => {
@@ -417,7 +417,7 @@ router.put(
 router.delete(
     "/:id",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     async (req: Request, res: Response) => {
         await menuItemController.deleteMenuItem(req, res);
@@ -504,7 +504,7 @@ const imageUpload = multer({
 router.put(
     "/:id/image",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     imageUpload.single("file"),
     async (req: Request, res: Response) => {
@@ -544,7 +544,7 @@ router.put(
 router.delete(
     "/:id/image",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     async (req: Request, res: Response) => {
         await menuItemController.deleteImage(req, res);

@@ -86,10 +86,6 @@ export class AuthService {
         const { email, password, name, pin, role } = input;
         const assignedRole = role ?? "barista";
 
-        if (assignedRole === "owner" && creatorRole !== "owner") {
-            throw AppError.forbidden("Only owners can create owner accounts");
-        }
-
         let pinHash: string | null = null;
         if (pin) {
             const employees = await employeeRepository.findActiveEmployees();

@@ -29,7 +29,7 @@ describe("formatEmployee.formatEmployee", () => {
     it("return a formatted employee object", () => {
         const mockEmployee: Employee = {
             id: "1",
-            role: "owner",
+            role: "manager",
             name: "Reaksmey Nou",
             pin: "123456",
             clerkUserId: "clerk-user-id",
@@ -43,7 +43,7 @@ describe("formatEmployee.formatEmployee", () => {
 
         expect(formattedEmployee).toEqual({
             id: "1",
-            role: "owner",
+            role: "manager",
             name: "Reaksmey Nou",
             clerkUserId: "clerk-user-id",
             isActive: true,

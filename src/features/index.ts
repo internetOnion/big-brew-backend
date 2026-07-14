@@ -62,12 +62,7 @@ router.use("/employees", employeeRoutes);
 
 // ── Protected ──────────────────────────────────────────────
 
-router.use(
-    "/storage",
-    authenticate,
-    requireRole("owner", "manager"),
-    storageRoutes,
-);
+router.use("/storage", authenticate, requireRole("manager"), storageRoutes);
 
 router.use("/settings", settingsRoutes);
 

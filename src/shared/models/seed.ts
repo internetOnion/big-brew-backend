@@ -26,7 +26,7 @@ import {
 interface SeedEmployee {
     id: string;
     name: string;
-    role: "barista" | "manager" | "owner";
+    role: "barista" | "manager";
     email: string;
     password: string;
     pin: string;
@@ -47,15 +47,15 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
     {
         id: "dc194edc-71fe-49e5-a710-482680f8436a",
         name: "Dev Team",
-        role: "owner",
+        role: "manager",
         email: "dev@bigbrew.com",
         password: "DevPass123",
         pin: "000000",
     },
     {
         id: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-        name: "Cafe Owner",
-        role: "owner",
+        name: "Cafe Manager",
+        role: "manager",
         email: "owner@bigbrew.com",
         password: "OwnerPass123",
         pin: "111111",
@@ -4831,8 +4831,8 @@ const seedOrders = async () => {
 
     // Employee IDs for order assignment
     const employeeIds = [
-        "dc194edc-71fe-49e5-a710-482680f8436a", // Dev Team (owner)
-        "1d04ed7f-e00a-450e-9397-d87ded11c5c6", // Cafe Owner (owner)
+        "dc194edc-71fe-49e5-a710-482680f8436a", // Dev Team (manager)
+        "1d04ed7f-e00a-450e-9397-d87ded11c5c6", // Cafe Manager (manager)
         "3a7af35d-daca-4a0f-bc74-e5d3815861e9", // Alice (manager)
         "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b", // Bob (barista)
         "265a9de3-aaf0-4a98-9143-d12ab3b67478", // Cindy (barista)

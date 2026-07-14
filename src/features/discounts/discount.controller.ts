@@ -38,7 +38,8 @@ export class DiscountController {
             type,
             value: value !== undefined && value !== null ? String(value) : null,
             maxDiscountAmount:
-                max_discount_amount !== undefined && max_discount_amount !== null
+                max_discount_amount !== undefined &&
+                max_discount_amount !== null
                     ? String(max_discount_amount)
                     : null,
             appliesTo: applies_to ?? "order",

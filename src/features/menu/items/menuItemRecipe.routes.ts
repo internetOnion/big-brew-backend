@@ -131,7 +131,7 @@ router.get(
 router.post(
     "/",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(recipeListParamsSchema),
     validateBody(recipeSchema),
     async (req: Request, res: Response) => {
@@ -200,7 +200,7 @@ router.post(
 router.put(
     "/:ingredientId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(recipeItemParamsSchema),
     validateBody(updateRecipeSchema),
     async (req: Request, res: Response) => {
@@ -246,7 +246,7 @@ router.put(
 router.delete(
     "/:ingredientId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(recipeItemParamsSchema),
     async (req: Request, res: Response) => {
         await menuItemRecipeController.deleteRecipe(req, res);

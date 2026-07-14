@@ -26,7 +26,7 @@ const updateBodySchema = z
     .strict();
 
 router.use(authenticate);
-router.use(requireRole("owner", "manager"));
+router.use(requireRole("manager"));
 
 /**
  * @openapi

@@ -39,7 +39,7 @@ const idParamsSchema = z.object({ id: z.uuid() });
 router.get(
     "/",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     (req: Request, res: Response) => employeeController.listEmployees(req, res),
 );
 
@@ -105,7 +105,7 @@ const updateEmployeeSchema = z
 router.get(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req: Request, res: Response) =>
         employeeController.getEmployeeById(req, res),
@@ -186,7 +186,7 @@ router.get(
 router.patch(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     validateBody(updateEmployeeSchema),
     (req: Request, res: Response) =>
@@ -225,7 +225,7 @@ router.patch(
 router.delete(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req: Request, res: Response) =>
         employeeController.deleteEmployee(req, res),

@@ -30,12 +30,18 @@ const createDiscountSchema = z
     .strict()
     .refine(
         (data) => {
-            if (data.max_discount_amount !== undefined && data.max_discount_amount !== null) {
+            if (
+                data.max_discount_amount !== undefined &&
+                data.max_discount_amount !== null
+            ) {
                 return data.type === "percentage";
             }
             return true;
         },
-        { message: "max_discount_amount is only valid for percentage discounts" },
+        {
+            message:
+                "max_discount_amount is only valid for percentage discounts",
+        },
     )
     .refine(
         (data) => {
@@ -80,12 +86,18 @@ const updateDiscountSchema = z
     .strict()
     .refine(
         (data) => {
-            if (data.max_discount_amount !== undefined && data.max_discount_amount !== null) {
+            if (
+                data.max_discount_amount !== undefined &&
+                data.max_discount_amount !== null
+            ) {
                 return data.type === undefined || data.type === "percentage";
             }
             return true;
         },
-        { message: "max_discount_amount is only valid for percentage discounts" },
+        {
+            message:
+                "max_discount_amount is only valid for percentage discounts",
+        },
     )
     .refine((data) => Object.keys(data).length > 0, {
         message: "At least one field must be provided",
@@ -116,11 +128,8 @@ router.use(authenticate);
  *       403:
  *         $ref: "#/components/responses/Forbidden"
  */
-router.get(
-    "/",
-    requireRole("owner", "manager"),
-    (req: Request, res: Response) =>
-        discountController.listAllDiscounts(req, res),
+router.get("/", requireRole("manager"), (req: Request, res: Response) =>
+    discountController.listAllDiscounts(req, res),
 );
 
 /**
@@ -183,7 +192,7 @@ router.get("/active", (req: Request, res: Response) =>
  */
 router.get(
     "/:id",
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req: Request, res: Response) => discountController.getDiscount(req, res),
 );
@@ -261,7 +270,7 @@ router.get(
  */
 router.post(
     "/",
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateBody(createDiscountSchema),
     (req: Request, res: Response) =>
         discountController.createDiscount(req, res),
@@ -344,7 +353,7 @@ router.post(
  */
 router.patch(
     "/:id",
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     validateBody(updateDiscountSchema),
     (req: Request, res: Response) =>
@@ -382,7 +391,7 @@ router.patch(
  */
 router.delete(
     "/:id",
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req: Request, res: Response) =>
         discountController.deleteDiscount(req, res),

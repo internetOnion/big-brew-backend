@@ -66,7 +66,7 @@ const listQuerySchema = z
 router.get(
     "/",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateQuery(listQuerySchema),
     (req: Request, res: Response) =>
         stockMovementController.listMovements(req, res),

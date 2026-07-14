@@ -107,7 +107,7 @@ describe("AuthService", () => {
                     password: "pass123",
                     name: "Alice",
                 },
-                "owner",
+                "manager",
             );
 
             expect(result.employee.name).toBe("Alice");
@@ -131,7 +131,7 @@ describe("AuthService", () => {
                         name: "Alice",
                         pin: "1234",
                     },
-                    "owner",
+                    "manager",
                 ),
             ).rejects.toThrow("PIN already in use");
         });
@@ -149,23 +149,9 @@ describe("AuthService", () => {
                         password: "pass",
                         name: "Alice",
                     },
-                    "owner",
-                ),
-            ).rejects.toThrow("Email already registered");
-        });
-
-        it("throws forbidden when non-owner creates owner", async () => {
-            await expect(
-                authService.signup(
-                    {
-                        email: "a@b.com",
-                        password: "pass",
-                        name: "Alice",
-                        role: "owner",
-                    },
                     "manager",
                 ),
-            ).rejects.toThrow("Only owners can create owner accounts");
+            ).rejects.toThrow("Email already registered");
         });
 
         it("rolls back Clerk user when DB insert fails", async () => {
@@ -183,7 +169,7 @@ describe("AuthService", () => {
                         password: "pass",
                         name: "Alice",
                     },
-                    "owner",
+                    "manager",
                 ),
             ).rejects.toThrow("db fail");
 
@@ -203,7 +189,7 @@ describe("AuthService", () => {
                         password: "pass",
                         name: "Alice",
                     },
-                    "owner",
+                    "manager",
                 ),
             ).rejects.toThrow("Failed to create auth user");
         });

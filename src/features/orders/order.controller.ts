@@ -130,7 +130,7 @@ export class OrderController {
 
         const employee = await authService.verifyPin(pin);
 
-        if (employee.role === "manager" || employee.role === "owner") {
+        if (employee.role === "manager") {
             await orderService.requestVoid(id, employee.id, reason);
             const order = await orderService.approveVoid(id, employee.id);
             return res.json(order);

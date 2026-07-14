@@ -107,7 +107,7 @@ router.get("/", authenticate, async (req: Request, res: Response) => {
 router.post(
     "/",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateBody(insertModifierGroupValidationSchema),
     async (req: Request, res: Response) => {
         await modifierGroupController.addModifierGroup(req, res);
@@ -178,7 +178,7 @@ router.post(
 router.put(
     "/:id",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     validateBody(insertModifierGroupValidationSchema.partial()),
     async (req: Request, res: Response) => {
@@ -218,7 +218,7 @@ router.put(
 router.delete(
     "/:id",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     async (req: Request, res: Response) => {
         await modifierGroupController.deleteModifierGroup(req, res);

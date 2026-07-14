@@ -65,7 +65,7 @@ const adjustStockSchema = z
 router.get(
     "/",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     (req: Request, res: Response) =>
         ingredientController.getIngredient(req, res),
 );
@@ -120,7 +120,7 @@ router.get(
 router.post(
     "/",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateBody(addIngredientSchema),
     (req: Request, res: Response) =>
         ingredientController.addIngredient(req, res),
@@ -188,7 +188,7 @@ router.post(
 router.patch(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     validateBody(addIngredientSchema.partial()),
     (req: Request, res: Response) =>
@@ -254,7 +254,7 @@ router.patch(
 router.post(
     "/:id/adjust",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     validateBody(adjustStockSchema),
     (req: Request, res: Response) => ingredientController.adjustStock(req, res),
@@ -292,7 +292,7 @@ router.post(
 router.delete(
     "/:id",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req: Request, res: Response) =>
         ingredientController.deleteIngredient(req, res),

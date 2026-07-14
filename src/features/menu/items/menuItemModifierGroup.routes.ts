@@ -187,7 +187,7 @@ router.get(
 router.post(
     "/",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(groupListParamsSchema),
     validateBody(insertGroupSchema),
     async (req: Request, res: Response) => {
@@ -262,7 +262,7 @@ router.post(
 router.put(
     "/:groupId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(groupItemParamsSchema),
     validateBody(updateGroupSchema),
     async (req: Request, res: Response) => {
@@ -308,7 +308,7 @@ router.put(
 router.delete(
     "/:groupId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(groupItemParamsSchema),
     async (req: Request, res: Response) => {
         await menuItemModifierGroupController.deleteGroup(req, res);
@@ -431,7 +431,7 @@ optionsRouter.get(
 optionsRouter.post(
     "/",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(optionListParamsSchema),
     validateBody(insertOptionSchema),
     async (req: Request, res: Response) => {
@@ -511,7 +511,7 @@ optionsRouter.post(
 optionsRouter.put(
     "/:optionId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(optionItemParamsSchema),
     validateBody(updateOptionSchema),
     async (req: Request, res: Response) => {
@@ -563,7 +563,7 @@ optionsRouter.put(
 optionsRouter.delete(
     "/:optionId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(optionItemParamsSchema),
     async (req: Request, res: Response) => {
         await menuItemModifierGroupController.deleteOption(req, res);
@@ -695,7 +695,7 @@ ingredientsRouter.get(
 ingredientsRouter.post(
     "/",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(ingredientListParamsSchema),
     validateBody(insertOptionIngredientSchema),
     async (req: Request, res: Response) => {
@@ -778,7 +778,7 @@ ingredientsRouter.post(
 ingredientsRouter.put(
     "/:ingredientId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(ingredientItemParamsSchema),
     validateBody(updateOptionIngredientSchema),
     async (req: Request, res: Response) => {
@@ -836,7 +836,7 @@ ingredientsRouter.put(
 ingredientsRouter.delete(
     "/:ingredientId",
     authenticate,
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(ingredientItemParamsSchema),
     async (req: Request, res: Response) => {
         await menuItemModifierGroupController.deleteOptionIngredient(req, res);

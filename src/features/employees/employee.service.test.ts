@@ -281,16 +281,6 @@ describe("EmployeeService", () => {
             ).rejects.toThrow("Employee not found");
         });
 
-        it("throws forbidden when deleting owner", async () => {
-            mockRepo.findById.mockResolvedValue(
-                makeEmployee({ role: "owner" }),
-            );
-
-            await expect(
-                employeeService.deleteEmployee("emp-1"),
-            ).rejects.toThrow("Cannot delete owner account");
-        });
-
         it("continues when Clerk delete fails", async () => {
             mockRepo.findById.mockResolvedValue(makeEmployee());
             mockRepo.delete.mockResolvedValue(undefined);

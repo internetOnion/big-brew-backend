@@ -70,7 +70,7 @@ router.get("/", authenticate, (req: Request, res: Response) =>
 router.delete(
     "/logo",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     (req: Request, res: Response) => settingsController.deleteLogo(req, res),
 );
 
@@ -134,7 +134,7 @@ router.delete(
 router.patch(
     "/",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateBody(updateSettingsSchema),
     (req: Request, res: Response) =>
         settingsController.updateSettings(req, res),

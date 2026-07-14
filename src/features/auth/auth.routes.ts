@@ -26,7 +26,7 @@ const signupSchema = z
             .length(6)
             .regex(/^\d+$/, "PIN must be numeric")
             .optional(),
-        role: z.enum(["barista", "manager", "owner"]).optional(),
+        role: z.enum(["barista", "manager"]).optional(),
     })
     .strict();
 
@@ -83,7 +83,7 @@ const verifyPinSchema = z
  *                 pattern: "^\\d{6}$"
  *               role:
  *                 type: string
- *                 enum: [barista, manager, owner]
+ *                 enum: [barista, manager]
  *     responses:
  *       201:
  *         description: Employee created
@@ -114,7 +114,7 @@ const verifyPinSchema = z
 router.post(
     "/signup",
     authenticate,
-    requireRole("owner", "manager"),
+    requireRole("manager"),
     validateBody(signupSchema),
     (req: Request, res: Response) => authController.signup(req, res),
 );
@@ -204,7 +204,7 @@ router.post(
  *                       type: string
  *                     role:
  *                       type: string
- *                       enum: [barista, manager, owner]
+ *                       enum: [barista, manager]
  *       401:
  *         description: Invalid PIN
  *         content:

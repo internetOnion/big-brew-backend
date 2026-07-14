@@ -132,7 +132,7 @@ router.use(authenticate);
  */
 router.post(
     "/",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateBody(createOrderSchema),
     (req, res) => orderController.createOrder(req, res),
 );
@@ -199,7 +199,7 @@ router.post(
  */
 router.get(
     "/",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateQuery(listOrdersQuerySchema),
     (req, res) => orderController.listOrders(req, res),
 );
@@ -233,7 +233,7 @@ router.get(
  */
 router.get(
     "/:id",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateParams(idParamsSchema),
     (req, res) => orderController.getOrder(req, res),
 );
@@ -277,7 +277,7 @@ router.get(
  */
 router.patch(
     "/:id/status",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateParams(idParamsSchema),
     validateBody(updateStatusSchema),
     (req, res) => orderController.updateOrderStatus(req, res),
@@ -320,7 +320,7 @@ router.patch(
  */
 router.post(
     "/:id/pay",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateParams(idParamsSchema),
     validateBody(processPaymentSchema),
     (req, res) => orderController.processPayment(req, res),
@@ -357,7 +357,7 @@ router.post(
  */
 router.get(
     "/:id/payments",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateParams(idParamsSchema),
     (req, res) => orderController.getPayments(req, res),
 );
@@ -399,7 +399,7 @@ router.get(
  */
 router.post(
     "/:id/void-request",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateParams(idParamsSchema),
     validateBody(requestVoidSchema),
     (req, res) => orderController.requestVoid(req, res),
@@ -410,7 +410,7 @@ router.post(
  * /api/orders/{id}/void-with-pin:
  *   post:
  *     tags: [Orders]
- *     summary: "Void an order (barista: request void; manager/owner: auto-approve)"
+ *     summary: "Void an order (barista: request void; manager: auto-approve)"
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -444,7 +444,7 @@ router.post(
  */
 router.post(
     "/:id/void-with-pin",
-    requireRole("barista", "manager", "owner"),
+    requireRole("barista", "manager"),
     validateParams(idParamsSchema),
     validateBody(voidWithPinSchema),
     (req, res) => orderController.voidWithPin(req, res),
@@ -477,13 +477,13 @@ router.post(
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:
- *         description: Forbidden (manager/owner only)
+ *         description: Forbidden (manager only)
  *       404:
  *         description: Order not found
  */
 router.post(
     "/:id/void-approve",
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req, res) => orderController.approveVoid(req, res),
 );
@@ -515,13 +515,13 @@ router.post(
  *       401:
  *         $ref: "#/components/responses/Unauthorized"
  *       403:
- *         description: Forbidden (manager/owner only)
+ *         description: Forbidden (manager only)
  *       404:
  *         description: Order not found
  */
 router.post(
     "/:id/void-reject",
-    requireRole("manager", "owner"),
+    requireRole("manager"),
     validateParams(idParamsSchema),
     (req, res) => orderController.rejectVoid(req, res),
 );

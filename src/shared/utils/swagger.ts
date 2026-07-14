@@ -64,7 +64,7 @@ const options: swaggerJsdoc.Options = {
                         id: { type: "string", format: "uuid" },
                         role: {
                             type: "string",
-                            enum: ["barista", "manager", "owner"],
+                            enum: ["barista", "manager"],
                         },
                         name: { type: "string" },
                         clerkUserId: {

@@ -15,7 +15,7 @@ const router = Router();
 const idParamsSchema = z.object({ id: z.uuid() });
 
 router.use(authenticate);
-router.use(requireRole("owner", "manager"));
+router.use(requireRole("manager"));
 
 export const insertCategoryValidationSchema = insertCategorySchema
     .pick({
