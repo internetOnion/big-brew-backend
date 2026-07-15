@@ -166,7 +166,40 @@ describe("TerminalService", () => {
                     email: "pos@bigbrew.com",
                     password: "Pass123",
                 }),
-            ).rejects.toThrow("Failed to create auth user");
+            ).rejects.toThrow("Failed to create terminal account");
+        });
+
+        it("throws badRequest for breached password", async () => {
+            mockClerk.users.createUser.mockRejectedValue({
+                errors: [{ code: "form_password_pwned", message: "pwned" }],
+            });
+
+            await expect(
+                terminalService.createTerminal({
+                    name: "Terminal",
+                    email: "pos@bigbrew.com",
+                    password: "Pass123",
+                }),
+            ).rejects.toThrow("data breach");
+        });
+
+        it("throws badRequest for compromised password", async () => {
+            mockClerk.users.createUser.mockRejectedValue({
+                errors: [
+                    {
+                        code: "form_password_compromised",
+                        message: "compromised",
+                    },
+                ],
+            });
+
+            await expect(
+                terminalService.createTerminal({
+                    name: "Terminal",
+                    email: "pos@bigbrew.com",
+                    password: "Pass123",
+                }),
+            ).rejects.toThrow("data breach");
         });
     });
 

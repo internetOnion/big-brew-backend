@@ -162,6 +162,14 @@ export class AuthService {
             if (err?.errors?.[0]?.code === "form_identifier_exists") {
                 throw AppError.conflict("Email already registered");
             }
+            if (
+                err?.errors?.[0]?.code === "form_password_pwned" ||
+                err?.errors?.[0]?.code === "form_password_compromised"
+            ) {
+                throw AppError.badRequest(
+                    "This password has been found in a data breach. Please choose a different password.",
+                );
+            }
             logger.error(err as Error, "Failed to create Clerk user");
             throw AppError.internal("Failed to create auth user");
         }
