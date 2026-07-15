@@ -37,9 +37,13 @@ const reset = async () => {
             employees,
             ingredients,
             categories,
-            settings
+            settings,
+            terminals
         RESTART IDENTITY CASCADE
     `);
+    console.log(
+        "  Tables truncated: order_item_modifiers, order_items, orders, stock_movements, modifier_option_ingredients, item_recipes, expenses, expense_categories, modifier_options, modifier_groups, menu_items, discounts, refresh_tokens, employees, ingredients, categories, settings, terminals",
+    );
 
     console.log("Deleting Clerk users...");
     const users = await clerkClient.users.getUserList({ limit: 500 });

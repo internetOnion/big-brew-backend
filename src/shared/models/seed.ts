@@ -22,14 +22,22 @@ import {
     settingsTable,
     expensesTable,
 } from "./schema/index.ts";
+import { terminalsTable } from "./schema/terminals.ts";
 
 interface SeedEmployee {
     id: string;
     name: string;
     role: "barista" | "manager";
+    email?: string;
+    password?: string;
+    pin: string;
+}
+
+interface SeedTerminal {
+    id: string;
+    name: string;
     email: string;
     password: string;
-    pin: string;
 }
 
 const EXPENSE_CATEGORY_IDS = {
@@ -62,27 +70,36 @@ const DEV_EMPLOYEES: SeedEmployee[] = [
     },
     {
         id: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-        name: "Alice (Manager)",
-        role: "manager",
-        email: "alice@bigbrew.com",
-        password: "AlicePass123",
+        name: "Alice",
+        role: "barista",
         pin: "222222",
     },
     {
         id: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
         name: "Bob",
         role: "barista",
-        email: "bob@bigbrew.com",
-        password: "BobPass123",
         pin: "333333",
     },
     {
         id: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
         name: "Cindy",
         role: "barista",
-        email: "cindy@bigbrew.com",
-        password: "CindyPass123",
         pin: "444444",
+    },
+];
+
+const DEV_TERMINALS: SeedTerminal[] = [
+    {
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        name: "Front Counter",
+        email: "pos1@bigbrew.com",
+        password: "PosPass123",
+    },
+    {
+        id: "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+        name: "Drive-Through",
+        email: "pos2@bigbrew.com",
+        password: "PosPass456",
     },
 ];
 
@@ -138,22 +155,59 @@ export const seed = async () => {
     const seedEmployees = getSeedEmployees();
 
     for (const emp of seedEmployees) {
-        const clerkUserId = await getOrCreateAuthUser(emp.email, emp.password);
         const pinHash = await bcrypt.hash(emp.pin, SALT_ROUNDS);
 
+        if (emp.role === "barista") {
+            // Baristas have no Clerk account — PIN only
+            await db
+                .insert(employeesTable)
+                .values({
+                    id: emp.id,
+                    role: emp.role,
+                    name: emp.name,
+                    pin: pinHash,
+                    clerkUserId: null,
+                    isActive: true,
+                })
+                .onConflictDoNothing();
+            console.log(`    ${emp.name} (barista, no login)`);
+        } else {
+            // Managers get a Clerk account
+            const clerkUserId = await getOrCreateAuthUser(
+                emp.email!,
+                emp.password!,
+            );
+            await db
+                .insert(employeesTable)
+                .values({
+                    id: emp.id,
+                    role: emp.role,
+                    name: emp.name,
+                    pin: pinHash,
+                    clerkUserId,
+                    isActive: true,
+                })
+                .onConflictDoNothing();
+            console.log(`    ${emp.name} (${emp.email})`);
+        }
+    }
+
+    console.log("  Terminals...");
+    for (const term of DEV_TERMINALS) {
+        const clerkUserId = await getOrCreateAuthUser(
+            term.email,
+            term.password,
+        );
         await db
-            .insert(employeesTable)
+            .insert(terminalsTable)
             .values({
-                id: emp.id,
-                role: emp.role,
-                name: emp.name,
-                pin: pinHash,
+                id: term.id,
+                name: term.name,
                 clerkUserId,
                 isActive: true,
             })
             .onConflictDoNothing();
-
-        console.log(`    ${emp.name} (${emp.email})`);
+        console.log(`    ${term.name} (${term.email})`);
     }
 
     console.log("  Categories...");
@@ -4833,7 +4887,7 @@ const seedOrders = async () => {
     const employeeIds = [
         "dc194edc-71fe-49e5-a710-482680f8436a", // Dev Team (manager)
         "1d04ed7f-e00a-450e-9397-d87ded11c5c6", // Cafe Manager (manager)
-        "3a7af35d-daca-4a0f-bc74-e5d3815861e9", // Alice (manager)
+        "3a7af35d-daca-4a0f-bc74-e5d3815861e9", // Alice (barista)
         "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b", // Bob (barista)
         "265a9de3-aaf0-4a98-9143-d12ab3b67478", // Cindy (barista)
     ];
