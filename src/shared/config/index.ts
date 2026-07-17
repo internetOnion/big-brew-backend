@@ -4,9 +4,7 @@ dotenv.config();
 export const config = {
     port: parseInt(process.env.PORT || "3000", 10),
     nodeEnv: process.env.NODE_ENV || "development",
-    databaseUrl:
-        process.env.NEON_DATABASE_URL ||
-        "postgresql://postgres:postgres@localhost:5432/postgres",
+    databaseUrl: process.env.NEON_DATABASE_URL || "",
     corsOrigin: process.env.CORS_ORIGIN || "*",
     logLevel: process.env.LOG_LEVEL || "info",
     supabaseUrl: process.env.SUPABASE_URL || "",
@@ -30,4 +28,27 @@ export const config = {
         path: "/api/auth",
         maxAge: 7 * 24 * 60 * 60 * 1000,
     },
+};
+
+export class MissingEnvVarError extends Error {
+    constructor(public readonly varName: string) {
+        super(`Missing required environment variable: ${varName}`);
+        this.name = "MissingEnvVarError";
+    }
+}
+
+export const validateConfig = (): void => {
+    const required = [
+        "JWT_SECRET",
+        "NEON_DATABASE_URL",
+        "SUPABASE_URL",
+        "SUPABASE_SECRET_KEY",
+        "CLERK_SECRET_KEY",
+    ] as const;
+
+    for (const name of required) {
+        if (!process.env[name]) {
+            throw new MissingEnvVarError(name);
+        }
+    }
 };
