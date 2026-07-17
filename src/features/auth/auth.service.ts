@@ -303,8 +303,6 @@ export class AuthService {
         const employees = await employeeRepository.findActiveEmployees();
 
         for (const emp of employees) {
-            // ponytail: only baristas have PINs for order attribution
-            if (emp.role !== "barista") continue;
             if (!emp.pin) continue;
             const match = await bcrypt.compare(pin, emp.pin);
             if (match) {

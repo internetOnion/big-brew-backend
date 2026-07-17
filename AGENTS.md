@@ -20,7 +20,7 @@
 
 Before committing: `npm run format && npm run build && npx vitest run`
 
-No CI pipeline.
+No CI for build/test/lint. `npm test` runs vitest in **watch** mode — use `npx vitest run` for one-shot. Only `.github/workflows/nightly-backup.yml` exists (DB backup, not a build gate). Stale `dist/` may exist despite `noEmit: true` — ignore it, `build` never emits.
 
 ## Setup
 

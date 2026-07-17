@@ -13,7 +13,7 @@ const router = Router();
 
 const signupSchema = z
     .object({
-        email: z.string().email().optional(),
+        email: z.email().optional(),
         password: z
             .string()
             .regex(
