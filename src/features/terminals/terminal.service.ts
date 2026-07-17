@@ -98,7 +98,6 @@ export class TerminalService {
                 err as Error,
                 "Failed to create Clerk user for terminal",
             );
-            console.error("Clerk error:", err?.errors ?? err?.message ?? err);
             throw AppError.internal(
                 `Failed to create terminal account: ${err?.errors?.[0]?.message ?? err?.message ?? "unknown"}`,
             );

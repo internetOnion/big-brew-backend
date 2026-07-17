@@ -3,7 +3,7 @@ import { AppError } from "../../shared/utils/AppError.ts";
 import { logger } from "../../shared/utils/logger.ts";
 import { config } from "../../shared/config/index.ts";
 
-const ALLOWED_MIME_TYPES = /^image\/(jpeg|png|gif|webp|svg\+xml|bmp|tiff)$/i;
+const ALLOWED_MIME_TYPES = /^image\/(jpeg|png|gif|webp|bmp|tiff)$/i;
 
 const storageFetch = async (
     method: string,
@@ -107,7 +107,7 @@ export class StorageService {
 
         if (!ALLOWED_MIME_TYPES.test(file.mimetype)) {
             throw AppError.badRequest(
-                "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, SVG, BMP, TIFF",
+                "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, BMP, TIFF",
             );
         }
     }
@@ -118,7 +118,6 @@ export class StorageService {
             "image/png": "png",
             "image/gif": "gif",
             "image/webp": "webp",
-            "image/svg+xml": "svg",
             "image/bmp": "bmp",
             "image/tiff": "tiff",
         };

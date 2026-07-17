@@ -14,13 +14,13 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: config.storageMaxFileSize },
     fileFilter: (_req, file, cb) => {
-        const allowed = /^image\/(jpeg|png|gif|webp|svg\+xml|bmp|tiff)$/i;
+        const allowed = /^image\/(jpeg|png|gif|webp|bmp|tiff)$/i;
         if (allowed.test(file.mimetype)) {
             cb(null, true);
         } else {
             cb(
                 AppError.badRequest(
-                    "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, SVG, BMP, TIFF",
+                    "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, BMP, TIFF",
                 ),
             );
         }
@@ -52,7 +52,7 @@ const deleteSchema = z
  *               file:
  *                 type: string
  *                 format: binary
- *                 description: Image file (JPEG, PNG, GIF, WebP, SVG, BMP, TIFF) up to 5 MB
+ *                description: Image file (JPEG, PNG, GIF, WebP, BMP, TIFF) up to 5 MB
  *     responses:
  *       200:
  *         description: File uploaded, returns public URL

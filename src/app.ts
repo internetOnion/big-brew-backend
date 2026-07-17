@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { pinoHttp } from "pino-http";
 
 import routes from "./features/index.ts";
@@ -13,7 +15,14 @@ const app = express();
 
 const allowedOrigins = config.corsOrigin.split(",").map((s) => s.trim());
 
+if (allowedOrigins.includes("*") && config.cookie.secure) {
+    logger.warn(
+        "CORS_ORIGIN is '*' with credentials enabled — browsers will reject cross-origin requests. Set a specific origin for production.",
+    );
+}
+
 app.use(pinoHttp({ logger }));
+app.use(helmet());
 app.use(
     cors({
         origin: (origin, callback) => {
@@ -26,8 +35,20 @@ app.use(
         credentials: true,
     }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
+
+const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later" },
+});
+
+app.use("/api/auth/login", authRateLimit);
+app.use("/api/auth/terminal-login", authRateLimit);
+app.use("/api/auth/verify-pin", authRateLimit);
 
 app.use("/api", routes);
 

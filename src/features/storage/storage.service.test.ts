@@ -54,6 +54,12 @@ describe("StorageService", () => {
             ).rejects.toThrow("Invalid file type");
         });
 
+        it("throws badRequest for svg files (XSS surface)", async () => {
+            await expect(
+                storageService.upload(makeFile({ mimetype: "image/svg+xml" })),
+            ).rejects.toThrow("Invalid file type");
+        });
+
         it("throws badRequest for oversized file", async () => {
             await expect(
                 storageService.upload(makeFile({ size: 10 * 1024 * 1024 })),
