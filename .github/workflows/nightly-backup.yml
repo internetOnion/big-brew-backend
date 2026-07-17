@@ -1,0 +1,110 @@
+name: Nightly PostgreSQL Backup to R2
+
+on:
+  schedule:
+    - cron: "0 5 * * *" # 05:00 UTC (12:00 PM WIB)
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-17
+
+      - name: Configure AWS credentials for R2
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws-region: auto
+
+      - name: Generate timestamp
+        id: timestamp
+        run: |
+          TIMESTAMP=$(date -u +%Y-%m-%d-%H%M%S)
+          DAY_OF_WEEK=$(date -u +%u) # 1=Monday, 7=Sunday
+          DAY_OF_MONTH=$(date -u +%d)
+          echo "timestamp=$TIMESTAMP" >> "$GITHUB_OUTPUT"
+          echo "day_of_week=$DAY_OF_WEEK" >> "$GITHUB_OUTPUT"
+          echo "day_of_month=$DAY_OF_MONTH" >> "$GITHUB_OUTPUT"
+
+      - name: Dump database
+        run: |
+          pg_dump "$NEON_DATABASE_URL" | gzip > backup-${{ steps.timestamp.outputs.timestamp }}.sql.gz
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
+      - name: Upload daily backup
+        run: |
+          aws s3 cp backup-${{ steps.timestamp.outputs.timestamp }}.sql.gz \
+            s3://${{ secrets.R2_BUCKET_NAME }}/daily/backup-${{ steps.timestamp.outputs.timestamp }}.sql.gz \
+            --endpoint-url ${{ secrets.R2_ENDPOINT }}
+
+      - name: Upload weekly backup (Sundays)
+        if: steps.timestamp.outputs.day_of_week == '7'
+        run: |
+          aws s3 cp backup-${{ steps.timestamp.outputs.timestamp }}.sql.gz \
+            s3://${{ secrets.R2_BUCKET_NAME }}/weekly/backup-${{ steps.timestamp.outputs.timestamp }}.sql.gz \
+            --endpoint-url ${{ secrets.R2_ENDPOINT }}
+
+      - name: Upload monthly backup (1st of month)
+        if: steps.timestamp.outputs.day_of_month == '01'
+        run: |
+          aws s3 cp backup-${{ steps.timestamp.outputs.timestamp }}.sql.gz \
+            s3://${{ secrets.R2_BUCKET_NAME }}/monthly/backup-${{ steps.timestamp.outputs.timestamp }}.sql.gz \
+            --endpoint-url ${{ secrets.R2_ENDPOINT }}
+
+      - name: Cleanup daily backups (older than 7 days)
+        run: |
+          CUTOFF_DATE=$(date -u -d "7 days ago" +%Y-%m-%d)
+          aws s3 ls s3://${{ secrets.R2_BUCKET_NAME }}/daily/ --endpoint-url ${{ secrets.R2_ENDPOINT }} | \
+            awk '{print $4}' | \
+            grep -E '^backup-.*\.sql\.gz$' | \
+            while read -r file; do
+              FILE_DATE=$(echo "$file" | grep -oP '\d{4}-\d{2}-\d{2}')
+              if [[ "$FILE_DATE" < "$CUTOFF_DATE" ]]; then
+                aws s3 rm "s3://${{ secrets.R2_BUCKET_NAME }}/daily/$file" --endpoint-url ${{ secrets.R2_ENDPOINT }}
+              fi
+            done
+
+      - name: Cleanup weekly backups (older than 4 weeks)
+        if: steps.timestamp.outputs.day_of_week == '7'
+        run: |
+          CUTOFF_DATE=$(date -u -d "28 days ago" +%Y-%m-%d)
+          aws s3 ls s3://${{ secrets.R2_BUCKET_NAME }}/weekly/ --endpoint-url ${{ secrets.R2_ENDPOINT }} | \
+            awk '{print $4}' | \
+            grep -E '^backup-.*\.sql\.gz$' | \
+            while read -r file; do
+              FILE_DATE=$(echo "$file" | grep -oP '\d{4}-\d{2}-\d{2}')
+              if [[ "$FILE_DATE" < "$CUTOFF_DATE" ]]; then
+                aws s3 rm "s3://${{ secrets.R2_BUCKET_NAME }}/weekly/$file" --endpoint-url ${{ secrets.R2_ENDPOINT }}
+              fi
+            done
+
+      - name: Cleanup monthly backups (older than 12 months)
+        if: steps.timestamp.outputs.day_of_month == '01'
+        run: |
+          CUTOFF_DATE=$(date -u -d "365 days ago" +%Y-%m-%d)
+          aws s3 ls s3://${{ secrets.R2_BUCKET_NAME }}/monthly/ --endpoint-url ${{ secrets.R2_ENDPOINT }} | \
+            awk '{print $4}' | \
+            grep -E '^backup-.*\.sql\.gz$' | \
+            while read -r file; do
+              FILE_DATE=$(echo "$file" | grep -oP '\d{4}-\d{2}-\d{2}')
+              if [[ "$FILE_DATE" < "$CUTOFF_DATE" ]]; then
+                aws s3 rm "s3://${{ secrets.R2_BUCKET_NAME }}/monthly/$file" --endpoint-url ${{ secrets.R2_ENDPOINT }}
+              fi
+            done
+
+      - name: Cleanup local backup file
+        if: always()
+        run: |
+          rm -f backup-*.sql.gz
