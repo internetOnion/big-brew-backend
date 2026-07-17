@@ -150,6 +150,24 @@ describe("StorageService", () => {
                 "URL does not match the expected Supabase Storage format",
             );
         });
+
+        it("throws badRequest for path not starting with uploads/", () => {
+            const url =
+                "https://test.supabase.co/storage/v1/object/public/assets/other/test.jpg";
+
+            expect(() => storageService.parseStoragePath(url)).toThrow(
+                "Invalid storage path",
+            );
+        });
+
+        it("throws badRequest for path containing ..", () => {
+            const url =
+                "https://test.supabase.co/storage/v1/object/public/assets/uploads/../etc/passwd";
+
+            expect(() => storageService.parseStoragePath(url)).toThrow(
+                "Invalid storage path",
+            );
+        });
     });
 
     describe("getPublicUrl", () => {

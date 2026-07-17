@@ -27,9 +27,15 @@ const upload = multer({
     },
 });
 
+// ponytail: regex is one line, Zod refinement adds noise for no gain
 const deleteSchema = z
     .object({
-        path: z.string().min(1),
+        path: z
+            .string()
+            .regex(
+                /^uploads\/[A-Za-z0-9._/-]+$/,
+                "Path must start with uploads/ and contain only safe characters",
+            ),
     })
     .strict();
 

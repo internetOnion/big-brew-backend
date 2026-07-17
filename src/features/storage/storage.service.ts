@@ -92,7 +92,11 @@ export class StorageService {
                 "URL does not match the expected Supabase Storage format",
             );
         }
-        return url.slice(index + prefix.length);
+        const path = url.slice(index + prefix.length);
+        if (!path.startsWith("uploads/") || path.includes("..")) {
+            throw AppError.badRequest("Invalid storage path");
+        }
+        return path;
     }
 
     getPublicUrl(path: string): string {
