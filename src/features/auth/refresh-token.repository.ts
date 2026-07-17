@@ -18,6 +18,7 @@ export interface RefreshToken {
     tokenHash: string;
     expiresAt: Date;
     revoked: boolean;
+    revokedAt: Date | null;
     createdAt: Date;
 }
 
@@ -40,10 +41,17 @@ export class RefreshTokenRepository {
         return result ?? null;
     }
 
+    async findByHashAny(tokenHash: string): Promise<RefreshToken | null> {
+        const result = await db.query.refreshTokensTable.findFirst({
+            where: eq(refreshTokensTable.tokenHash, tokenHash),
+        });
+        return result ?? null;
+    }
+
     async revoke(id: string): Promise<void> {
         await db
             .update(refreshTokensTable)
-            .set({ revoked: true })
+            .set({ revoked: true, revokedAt: new Date() })
             .where(eq(refreshTokensTable.id, id));
     }
 
@@ -53,7 +61,7 @@ export class RefreshTokenRepository {
     ): Promise<void> {
         await db
             .update(refreshTokensTable)
-            .set({ revoked: true })
+            .set({ revoked: true, revokedAt: new Date() })
             .where(
                 and(
                     eq(refreshTokensTable.entityId, entityId),

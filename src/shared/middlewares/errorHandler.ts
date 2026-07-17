@@ -14,6 +14,10 @@ export const errorHandler = (
     }
 
     if (err instanceof AppError) {
+        const details = err.details as Record<string, unknown> | undefined;
+        if (err.statusCode === 429 && details?.retryAfter) {
+            res.setHeader("Retry-After", String(details.retryAfter));
+        }
         return res.status(err.statusCode).json({
             error: err.message,
             ...(err.details !== undefined && { details: err.details }),

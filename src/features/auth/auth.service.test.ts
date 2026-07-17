@@ -90,6 +90,7 @@ const makeRefreshToken = (overrides = {}) => ({
     tokenHash: "hashed-token",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     revoked: false,
+    revokedAt: null,
     createdAt: new Date(),
     ...overrides,
 });
@@ -437,13 +438,13 @@ describe("AuthService", () => {
             ]);
             mockBcrypt.compare.mockResolvedValue(true as never);
 
-            const result = await authService.verifyPin("1234");
+            const result = await authService.verifyPin("1234", "127.0.0.1");
 
             expect(result.id).toBe("emp-1");
             expect(result.name).toBe("Alice");
         });
 
-        it("skips non-barista employees", async () => {
+        it("returns first matching employee regardless of role", async () => {
             mockEmployeeRepo.findActiveEmployees.mockResolvedValue([
                 makeEmployee({
                     id: "mgr-1",
@@ -456,11 +457,11 @@ describe("AuthService", () => {
                 .mockResolvedValueOnce(true as never) // manager PIN matches
                 .mockResolvedValueOnce(true as never); // barista PIN matches
 
-            const result = await authService.verifyPin("1234");
+            const result = await authService.verifyPin("1234", "127.0.0.1");
 
-            // Should return barista, not manager
-            expect(result.id).toBe("emp-1");
-            expect(result.role).toBe("barista");
+            // Returns first bcrypt match (manager)
+            expect(result.id).toBe("mgr-1");
+            expect(result.role).toBe("manager");
         });
 
         it("throws unauthorized when PIN invalid", async () => {
@@ -469,44 +470,152 @@ describe("AuthService", () => {
             ]);
             mockBcrypt.compare.mockResolvedValue(false as never);
 
-            await expect(authService.verifyPin("9999")).rejects.toThrow(
-                "Invalid PIN",
-            );
+            await expect(
+                authService.verifyPin("9999", "127.0.0.1"),
+            ).rejects.toThrow("Invalid PIN");
+        });
+
+        it("rate-limits after 5 failures from same IP", async () => {
+            mockEmployeeRepo.findActiveEmployees.mockResolvedValue([
+                makeEmployee(),
+            ]);
+            mockBcrypt.compare.mockResolvedValue(false as never);
+
+            for (let i = 0; i < 5; i++) {
+                await expect(
+                    authService.verifyPin("9999", "10.0.0.1"),
+                ).rejects.toThrow("Invalid PIN");
+            }
+
+            await expect(
+                authService.verifyPin("9999", "10.0.0.1"),
+            ).rejects.toThrow("Too many PIN attempts");
+        });
+
+        it("does not rate-limit different IPs independently", async () => {
+            mockEmployeeRepo.findActiveEmployees.mockResolvedValue([
+                makeEmployee(),
+            ]);
+            mockBcrypt.compare.mockResolvedValue(false as never);
+
+            // Exhaust IP 10.0.0.1
+            for (let i = 0; i < 5; i++) {
+                await expect(
+                    authService.verifyPin("9999", "10.0.0.99"),
+                ).rejects.toThrow("Invalid PIN");
+            }
+            await expect(
+                authService.verifyPin("9999", "10.0.0.99"),
+            ).rejects.toThrow("Too many PIN attempts");
+
+            // Different IP still allowed
+            await expect(
+                authService.verifyPin("9999", "10.0.0.100"),
+            ).rejects.toThrow("Invalid PIN");
         });
     });
 
     describe("refresh", () => {
-        it("returns new access token for employee", async () => {
+        it("rotates token: revokes old, issues new access + refresh token for employee", async () => {
             mockJwt.verify.mockReturnValue({
                 sub: "emp-1",
             } as any);
-            mockRefreshRepo.findByHash.mockResolvedValue(makeRefreshToken());
+            mockRefreshRepo.findByHashAny.mockResolvedValue(makeRefreshToken());
+            mockRefreshRepo.revoke.mockResolvedValue(undefined);
+            mockRefreshRepo.insert.mockResolvedValue(
+                makeRefreshToken({ id: "rt-2" }),
+            );
             mockEmployeeRepo.findById.mockResolvedValue(makeEmployee());
-            mockJwt.sign.mockReturnValue("new-access-token" as any);
+            mockJwt.sign.mockReturnValue("signed-token" as any);
 
             const result = await authService.refresh("valid-refresh-token");
 
-            expect(result.accessToken).toBe("new-access-token");
+            expect(result.accessToken).toBe("signed-token");
+            expect(typeof result.refreshToken).toBe("string");
+            expect(result.refreshToken.length).toBeGreaterThan(0);
             expect(result.entityType).toBe("employee");
+            expect(mockRefreshRepo.revoke).toHaveBeenCalledWith("rt-1");
+            expect(mockRefreshRepo.insert).toHaveBeenCalledTimes(1);
         });
 
-        it("returns new access token for terminal", async () => {
+        it("rotates token: revokes old, issues new access + refresh token for terminal", async () => {
             mockJwt.verify.mockReturnValue({
                 sub: "term-1",
             } as any);
-            mockRefreshRepo.findByHash.mockResolvedValue(
+            mockRefreshRepo.findByHashAny.mockResolvedValue(
                 makeRefreshToken({
                     entityId: "term-1",
                     entityType: "terminal",
                 }),
             );
+            mockRefreshRepo.revoke.mockResolvedValue(undefined);
+            mockRefreshRepo.insert.mockResolvedValue(
+                makeRefreshToken({
+                    id: "rt-2",
+                    entityId: "term-1",
+                    entityType: "terminal",
+                }),
+            );
             mockTerminalRepo.findById.mockResolvedValue(makeTerminal());
-            mockJwt.sign.mockReturnValue("terminal-access-token" as any);
+            mockJwt.sign.mockReturnValue("signed-token" as any);
 
             const result = await authService.refresh("valid-terminal-token");
 
-            expect(result.accessToken).toBe("terminal-access-token");
+            expect(result.accessToken).toBe("signed-token");
+            expect(typeof result.refreshToken).toBe("string");
+            expect(result.refreshToken.length).toBeGreaterThan(0);
             expect(result.entityType).toBe("terminal");
+            expect(mockRefreshRepo.revoke).toHaveBeenCalledWith("rt-1");
+            expect(mockRefreshRepo.insert).toHaveBeenCalledTimes(1);
+        });
+
+        it("revokes entire family on reused token", async () => {
+            mockJwt.verify.mockReturnValue({
+                sub: "emp-1",
+            } as any);
+            mockRefreshRepo.findByHashAny.mockResolvedValue(
+                makeRefreshToken({ revoked: true }),
+            );
+            mockRefreshRepo.revokeAllForEntity.mockResolvedValue(undefined);
+
+            await expect(authService.refresh("revoked-token")).rejects.toThrow(
+                "Refresh token revoked",
+            );
+
+            expect(mockRefreshRepo.revokeAllForEntity).toHaveBeenCalledWith(
+                "emp-1",
+                "employee",
+            );
+        });
+
+        it("rejects reused token even after successful rotation", async () => {
+            // First use: valid token, rotation succeeds
+            mockJwt.verify.mockReturnValue({ sub: "emp-1" } as any);
+            mockRefreshRepo.findByHashAny.mockResolvedValueOnce(
+                makeRefreshToken(),
+            );
+            mockRefreshRepo.revoke.mockResolvedValue(undefined);
+            mockRefreshRepo.insert.mockResolvedValue(
+                makeRefreshToken({ id: "rt-2" }),
+            );
+            mockEmployeeRepo.findById.mockResolvedValue(makeEmployee());
+            mockJwt.sign.mockReturnValue("signed-token" as any);
+
+            await authService.refresh("token-A");
+
+            // Second use: same token-A is now revoked, reuse detected
+            mockRefreshRepo.findByHashAny.mockResolvedValueOnce(
+                makeRefreshToken({ revoked: true }),
+            );
+            mockRefreshRepo.revokeAllForEntity.mockResolvedValue(undefined);
+
+            await expect(authService.refresh("token-A")).rejects.toThrow(
+                "Refresh token revoked",
+            );
+            expect(mockRefreshRepo.revokeAllForEntity).toHaveBeenCalledWith(
+                "emp-1",
+                "employee",
+            );
         });
 
         it("throws unauthorized when token expired", async () => {
@@ -535,7 +644,7 @@ describe("AuthService", () => {
             mockJwt.verify.mockReturnValue({
                 sub: "emp-1",
             } as any);
-            mockRefreshRepo.findByHash.mockResolvedValue(null);
+            mockRefreshRepo.findByHashAny.mockResolvedValue(null);
 
             await expect(authService.refresh("revoked-token")).rejects.toThrow(
                 "Invalid refresh token",
@@ -546,7 +655,7 @@ describe("AuthService", () => {
             mockJwt.verify.mockReturnValue({
                 sub: "emp-1",
             } as any);
-            mockRefreshRepo.findByHash.mockResolvedValue(
+            mockRefreshRepo.findByHashAny.mockResolvedValue(
                 makeRefreshToken({
                     expiresAt: new Date(Date.now() - 1000),
                 }),
@@ -561,7 +670,8 @@ describe("AuthService", () => {
             mockJwt.verify.mockReturnValue({
                 sub: "emp-1",
             } as any);
-            mockRefreshRepo.findByHash.mockResolvedValue(makeRefreshToken());
+            mockRefreshRepo.findByHashAny.mockResolvedValue(makeRefreshToken());
+            mockRefreshRepo.revoke.mockResolvedValue(undefined);
             mockEmployeeRepo.findById.mockResolvedValue(
                 makeEmployee({ isActive: false }),
             );
@@ -575,12 +685,13 @@ describe("AuthService", () => {
             mockJwt.verify.mockReturnValue({
                 sub: "term-1",
             } as any);
-            mockRefreshRepo.findByHash.mockResolvedValue(
+            mockRefreshRepo.findByHashAny.mockResolvedValue(
                 makeRefreshToken({
                     entityId: "term-1",
                     entityType: "terminal",
                 }),
             );
+            mockRefreshRepo.revoke.mockResolvedValue(undefined);
             mockTerminalRepo.findById.mockResolvedValue(
                 makeTerminal({ isActive: false }),
             );

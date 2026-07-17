@@ -20,6 +20,7 @@ export const refreshTokensTable = pgTable(
         tokenHash: text("token_hash").notNull().unique(),
         expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
         revoked: boolean("revoked").default(false).notNull(),
+        revokedAt: timestamp("revoked_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
             .defaultNow(),

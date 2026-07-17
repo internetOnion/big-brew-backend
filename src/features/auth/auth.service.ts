@@ -24,6 +24,32 @@ import type {
 
 const SALT_ROUNDS = 10;
 
+const MAX_PIN_ATTEMPTS = 5;
+const PIN_LOCKOUT_MS = 15 * 60 * 1000;
+
+// ponytail: in-memory per-IP rate limit — resets on restart, good enough for v1
+const pinAttempts = new Map<string, { count: number; resetAt: number }>();
+
+const checkPinRateLimit = (
+    ip: string,
+): { allowed: boolean; retryAfter?: number } => {
+    const now = Date.now();
+    const entry = pinAttempts.get(ip);
+
+    if (!entry || now > entry.resetAt) {
+        pinAttempts.set(ip, { count: 1, resetAt: now + PIN_LOCKOUT_MS });
+        return { allowed: true };
+    }
+
+    entry.count++;
+    if (entry.count > MAX_PIN_ATTEMPTS) {
+        const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+        return { allowed: false, retryAfter };
+    }
+
+    return { allowed: true };
+};
+
 interface SignupInput {
     email?: string;
     password?: string;
@@ -136,13 +162,20 @@ export class AuthService {
 
         // ponytail: baristas have no Clerk account — name + PIN only
         if (assignedRole === "barista") {
-            const employee = await employeeRepository.insert({
-                name,
-                role: assignedRole,
-                pin: pinHash ?? "",
-                clerkUserId: null,
-            });
-            return { employee: formatEmployee(employee) };
+            try {
+                const employee = await employeeRepository.insert({
+                    name,
+                    role: assignedRole,
+                    pin: pinHash ?? "",
+                    clerkUserId: null,
+                });
+                return { employee: formatEmployee(employee) };
+            } catch (err: any) {
+                if (err?.code === "23505") {
+                    throw AppError.conflict("PIN already in use");
+                }
+                throw err;
+            }
         }
 
         // Managers require email + password for Clerk
@@ -188,7 +221,7 @@ export class AuthService {
                 )?.emailAddress ?? email;
 
             return { employee: formatEmployee(employee, primaryEmail) };
-        } catch (err) {
+        } catch (err: any) {
             try {
                 await clerkClient.users.deleteUser(clerkUser.id);
             } catch (deleteErr) {
@@ -196,6 +229,9 @@ export class AuthService {
                     deleteErr as Error,
                     "Failed to rollback Clerk user after DB insert failure",
                 );
+            }
+            if (err?.code === "23505") {
+                throw AppError.conflict("PIN already in use");
             }
             throw err;
         }
@@ -295,26 +331,43 @@ export class AuthService {
         };
     }
 
-    async verifyPin(pin: string): Promise<{
+    async verifyPin(
+        pin: string,
+        ip: string,
+    ): Promise<{
         id: string;
         name: string;
         role: EmployeeRole;
     }> {
+        const rateLimit = checkPinRateLimit(ip);
+        if (!rateLimit.allowed) {
+            throw AppError.tooManyRequests(
+                "Too many PIN attempts. Try again later.",
+                { retryAfter: rateLimit.retryAfter },
+            );
+        }
+
         const employees = await employeeRepository.findActiveEmployees();
 
         for (const emp of employees) {
             if (!emp.pin) continue;
             const match = await bcrypt.compare(pin, emp.pin);
             if (match) {
+                logger.info(
+                    { employeeId: emp.id, ip, route: "verify-pin" },
+                    "PIN verification success",
+                );
                 return { id: emp.id, name: emp.name, role: emp.role };
             }
         }
 
+        logger.warn({ ip, route: "verify-pin" }, "PIN verification failure");
         throw AppError.unauthorized("Invalid PIN");
     }
 
     async refresh(refreshToken: string): Promise<{
         accessToken: string;
+        refreshToken: string;
         entityType: "employee" | "terminal";
     }> {
         try {
@@ -324,7 +377,7 @@ export class AuthService {
 
             const tokenHash = hashToken(refreshToken);
             const storedToken =
-                await refreshTokenRepository.findByHash(tokenHash);
+                await refreshTokenRepository.findByHashAny(tokenHash);
 
             if (!storedToken) {
                 throw AppError.unauthorized("Invalid refresh token");
@@ -333,6 +386,18 @@ export class AuthService {
             if (storedToken.expiresAt < new Date()) {
                 throw AppError.unauthorized("Refresh token expired");
             }
+
+            // ponytail: reuse detection — a revoked token means theft
+            if (storedToken.revoked) {
+                await refreshTokenRepository.revokeAllForEntity(
+                    storedToken.entityId,
+                    storedToken.entityType,
+                );
+                throw AppError.unauthorized("Refresh token revoked");
+            }
+
+            // Rotation: revoke current, issue new
+            await refreshTokenRepository.revoke(storedToken.id);
 
             if (storedToken.entityType === "terminal") {
                 const terminal = await terminalRepository.findById(
@@ -343,8 +408,15 @@ export class AuthService {
                         "Terminal not found or inactive",
                     );
                 }
+                const newRefreshToken = generateRefreshToken(terminal.id);
+                await storeRefreshToken(
+                    terminal.id,
+                    "terminal",
+                    newRefreshToken,
+                );
                 return {
                     accessToken: generateTerminalAccessToken(terminal),
+                    refreshToken: newRefreshToken,
                     entityType: "terminal",
                 };
             }
@@ -356,8 +428,11 @@ export class AuthService {
                 throw AppError.unauthorized("Employee not found or inactive");
             }
 
+            const newRefreshToken = generateRefreshToken(employee.id);
+            await storeRefreshToken(employee.id, "employee", newRefreshToken);
             return {
                 accessToken: generateAccessToken(employee),
+                refreshToken: newRefreshToken,
                 entityType: "employee",
             };
         } catch (err) {

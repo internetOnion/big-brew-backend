@@ -51,7 +51,7 @@ export class AuthController {
     async verifyPin(req: Request, res: Response) {
         const { pin } = req.body;
 
-        const result = await authService.verifyPin(pin);
+        const result = await authService.verifyPin(pin, req.ip ?? "unknown");
 
         return res.json({
             data: result,
@@ -65,6 +65,8 @@ export class AuthController {
         }
 
         const result = await authService.refresh(refreshToken);
+
+        res.cookie("refresh_token", result.refreshToken, config.cookie);
 
         return res.json({
             data: {

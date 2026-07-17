@@ -7,7 +7,7 @@ import {
     index,
     uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { sql, isNull } from "drizzle-orm";
+import { sql, and, isNull } from "drizzle-orm";
 import { employeeRoleEnum } from "./enums.ts";
 
 export const employeesTable = pgTable(
@@ -33,7 +33,7 @@ export const employeesTable = pgTable(
             .where(sql`${t.isActive} = true`),
         uniqueIndex("employees_pin_unique")
             .on(t.pin)
-            .where(isNull(t.deletedAt)),
+            .where(sql`(${isNull(t.deletedAt)}) AND (${t.pin} != '')`),
         uniqueIndex("employees_clerk_user_id_unique")
             .on(t.clerkUserId)
             .where(isNull(t.deletedAt)),

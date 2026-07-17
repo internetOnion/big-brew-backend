@@ -40,6 +40,13 @@ export class AppError extends Error {
         return new AppError(422, message, details);
     }
 
+    static tooManyRequests(
+        message = "Too Many Requests",
+        details?: unknown,
+    ): AppError {
+        return new AppError(429, message, details);
+    }
+
     static internal(
         message = "Internal Server Error",
         details?: unknown,
