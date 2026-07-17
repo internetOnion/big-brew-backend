@@ -28,6 +28,9 @@ export const errorHandler = (
         return res.status(400).json({ error: err.message });
     }
 
-    logger.error(err);
+    logger.error(
+        { err, name: err.name, message: err.message },
+        "Unhandled error",
+    );
     return res.status(500).json({ error: "Internal Server Error" });
 };

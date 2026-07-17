@@ -128,7 +128,7 @@ export class OrderController {
         const { id } = req.params as { id: string };
         const { pin, reason } = req.body;
 
-        const employee = await authService.verifyPin(pin);
+        const employee = await authService.verifyPin(pin, req.ip ?? "unknown");
 
         if (employee.role === "manager") {
             await orderService.requestVoid(id, employee.id, reason);

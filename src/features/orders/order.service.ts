@@ -1,10 +1,11 @@
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, sql } from "drizzle-orm";
 import { AppError } from "../../shared/utils/AppError.ts";
 import { db } from "../../shared/models/index.ts";
 import {
     itemRecipesTable,
     modifierOptionIngredientsTable,
     stockMovementsTable,
+    ingredientsTable,
     menuItemsTable,
     modifierOptionsTable,
 } from "../../shared/models/schema/index.ts";
@@ -102,7 +103,6 @@ export class OrderService {
             ...new Set(items.flatMap((i) => i.modifierOptionIds)),
         ];
 
-        // Batch-load recipes and modifier ingredients in parallel
         const [recipes, modIngredients] = await Promise.all([
             menuItemIds.length > 0
                 ? dbClient
@@ -123,7 +123,6 @@ export class OrderService {
                 : ([] as (typeof modifierOptionIngredientsTable.$inferSelect)[]),
         ]);
 
-        // Build lookup maps
         const recipesByItemId = new Map<string, typeof recipes>();
         for (const r of recipes) {
             const list = recipesByItemId.get(r.itemId) || [];
@@ -142,7 +141,6 @@ export class OrderService {
             modIngredientsByOptionId.set(mi.modifierOptionId, list);
         }
 
-        // ponytail: aggregate per ingredient so stock_movements has one row per unique ingredient
         const totalsByIngredient = new Map<string, number>();
 
         for (const item of items) {
@@ -170,21 +168,53 @@ export class OrderService {
             }
         }
 
-        if (totalsByIngredient.size > 0) {
-            const stockMovements = [...totalsByIngredient].map(
-                ([ingredientId, quantity]) => ({
-                    ingredientId,
-                    quantityChange: (-quantity).toString(),
-                    reason: "order_placed" as const,
-                    referenceOrderId: orderId,
-                }),
-            );
+        if (totalsByIngredient.size === 0) return;
 
-            await dbClient.insert(stockMovementsTable).values(stockMovements);
+        // H3: atomic decrement — prevents oversell race condition
+        const outOfStock: string[] = [];
+
+        for (const [ingredientId, quantity] of totalsByIngredient) {
+            const result = await dbClient
+                .update(ingredientsTable)
+                .set({
+                    stockQuantity: sql`${ingredientsTable.stockQuantity} - ${quantity}`,
+                })
+                .where(
+                    and(
+                        eq(ingredientsTable.id, ingredientId),
+                        sql`${ingredientsTable.stockQuantity} >= ${quantity}`,
+                    ),
+                );
+
+            // Drizzle node-postgres returns { rowCount } on UPDATE
+            if ((result as any).rowCount === 0) {
+                const [row] = await dbClient
+                    .select({ name: ingredientsTable.name })
+                    .from(ingredientsTable)
+                    .where(eq(ingredientsTable.id, ingredientId));
+                outOfStock.push(row?.name ?? ingredientId);
+            }
         }
+
+        if (outOfStock.length > 0) {
+            throw AppError.conflict(
+                `Out of stock for: ${outOfStock.join(", ")}`,
+            );
+        }
+
+        const stockMovements = [...totalsByIngredient].map(
+            ([ingredientId, quantity]) => ({
+                ingredientId,
+                quantityChange: (-quantity).toString(),
+                reason: "order_placed" as const,
+                referenceOrderId: orderId,
+            }),
+        );
+
+        await dbClient.insert(stockMovementsTable).values(stockMovements);
     }
 
-    // ponytail: restores by negating original order_placed movements instead of re-reading recipes
+    // ponytail: restores by reversing stock movements and incrementing ingredient stock
     private async restoreStock(orderId: string, tx?: any): Promise<void> {
         const dbClient = tx || db;
 
@@ -201,18 +231,30 @@ export class OrderService {
                 ),
             );
 
-        if (originalMovements.length > 0) {
-            const stockMovements = originalMovements.map(
-                (m: { ingredientId: string; quantityChange: string }) => ({
-                    ingredientId: m.ingredientId,
-                    quantityChange: (-parseFloat(m.quantityChange)).toString(),
-                    reason: "order_voided" as const,
-                    referenceOrderId: orderId,
-                }),
-            );
+        if (originalMovements.length === 0) return;
 
-            await dbClient.insert(stockMovementsTable).values(stockMovements);
+        for (const m of originalMovements) {
+            const quantity = -parseFloat(m.quantityChange);
+
+            // Increment ingredient stock back
+            await dbClient
+                .update(ingredientsTable)
+                .set({
+                    stockQuantity: sql`${ingredientsTable.stockQuantity} + ${quantity}`,
+                })
+                .where(eq(ingredientsTable.id, m.ingredientId));
         }
+
+        const stockMovements = originalMovements.map(
+            (m: { ingredientId: string; quantityChange: string }) => ({
+                ingredientId: m.ingredientId,
+                quantityChange: (-parseFloat(m.quantityChange)).toString(),
+                reason: "order_voided" as const,
+                referenceOrderId: orderId,
+            }),
+        );
+
+        await dbClient.insert(stockMovementsTable).values(stockMovements);
     }
 
     async getOrder(id: string): Promise<Order> {

@@ -18,12 +18,29 @@ const storageFetch = async (
     };
     if (contentType) headers["Content-Type"] = contentType;
 
-    const res = await fetch(url, { method, headers, body });
+    let res: Response;
+    try {
+        res = await fetch(url, {
+            method,
+            headers,
+            body,
+            signal: AbortSignal.timeout(15000),
+        });
+    } catch (err: any) {
+        if (err.name === "TimeoutError" || err.name === "AbortError") {
+            throw AppError.gatewayTimeout("Storage request timed out");
+        }
+        throw AppError.internal("Storage request failed", {
+            upstream: err.message,
+        });
+    }
+
     if (!res.ok && method !== "HEAD") {
         const text = await res.text().catch(() => "");
-        throw new Error(
-            `Storage ${method} ${path} failed (${res.status}): ${text}`,
-        );
+        throw AppError.internal(`Storage ${method} failed`, {
+            upstream: res.status,
+            message: text,
+        });
     }
     return res;
 };

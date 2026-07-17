@@ -53,4 +53,11 @@ export class AppError extends Error {
     ): AppError {
         return new AppError(500, message, details);
     }
+
+    static gatewayTimeout(
+        message = "Gateway Timeout",
+        details?: unknown,
+    ): AppError {
+        return new AppError(504, message, details);
+    }
 }

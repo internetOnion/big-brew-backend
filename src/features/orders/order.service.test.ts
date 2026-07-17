@@ -201,7 +201,16 @@ describe("OrderService", () => {
                     ]);
                 const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
                 const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
-                const mockTx = { select: mockSelect, insert: mockInsert };
+                const mockUpdate = vi.fn().mockReturnValue({
+                    set: vi.fn().mockReturnValue({
+                        where: vi.fn().mockResolvedValue(undefined),
+                    }),
+                });
+                const mockTx = {
+                    select: mockSelect,
+                    insert: mockInsert,
+                    update: mockUpdate,
+                };
                 return cb(mockTx);
             });
             mockOrderRepo.findById.mockResolvedValue(
