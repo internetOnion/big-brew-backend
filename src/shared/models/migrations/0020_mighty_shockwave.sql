@@ -20,6 +20,8 @@ ALTER TABLE "orders" DROP CONSTRAINT "chk_void_approved_fields";--> statement-br
 ALTER TABLE "menu_items" DROP CONSTRAINT "chk_base_price_positive";--> statement-breakpoint
 ALTER TABLE "modifier_option_ingredients" DROP CONSTRAINT "modifier_option_ingredients_modifier_option_id_modifier_options";
 --> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT "orders_confirmed_by_employees_id_fk";
+--> statement-breakpoint
 DROP INDEX "idx_moi_ingredient";--> statement-breakpoint
 DROP INDEX "idx_item_recipes_ingredient";--> statement-breakpoint
 DROP INDEX "terminals_clerk_user_id_unique";--> statement-breakpoint
@@ -82,6 +84,7 @@ CREATE UNIQUE INDEX "employees_pin_unique" ON "employees" USING btree ("pin") WH
 CREATE INDEX "idx_employees_pin" ON "employees" USING btree ("pin") WHERE "employees"."is_active" = true;--> statement-breakpoint
 CREATE INDEX "idx_refresh_tokens_entity" ON "refresh_tokens" USING btree ("entity_id","entity_type");--> statement-breakpoint
 CREATE INDEX "idx_refresh_tokens_hash" ON "refresh_tokens" USING btree ("token_hash") WHERE "refresh_tokens"."revoked" = false;--> statement-breakpoint
+ALTER TABLE "orders" DROP COLUMN "confirmed_by";--> statement-breakpoint
 ALTER TABLE "modifier_option_ingredients" ADD CONSTRAINT "modifier_option_ingredients_modifier_option_id_ingredient_id_unique" UNIQUE("modifier_option_id","ingredient_id");--> statement-breakpoint
 ALTER TABLE "modifier_option_ingredients" ADD CONSTRAINT "chk_moi_quantity_positive" CHECK ("modifier_option_ingredients"."quantity" > 0);--> statement-breakpoint
 ALTER TABLE "item_recipes" ADD CONSTRAINT "chk_recipe_quantity_positive" CHECK ("item_recipes"."quantity" > 0);--> statement-breakpoint

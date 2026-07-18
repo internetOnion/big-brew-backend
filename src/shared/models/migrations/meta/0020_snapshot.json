@@ -1,5 +1,5 @@
 {
-  "id": "8418b37a-f736-44c2-aed5-84762eebc320",
+  "id": "3e40dd43-7e84-46c3-b3c9-9c9c67e93eec",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1486,12 +1486,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "confirmed_by": {
-          "name": "confirmed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "void_requested_by": {
           "name": "void_requested_by",
           "type": "uuid",
@@ -1616,19 +1610,6 @@
           "tableTo": "employees",
           "columnsFrom": [
             "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "orders_confirmed_by_employees_id_fk": {
-          "name": "orders_confirmed_by_employees_id_fk",
-          "tableFrom": "orders",
-          "tableTo": "employees",
-          "columnsFrom": [
-            "confirmed_by"
           ],
           "columnsTo": [
             "id"

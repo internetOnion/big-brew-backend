@@ -145,15 +145,8 @@
     {
       "idx": 20,
       "version": "7",
-      "when": 1784346998466,
-      "tag": "0020_motionless_excalibur",
-      "breakpoints": true
-    },
-    {
-      "idx": 21,
-      "version": "7",
-      "when": 1784347988300,
-      "tag": "0021_thick_vin_gonzales",
+      "when": 1784363710606,
+      "tag": "0020_mighty_shockwave",
       "breakpoints": true
     }
   ]
