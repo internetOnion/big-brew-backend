@@ -83,9 +83,18 @@ export const authenticate = async (
     next();
 };
 
+// ponytail: terminals aren't employees but need POS-endpoint access.
+// Pass "terminal" in the role list to allow them through.
+type AllowedRole = EmployeeRole | "terminal";
+
 export const requireRole =
-    (...roles: EmployeeRole[]) =>
+    (...roles: AllowedRole[]) =>
     (req: Request, _res: Response, next: NextFunction) => {
+        if (req.terminal) {
+            if (roles.includes("terminal" as AllowedRole)) return next();
+            throw AppError.forbidden("Insufficient permissions");
+        }
+
         if (!req.employee) {
             throw AppError.unauthorized("Authentication required");
         }
