@@ -7,12 +7,12 @@ import {
 import {
     ingredientRepository,
     type Ingredient,
-} from "./ingredient.respository.ts";
+} from "./ingredient.repository.ts";
 import { formatIngredient } from "../../shared/utils/formatIngredient.ts";
 import type {
     InsertIngredient,
     UpdateIngredient,
-} from "./ingredient.respository.ts";
+} from "./ingredient.repository.ts";
 import { AppError } from "../../shared/utils/AppError.ts";
 import type { StockReason } from "../../shared/types/index.ts";
 
@@ -81,7 +81,7 @@ export class IngredientService {
         quantityChange: number,
         reason: StockReason,
         notes: string | undefined,
-        recordedBy: string,
+        _recordedBy: string,
     ): Promise<IngredientResponse> {
         const existingIngredient = await ingredientRepository.findById(id);
         if (!existingIngredient) {

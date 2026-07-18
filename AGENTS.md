@@ -17,10 +17,11 @@
 | `npm run db:studio` | Open Drizzle Studio GUI |
 | `npx vitest run` | Run all unit tests |
 | `npx vitest run src/path/to/file.test.ts` | Run a single test file |
+| `npm run lint` | Run ESLint on src/ |
 
-Before committing: `npm run format && npm run build && npx vitest run`
+Before committing: `npm run format && npm run lint && npm run build && npx vitest run`
 
-No CI for build/test/lint. `npm test` runs vitest in **watch** mode — use `npx vitest run` for one-shot. Only `.github/workflows/nightly-backup.yml` exists (DB backup, not a build gate). Stale `dist/` may exist despite `noEmit: true` — ignore it, `build` never emits.
+CI runs on PRs and pushes to main via `.github/workflows/backend-ci.yml` (lint, format check, type check, tests). `npm test` runs vitest in **watch** mode — use `npx vitest run` for one-shot.
 
 ## Setup
 
@@ -69,7 +70,7 @@ Commit migration files. Never edit a production migration. Never `db:push` again
 ## Conventions
 
 - Only arrow functions (`const foo = () => {}`).
-- `.ts` extension in all relative imports (with known exceptions in gotchas).
+- `.ts` extension in all relative imports.
 - File suffixes: `.routes.ts`, `.controller.ts`, `.service.ts`, `.repository.ts`.
 - Singletons: each class file exports a named class AND an instantiated singleton. Import the singleton.
 - Zod schemas defined in route files, not inline. Always `.strict()`.
@@ -82,12 +83,9 @@ Commit migration files. Never edit a production migration. Never `db:push` again
 
 ## Gotchas
 
-- `src/features/ingredients/ingredient.respository.ts` has a typo ("respository") — consistent across the codebase, don't fix it.
-- Three known imports missing `.ts` extension: `swagger.ts` → logger, `validate.ts` → AppError, `logger.ts` → config. Don't fix.
 - `src/features/menu/modifiers/modifierOptionIngredient.ts` doesn't follow `.service.ts` naming — use `modifierGroup.service.ts` instead.
 - Menu sub-resources: recipes at `/menu-items/:menuItemId/recipes`, modifier-groups at `/menu-items/:menuItemId/modifier-groups` (both use `mergeParams: true`).
 - `POST /menu-items` supports batch creation (menu item + recipes + modifier groups + options + ingredients in one atomic transaction).
 - Categories use `router.use(authenticate)` at router level; ingredients and most other domains apply auth per-route.
 - Auth routes (`/api/auth/*`) are public except `POST /auth/signup` (requires owner or manager).
 - Employee routes are **public** at the router level (no `authenticate` in the mount) — each route applies its own auth.
-- `.prettierignore` excludes `AGENTS.md`, `.agents/`, `src/shared/models/migrations/`. Note: `.prettierignore` has a stale path `src/models/migrations/` but the real dir is `src/shared/models/migrations/`.

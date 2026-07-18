@@ -1,7 +1,7 @@
 import { ZodTypeAny } from "zod";
 import type { NextFunction, Request, Response } from "express";
 
-import { AppError } from "../utils/AppError";
+import { AppError } from "../utils/AppError.ts";
 
 const createValidator = (target: "body" | "params" | "query") => {
     return (schema: ZodTypeAny) => {

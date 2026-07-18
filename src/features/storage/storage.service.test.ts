@@ -10,7 +10,6 @@ vi.mock("../../shared/config/index.ts", () => ({
 }));
 
 import { storageService } from "./storage.service.ts";
-import { AppError } from "../../shared/utils/AppError.ts";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);

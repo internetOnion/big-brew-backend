@@ -142,7 +142,7 @@ const createTerminalTokenPair = async (
 export class AuthService {
     async signup(
         input: SignupInput,
-        creatorRole: EmployeeRole,
+        _creatorRole: EmployeeRole,
     ): Promise<{ employee: EmployeePayload }> {
         const { email, password, name, pin, role } = input;
         const assignedRole = role ?? "barista";
@@ -371,7 +371,7 @@ export class AuthService {
         entityType: "employee" | "terminal";
     }> {
         try {
-            const payload = jwt.verify(refreshToken, config.jwtSecret) as {
+            const _payload = jwt.verify(refreshToken, config.jwtSecret) as {
                 sub: string;
             };
 

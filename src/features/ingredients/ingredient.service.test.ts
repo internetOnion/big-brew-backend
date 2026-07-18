@@ -1,13 +1,13 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-vi.mock("./ingredient.respository.ts");
+vi.mock("./ingredient.repository.ts");
 vi.mock("../../shared/models/index.ts", () => ({
     db: { transaction: vi.fn() },
     pool: {},
 }));
 
 import { ingredientService } from "./ingredient.service.ts";
-import { ingredientRepository } from "./ingredient.respository.ts";
+import { ingredientRepository } from "./ingredient.repository.ts";
 import { db } from "../../shared/models/index.ts";
 
 const mockRepo = vi.mocked(ingredientRepository);

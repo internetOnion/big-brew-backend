@@ -1,4 +1,4 @@
-import { type Category } from "../../features/categories/category.repository";
+import { type Category } from "../../features/categories/category.repository.ts";
 
 export type CategoryResponse = Omit<
     Category,

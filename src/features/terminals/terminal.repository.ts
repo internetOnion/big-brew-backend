@@ -1,4 +1,4 @@
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { db } from "../../shared/models/index.ts";
 import { terminalsTable } from "../../shared/models/schema/index.ts";
 

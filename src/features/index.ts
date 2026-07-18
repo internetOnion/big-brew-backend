@@ -4,7 +4,7 @@ import type { Request, Response } from "express";
 import { authenticate, requireRole } from "../shared/middlewares/index.ts";
 import { logger } from "../shared/utils/logger.ts";
 
-const safeImport = (name: string, importFn: () => Promise<any>) => {
+const _safeImport = (name: string, importFn: () => Promise<any>) => {
     return importFn().catch((err: Error) => {
         logger.error(
             { name, error: err.message },

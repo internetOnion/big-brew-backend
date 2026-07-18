@@ -128,7 +128,9 @@ const getOrCreateAuthUser = async (
             if (users.data.length > 0) return users.data[0].id;
         }
         console.error("Clerk error:", err?.errors ?? err?.message ?? err);
-        throw new Error(`Failed to create/find auth user for ${email}`);
+        throw new Error(`Failed to create/find auth user for ${email}`, {
+            cause: err,
+        });
     }
 };
 

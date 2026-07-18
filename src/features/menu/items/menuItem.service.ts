@@ -8,7 +8,7 @@ import {
     categoryRepository,
     type Category,
 } from "../../categories/category.repository.ts";
-import { ingredientRepository } from "../../ingredients/ingredient.respository.ts";
+import { ingredientRepository } from "../../ingredients/ingredient.repository.ts";
 import { AppError } from "../../../shared/utils/AppError.ts";
 import { storageService } from "../../storage/storage.service.ts";
 import {

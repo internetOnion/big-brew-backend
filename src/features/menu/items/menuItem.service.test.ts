@@ -2,13 +2,13 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 vi.mock("./menuItem.repository.ts");
 vi.mock("../../categories/category.repository.ts");
-vi.mock("../../ingredients/ingredient.respository.ts");
+vi.mock("../../ingredients/ingredient.repository.ts");
 vi.mock("../../storage/storage.service.ts");
 
 import { menuItemService } from "./menuItem.service.ts";
 import { menuItemRepository } from "./menuItem.repository.ts";
 import { categoryRepository } from "../../categories/category.repository.ts";
-import { ingredientRepository } from "../../ingredients/ingredient.respository.ts";
+import { ingredientRepository } from "../../ingredients/ingredient.repository.ts";
 import { storageService } from "../../storage/storage.service.ts";
 
 const mockMenuItemRepo = vi.mocked(menuItemRepository);

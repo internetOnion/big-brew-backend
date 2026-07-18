@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { formatCategory } from "./formatCategory";
-import { formatEmployee } from "./formatEmployee";
-import type { Category } from "../../features/categories/category.repository";
-import type { Employee } from "../../features/employees/employee.repository";
+import { formatCategory } from "./formatCategory.ts";
+import { formatEmployee } from "./formatEmployee.ts";
+import type { Category } from "../../features/categories/category.repository.ts";
+import type { Employee } from "../../features/employees/employee.repository.ts";
 
 describe("formatCategory.formatCategory", () => {
     it("returns a formatted category object", () => {

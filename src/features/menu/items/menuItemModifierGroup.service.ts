@@ -14,7 +14,7 @@ import {
     type UpdateModifierOptionIngredient,
 } from "../modifiers/modifierOptionIngredient.repository.ts";
 import { menuItemRepository } from "./menuItem.repository.ts";
-import { ingredientRepository } from "../../ingredients/ingredient.respository.ts";
+import { ingredientRepository } from "../../ingredients/ingredient.repository.ts";
 import { AppError } from "../../../shared/utils/AppError.ts";
 
 export class MenuItemModifierGroupService {

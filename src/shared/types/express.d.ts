@@ -1,4 +1,4 @@
-import type { EmployeeRole, EmployeePayload } from "./index.ts";
+import type { EmployeePayload } from "./index.ts";
 
 interface TerminalPayload {
     id: string;

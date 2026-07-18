@@ -1,4 +1,4 @@
-import type { Ingredient } from "../../features/ingredients/ingredient.respository.ts";
+import type { Ingredient } from "../../features/ingredients/ingredient.repository.ts";
 
 export const formatIngredient = (ingredient: Ingredient) => ({
     id: ingredient.id,

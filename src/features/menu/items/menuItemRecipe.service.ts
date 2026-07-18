@@ -4,7 +4,7 @@ import {
     type UpdateItemRecipe,
     type ItemRecipe,
 } from "./itemRecipe.repository.ts";
-import { ingredientRepository } from "../../ingredients/ingredient.respository.ts";
+import { ingredientRepository } from "../../ingredients/ingredient.repository.ts";
 import { AppError } from "../../../shared/utils/AppError.ts";
 
 export class MenuItemRecipeService {

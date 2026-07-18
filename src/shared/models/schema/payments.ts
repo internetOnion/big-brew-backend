@@ -2,7 +2,6 @@ import {
     pgTable,
     uuid,
     decimal,
-    text,
     timestamp,
     index,
     check,

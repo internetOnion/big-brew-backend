@@ -1,4 +1,4 @@
-import type { ModifierOption } from "../../features/menu/modifiers/modifierOption.repository";
+import type { ModifierOption } from "../../features/menu/modifiers/modifierOption.repository.ts";
 
 export type ModifierOptionResponse = Omit<
     ModifierOption,

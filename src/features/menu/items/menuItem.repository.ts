@@ -1,4 +1,3 @@
-import { baseMenuItemSchema } from "../../../shared/models/schema/menu-items.ts";
 import { menuItemsTable } from "../../../shared/models/schema/menu-items.ts";
 import { categoriesTable } from "../../../shared/models/schema/categories.ts";
 import { modifierGroupsTable } from "../../../shared/models/schema/modifier-groups.ts";
@@ -15,7 +14,7 @@ import { ModifierGroup } from "../modifiers/modifierGroup.repository.ts";
 import { ModifierOption } from "../modifiers/modifierOption.repository.ts";
 import { ModifierOptionIngredient } from "../modifiers/modifierOptionIngredient.repository.ts";
 import { ItemRecipe } from "./itemRecipe.repository.ts";
-import type { Ingredient } from "../../ingredients/ingredient.respository.ts";
+import type { Ingredient } from "../../ingredients/ingredient.repository.ts";
 import { db } from "../../../shared/models/index.ts";
 import { eq, and, isNull, inArray } from "drizzle-orm";
 import { z } from "zod";

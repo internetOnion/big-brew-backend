@@ -4,10 +4,9 @@ import {
     text,
     boolean,
     timestamp,
-    index,
     uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { sql, isNull } from "drizzle-orm";
+import { isNull } from "drizzle-orm";
 
 export const terminalsTable = pgTable(
     "terminals",

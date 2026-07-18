@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../shared/utils/AppError.ts";
-import { logger } from "../../shared/utils/logger.ts";
 import { config } from "../../shared/config/index.ts";
 
 const ALLOWED_MIME_TYPES = /^image\/(jpeg|png|gif|webp|bmp|tiff)$/i;

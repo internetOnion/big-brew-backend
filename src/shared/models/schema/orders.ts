@@ -8,7 +8,7 @@ import {
     index,
     check,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, desc } from "drizzle-orm";
 import {
     orderStatusEnum,
     diningOptionEnum,
@@ -67,7 +67,8 @@ export const ordersTable = pgTable(
             .defaultNow(),
     },
     (t) => [
-        index("idx_orders_status_created").on(t.status, t.createdAt),
+        index("idx_orders_created_at").on(desc(t.createdAt)),
+        index("idx_orders_status_created").on(t.status, desc(t.createdAt)),
         index("idx_orders_created_by").on(t.createdBy),
         check("chk_subtotal_non_negative", sql`${t.subtotal} >= 0`),
         check("chk_total_non_negative", sql`${t.total} >= 0`),

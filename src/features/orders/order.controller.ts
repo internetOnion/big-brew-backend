@@ -94,7 +94,7 @@ export class OrderController {
 
     async processPayment(req: Request, res: Response) {
         const { id } = req.params as { id: string };
-        const { payment_method, amount_received, notes } = req.body;
+        const { payment_method, amount_received, notes: _notes } = req.body;
         const employeeId = req.employee!.id;
 
         const order = await orderService.processPayment(

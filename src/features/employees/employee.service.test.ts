@@ -183,7 +183,7 @@ describe("EmployeeService", () => {
             mockClerk.users.updateUser.mockResolvedValue({} as any);
             mockRepo.update.mockResolvedValue(makeEmployee());
 
-            const result = await employeeService.updateEmployee("emp-1", {
+            const _result = await employeeService.updateEmployee("emp-1", {
                 email: "new@example.com",
             });
 

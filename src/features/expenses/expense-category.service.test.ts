@@ -4,7 +4,6 @@ vi.mock("./expense-category.repository.ts");
 
 import { expenseCategoryService } from "./expense-category.service.ts";
 import { expenseCategoryRepository } from "./expense-category.repository.ts";
-import { AppError } from "../../shared/utils/AppError.ts";
 
 const mockRepo = vi.mocked(expenseCategoryRepository);
 

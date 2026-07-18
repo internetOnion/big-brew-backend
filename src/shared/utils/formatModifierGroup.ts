@@ -1,4 +1,4 @@
-import { ModifierGroup } from "../../features/menu/modifiers/modifierGroup.repository";
+import { ModifierGroup } from "../../features/menu/modifiers/modifierGroup.repository.ts";
 
 export type ModifierGroupResponse = Omit<
     ModifierGroup,

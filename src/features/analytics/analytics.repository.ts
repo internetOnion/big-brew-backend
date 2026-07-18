@@ -1,4 +1,4 @@
-import { sql, and, gte, lte, eq, desc } from "drizzle-orm";
+import { sql, and, gte, lte, eq } from "drizzle-orm";
 import { db } from "../../shared/models/index.ts";
 import {
     ordersTable,

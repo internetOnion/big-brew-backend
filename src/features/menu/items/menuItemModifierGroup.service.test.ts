@@ -4,14 +4,14 @@ vi.mock("../modifiers/modifierGroup.repository.ts");
 vi.mock("../modifiers/modifierOption.repository.ts");
 vi.mock("../modifiers/modifierOptionIngredient.repository.ts");
 vi.mock("./menuItem.repository.ts");
-vi.mock("../../ingredients/ingredient.respository.ts");
+vi.mock("../../ingredients/ingredient.repository.ts");
 
 import { menuItemModifierGroupService } from "./menuItemModifierGroup.service.ts";
 import { modifierGroupRepository } from "../modifiers/modifierGroup.repository.ts";
 import { modifierOptionRepository } from "../modifiers/modifierOption.repository.ts";
 import { modifierOptionIngredientRepository } from "../modifiers/modifierOptionIngredient.repository.ts";
 import { menuItemRepository } from "./menuItem.repository.ts";
-import { ingredientRepository } from "../../ingredients/ingredient.respository.ts";
+import { ingredientRepository } from "../../ingredients/ingredient.repository.ts";
 
 const mockGroupRepo = vi.mocked(modifierGroupRepository);
 const mockOptionRepo = vi.mocked(modifierOptionRepository);

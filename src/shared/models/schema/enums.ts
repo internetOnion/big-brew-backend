@@ -1,5 +1,4 @@
 import { pgEnum } from "drizzle-orm/pg-core";
-import { z } from "zod";
 import { createSelectSchema } from "drizzle-zod";
 
 export const employeeRoleEnum = pgEnum("employee_role", ["barista", "manager"]);

@@ -7,7 +7,7 @@ import {
     index,
     uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { sql, and, isNull } from "drizzle-orm";
+import { sql, isNull } from "drizzle-orm";
 import { employeeRoleEnum } from "./enums.ts";
 
 export const employeesTable = pgTable(

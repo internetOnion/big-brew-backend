@@ -1,11 +1,11 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 vi.mock("./itemRecipe.repository.ts");
-vi.mock("../../ingredients/ingredient.respository.ts");
+vi.mock("../../ingredients/ingredient.repository.ts");
 
 import { menuItemRecipeService } from "./menuItemRecipe.service.ts";
 import { itemRecipeRepository } from "./itemRecipe.repository.ts";
-import { ingredientRepository } from "../../ingredients/ingredient.respository.ts";
+import { ingredientRepository } from "../../ingredients/ingredient.repository.ts";
 
 const mockRecipeRepo = vi.mocked(itemRecipeRepository);
 const mockIngredientRepo = vi.mocked(ingredientRepository);
