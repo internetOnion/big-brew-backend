@@ -32,7 +32,7 @@ const createOrderSchema = z
             .min(1, "At least one item is required"),
         payment_method: z.enum(["cash", "qr"]).optional(),
         amount_received: z.number().positive().optional(),
-        confirmed_by: z.uuid().optional(),
+        pin: z.string().min(1, "PIN is required"),
     })
     .strict()
     .refine(
@@ -132,7 +132,7 @@ router.use(authenticate);
  */
 router.post(
     "/",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateBody(createOrderSchema),
     (req, res) => orderController.createOrder(req, res),
 );
@@ -199,7 +199,7 @@ router.post(
  */
 router.get(
     "/",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateQuery(listOrdersQuerySchema),
     (req, res) => orderController.listOrders(req, res),
 );
@@ -233,7 +233,7 @@ router.get(
  */
 router.get(
     "/:id",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateParams(idParamsSchema),
     (req, res) => orderController.getOrder(req, res),
 );
@@ -277,7 +277,7 @@ router.get(
  */
 router.patch(
     "/:id/status",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateParams(idParamsSchema),
     validateBody(updateStatusSchema),
     (req, res) => orderController.updateOrderStatus(req, res),
@@ -320,7 +320,7 @@ router.patch(
  */
 router.post(
     "/:id/pay",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateParams(idParamsSchema),
     validateBody(processPaymentSchema),
     (req, res) => orderController.processPayment(req, res),
@@ -357,7 +357,7 @@ router.post(
  */
 router.get(
     "/:id/payments",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateParams(idParamsSchema),
     (req, res) => orderController.getPayments(req, res),
 );
@@ -399,7 +399,7 @@ router.get(
  */
 router.post(
     "/:id/void-request",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateParams(idParamsSchema),
     validateBody(requestVoidSchema),
     (req, res) => orderController.requestVoid(req, res),
@@ -444,7 +444,7 @@ router.post(
  */
 router.post(
     "/:id/void-with-pin",
-    requireRole("barista", "manager"),
+    requireRole("barista", "manager", "terminal"),
     validateParams(idParamsSchema),
     validateBody(voidWithPinSchema),
     (req, res) => orderController.voidWithPin(req, res),

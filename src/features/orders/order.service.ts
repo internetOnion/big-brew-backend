@@ -275,7 +275,7 @@ export class OrderService {
         id: string,
         status: "pending" | "completed",
         employeeId: string,
-        employeeRole: EmployeeRole,
+        employeeRole: EmployeeRole | "terminal",
     ): Promise<Order> {
         const order = await this.getOrder(id);
 

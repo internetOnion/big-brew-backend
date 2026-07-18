@@ -28,7 +28,6 @@ const makeOrder = (overrides = {}) => ({
     total: "10.00",
     paymentStatus: "pending" as const,
     createdBy: { id: "emp-1", name: "Alice" },
-    confirmedBy: { id: "emp-1", name: "Alice" },
     voidRequestedBy: null,
     voidRequestedAt: null,
     voidApprovedBy: null,
@@ -355,7 +354,6 @@ describe("OrderService", () => {
                         },
                     ],
                     createdBy: "emp-1",
-                    confirmedBy: "emp-1",
                 },
                 "cash",
                 10,
@@ -389,7 +387,6 @@ describe("OrderService", () => {
                         },
                     ],
                     createdBy: "emp-1",
-                    confirmedBy: "emp-1",
                 }),
             ).rejects.toThrow("Menu item with ID missing not found");
         });
@@ -425,7 +422,6 @@ describe("OrderService", () => {
                         },
                     ],
                     createdBy: "emp-1",
-                    confirmedBy: "emp-1",
                 }),
             ).rejects.toThrow("Modifier option with ID mod-missing not found");
         });

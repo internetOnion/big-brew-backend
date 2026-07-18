@@ -7,8 +7,8 @@ import {
     menuItemsTable,
     modifierOptionsTable,
     modifierGroupsTable,
-    employeesTable,
     discountsTable,
+    employeesTable,
 } from "../../shared/models/schema/index.ts";
 import { paymentRepository, type Payment } from "./payment.repository.ts";
 import type {
@@ -29,7 +29,6 @@ export interface CreateOrderInput {
     discountId?: string;
     items: OrderItemInput[];
     createdBy: string;
-    confirmedBy: string;
 }
 
 export interface OrderItemModifier {
@@ -62,7 +61,6 @@ export interface Order {
     total: string;
     paymentStatus: PaymentStatus;
     createdBy: { id: string; name: string };
-    confirmedBy: { id: string; name: string };
     voidRequestedBy: { id: string; name: string } | null;
     voidRequestedAt: Date | null;
     voidApprovedBy: { id: string; name: string } | null;
@@ -225,7 +223,6 @@ export class OrderRepository {
                     total: total.toFixed(2),
                     paymentStatus: "pending",
                     createdBy: input.createdBy,
-                    confirmedBy: input.confirmedBy,
                 })
                 .returning();
 
@@ -302,8 +299,6 @@ export class OrderRepository {
                 updatedAt: ordersTable.updatedAt,
                 createdById: ordersTable.createdBy,
                 createdByName: employeesTable.name,
-                confirmedById: ordersTable.confirmedBy,
-                confirmedByName: sql<string>`cb.name`,
                 voidRequestedById: ordersTable.voidRequestedBy,
                 voidRequestedByName: sql<string>`vr.name`,
                 voidApprovedById: ordersTable.voidApprovedBy,
@@ -313,10 +308,6 @@ export class OrderRepository {
             .leftJoin(
                 employeesTable,
                 eq(ordersTable.createdBy, employeesTable.id),
-            )
-            .leftJoin(
-                sql`employees AS cb`,
-                sql`${ordersTable.confirmedBy} = cb.id`,
             )
             .leftJoin(
                 sql`employees AS vr`,
@@ -417,7 +408,6 @@ export class OrderRepository {
             total: o.total,
             paymentStatus: o.paymentStatus as PaymentStatus,
             createdBy: { id: o.createdById, name: o.createdByName },
-            confirmedBy: { id: o.confirmedById, name: o.confirmedByName! },
             voidRequestedBy: o.voidRequestedById
                 ? { id: o.voidRequestedById, name: o.voidRequestedByName! }
                 : null,
@@ -458,8 +448,6 @@ export class OrderRepository {
                 updatedAt: ordersTable.updatedAt,
                 createdById: ordersTable.createdBy,
                 createdByName: employeesTable.name,
-                confirmedById: ordersTable.confirmedBy,
-                confirmedByName: sql<string>`cb.name`,
                 voidRequestedById: ordersTable.voidRequestedBy,
                 voidRequestedByName: sql<string>`vr.name`,
                 voidApprovedById: ordersTable.voidApprovedBy,
@@ -469,10 +457,6 @@ export class OrderRepository {
             .leftJoin(
                 employeesTable,
                 eq(ordersTable.createdBy, employeesTable.id),
-            )
-            .leftJoin(
-                sql`employees AS cb`,
-                sql`${ordersTable.confirmedBy} = cb.id`,
             )
             .leftJoin(
                 sql`employees AS vr`,
@@ -575,7 +559,6 @@ export class OrderRepository {
             total: o.total,
             paymentStatus: o.paymentStatus as PaymentStatus,
             createdBy: { id: o.createdById, name: o.createdByName },
-            confirmedBy: { id: o.confirmedById, name: o.confirmedByName! },
             voidRequestedBy: o.voidRequestedById
                 ? { id: o.voidRequestedById, name: o.voidRequestedByName! }
                 : null,
@@ -641,8 +624,6 @@ export class OrderRepository {
                     updatedAt: ordersTable.updatedAt,
                     createdById: ordersTable.createdBy,
                     createdByName: employeesTable.name,
-                    confirmedById: ordersTable.confirmedBy,
-                    confirmedByName: sql<string>`cb.name`,
                     voidRequestedById: ordersTable.voidRequestedBy,
                     voidRequestedByName: sql<string>`vr.name`,
                     voidApprovedById: ordersTable.voidApprovedBy,
@@ -652,10 +633,6 @@ export class OrderRepository {
                 .leftJoin(
                     employeesTable,
                     eq(ordersTable.createdBy, employeesTable.id),
-                )
-                .leftJoin(
-                    sql`employees AS cb`,
-                    sql`${ordersTable.confirmedBy} = cb.id`,
                 )
                 .leftJoin(
                     sql`employees AS vr`,
@@ -733,10 +710,6 @@ export class OrderRepository {
                 total: o.total,
                 paymentStatus: o.paymentStatus as PaymentStatus,
                 createdBy: { id: o.createdById, name: o.createdByName! },
-                confirmedBy: {
-                    id: o.confirmedById,
-                    name: o.confirmedByName!,
-                },
                 voidRequestedBy: o.voidRequestedById
                     ? {
                           id: o.voidRequestedById,

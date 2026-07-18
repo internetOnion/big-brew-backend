@@ -566,9 +566,6 @@ const options: swaggerJsdoc.Options = {
                         createdBy: {
                             $ref: "#/components/schemas/OrderEmployee",
                         },
-                        confirmedBy: {
-                            $ref: "#/components/schemas/OrderEmployee",
-                        },
                         voidRequestedBy: {
                             allOf: [
                                 {
@@ -636,7 +633,6 @@ const options: swaggerJsdoc.Options = {
                         "total",
                         "paymentStatus",
                         "createdBy",
-                        "confirmedBy",
                         "items",
                         "payments",
                         "createdAt",
@@ -645,7 +641,7 @@ const options: swaggerJsdoc.Options = {
                 },
                 CreateOrderRequest: {
                     type: "object",
-                    required: ["dining_option", "items"],
+                    required: ["dining_option", "items", "pin"],
                     properties: {
                         dining_option: {
                             type: "string",
@@ -655,11 +651,10 @@ const options: swaggerJsdoc.Options = {
                             type: "string",
                             format: "uuid",
                         },
-                        confirmed_by: {
+                        pin: {
                             type: "string",
-                            format: "uuid",
                             description:
-                                "Optional - employee confirming the order on behalf of another",
+                                "6-digit employee PIN for order attribution",
                         },
                         items: {
                             type: "array",

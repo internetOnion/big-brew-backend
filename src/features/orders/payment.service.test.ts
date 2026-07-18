@@ -28,7 +28,6 @@ const makeOrder = (overrides = {}) => ({
     total: "10.00",
     paymentStatus: "pending" as const,
     createdBy: { id: "emp-1", name: "Alice" },
-    confirmedBy: { id: "emp-1", name: "Alice" },
     voidRequestedBy: null,
     voidRequestedAt: null,
     voidApprovedBy: null,

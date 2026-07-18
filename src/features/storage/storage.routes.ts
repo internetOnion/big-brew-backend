@@ -58,7 +58,7 @@ const deleteSchema = z
  *               file:
  *                 type: string
  *                 format: binary
- *                description: Image file (JPEG, PNG, GIF, WebP, BMP, TIFF) up to 5 MB
+ *                 description: Image file (JPEG, PNG, GIF, WebP, BMP, TIFF) up to 5 MB
  *     responses:
  *       200:
  *         description: File uploaded, returns public URL

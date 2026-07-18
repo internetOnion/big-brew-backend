@@ -40,9 +40,6 @@ export const ordersTable = pgTable(
         createdBy: uuid("created_by")
             .notNull()
             .references(() => employeesTable.id),
-        confirmedBy: uuid("confirmed_by")
-            .notNull()
-            .references(() => employeesTable.id),
         voidRequestedBy: uuid("void_requested_by").references(
             () => employeesTable.id,
         ),

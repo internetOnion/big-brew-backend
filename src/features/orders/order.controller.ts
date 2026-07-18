@@ -2,8 +2,29 @@ import type { Request, Response } from "express";
 import { authService } from "../auth/auth.service.ts";
 import { orderService } from "./order.service.ts";
 import { paymentService } from "./payment.service.ts";
+import { AppError } from "../../shared/utils/AppError.ts";
 
 export class OrderController {
+    // ponytail: terminal or employee can place orders. Hold the actor
+    // identity once per handler instead of repeating req.employee!.
+    private getActor(req: Request): {
+        id: string;
+        role: "barista" | "manager" | "terminal";
+        type: "employee" | "terminal";
+    } {
+        if (req.terminal) {
+            return { id: req.terminal.id, role: "terminal", type: "terminal" };
+        }
+        if (req.employee) {
+            return {
+                id: req.employee.id,
+                role: req.employee.role,
+                type: "employee",
+            };
+        }
+        throw AppError.unauthorized("Authentication required");
+    }
+
     async createOrder(req: Request, res: Response) {
         const {
             dining_option,
@@ -11,9 +32,11 @@ export class OrderController {
             items,
             payment_method,
             amount_received,
-            confirmed_by,
+            pin,
         } = req.body;
-        const employeeId = req.employee!.id;
+
+        // PIN verification: barista/manager identity per order
+        const employee = await authService.verifyPin(pin, req.ip ?? "unknown");
 
         const order = await orderService.createOrder(
             {
@@ -25,8 +48,7 @@ export class OrderController {
                     unitPrice: item.unit_price,
                     modifierOptionIds: item.modifier_option_ids || [],
                 })),
-                createdBy: employeeId,
-                confirmedBy: confirmed_by || employeeId,
+                createdBy: employee.id,
             },
             payment_method,
             amount_received,
@@ -79,14 +101,13 @@ export class OrderController {
     async updateOrderStatus(req: Request, res: Response) {
         const { id } = req.params as { id: string };
         const { status } = req.body;
-        const employeeId = req.employee!.id;
-        const employeeRole = req.employee!.role;
+        const actor = this.getActor(req);
 
         const order = await orderService.updateOrderStatus(
             id,
             status,
-            employeeId,
-            employeeRole,
+            actor.id,
+            actor.role,
         );
 
         return res.json(order);
@@ -95,12 +116,12 @@ export class OrderController {
     async processPayment(req: Request, res: Response) {
         const { id } = req.params as { id: string };
         const { payment_method, amount_received, notes: _notes } = req.body;
-        const employeeId = req.employee!.id;
+        const actor = this.getActor(req);
 
         const order = await orderService.processPayment(
             id,
             payment_method,
-            employeeId,
+            actor.id,
             amount_received,
         );
 
@@ -110,17 +131,18 @@ export class OrderController {
     async requestVoid(req: Request, res: Response) {
         const { id } = req.params as { id: string };
         const { reason, verified_employee_id } = req.body;
-        const employeeId = verified_employee_id || req.employee!.id;
+        const actor = this.getActor(req);
+        const requestedById = verified_employee_id || actor.id;
 
-        const order = await orderService.requestVoid(id, employeeId, reason);
+        const order = await orderService.requestVoid(id, requestedById, reason);
         return res.json(order);
     }
 
     async approveVoid(req: Request, res: Response) {
         const { id } = req.params as { id: string };
-        const employeeId = req.employee!.id;
+        const actor = this.getActor(req);
 
-        const order = await orderService.approveVoid(id, employeeId);
+        const order = await orderService.approveVoid(id, actor.id);
         return res.json(order);
     }
 

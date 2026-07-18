@@ -4942,7 +4942,6 @@ const seedOrders = async () => {
         );
 
         const createdBy = employeeIds[Math.floor(rng() * employeeIds.length)];
-        const confirmedBy = employeeIds[Math.floor(rng() * employeeIds.length)];
         const diningOption = rng() < 0.6 ? "dine_in" : "take_away";
 
         // 1-4 items per order
@@ -5030,7 +5029,6 @@ const seedOrders = async () => {
             total: total.toFixed(2),
             paymentStatus: "paid",
             createdBy,
-            confirmedBy,
             createdAt: orderTime,
             updatedAt: orderTime,
         });
