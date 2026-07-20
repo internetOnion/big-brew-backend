@@ -48,7 +48,6 @@ const authRateLimit = rateLimit({
 
 app.use("/api/auth/login", authRateLimit);
 app.use("/api/auth/terminal-login", authRateLimit);
-app.use("/api/auth/verify-pin", authRateLimit);
 
 app.use("/api", routes);
 

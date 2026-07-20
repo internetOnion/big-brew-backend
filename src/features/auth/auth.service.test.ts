@@ -475,6 +475,47 @@ describe("AuthService", () => {
             ).rejects.toThrow("Invalid PIN");
         });
 
+        it("does not rate-limit after 5 successful PINs", async () => {
+            mockEmployeeRepo.findActiveEmployees.mockResolvedValue([
+                makeEmployee(),
+            ]);
+            mockBcrypt.compare.mockResolvedValue(true as never);
+
+            for (let i = 0; i < 5; i++) {
+                await expect(
+                    authService.verifyPin("1234", "10.0.0.50"),
+                ).resolves.toMatchObject({ id: "emp-1" });
+            }
+        });
+
+        it("resets the failure counter on a successful PIN", async () => {
+            mockEmployeeRepo.findActiveEmployees.mockResolvedValue([
+                makeEmployee(),
+            ]);
+
+            // 4 failures
+            mockBcrypt.compare.mockResolvedValue(false as never);
+            for (let i = 0; i < 4; i++) {
+                await expect(
+                    authService.verifyPin("9999", "10.0.0.60"),
+                ).rejects.toThrow("Invalid PIN");
+            }
+
+            // 1 success clears the slate
+            mockBcrypt.compare.mockResolvedValue(true as never);
+            await expect(
+                authService.verifyPin("1234", "10.0.0.60"),
+            ).resolves.toMatchObject({ id: "emp-1" });
+
+            // 4 more failures still allowed (not blocked at 5th overall)
+            mockBcrypt.compare.mockResolvedValue(false as never);
+            for (let i = 0; i < 4; i++) {
+                await expect(
+                    authService.verifyPin("9999", "10.0.0.60"),
+                ).rejects.toThrow("Invalid PIN");
+            }
+        });
+
         it("rate-limits after 5 failures from same IP", async () => {
             mockEmployeeRepo.findActiveEmployees.mockResolvedValue([
                 makeEmployee(),

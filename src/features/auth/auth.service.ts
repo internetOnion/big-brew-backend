@@ -27,27 +27,32 @@ const SALT_ROUNDS = 10;
 const MAX_PIN_ATTEMPTS = 5;
 const PIN_LOCKOUT_MS = 15 * 60 * 1000;
 
-// ponytail: in-memory per-IP rate limit — resets on restart, good enough for v1
+// ponytail: in-memory per-IP failure limiter — resets on restart, good
+// enough for v1. Only failed PIN attempts count; a success clears the slate.
 const pinAttempts = new Map<string, { count: number; resetAt: number }>();
 
-const checkPinRateLimit = (
+const recordPinFailure = (
     ip: string,
-): { allowed: boolean; retryAfter?: number } => {
+): { blocked: boolean; retryAfter?: number } => {
     const now = Date.now();
     const entry = pinAttempts.get(ip);
 
     if (!entry || now > entry.resetAt) {
         pinAttempts.set(ip, { count: 1, resetAt: now + PIN_LOCKOUT_MS });
-        return { allowed: true };
+        return { blocked: false };
     }
 
     entry.count++;
     if (entry.count > MAX_PIN_ATTEMPTS) {
         const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-        return { allowed: false, retryAfter };
+        return { blocked: true, retryAfter };
     }
 
-    return { allowed: true };
+    return { blocked: false };
+};
+
+const resetPinAttempts = (ip: string): void => {
+    pinAttempts.delete(ip);
 };
 
 interface SignupInput {
@@ -339,26 +344,27 @@ export class AuthService {
         name: string;
         role: EmployeeRole;
     }> {
-        const rateLimit = checkPinRateLimit(ip);
-        if (!rateLimit.allowed) {
-            throw AppError.tooManyRequests(
-                "Too many PIN attempts. Try again later.",
-                { retryAfter: rateLimit.retryAfter },
-            );
-        }
-
         const employees = await employeeRepository.findActiveEmployees();
 
         for (const emp of employees) {
             if (!emp.pin) continue;
             const match = await bcrypt.compare(pin, emp.pin);
             if (match) {
+                resetPinAttempts(ip);
                 logger.info(
                     { employeeId: emp.id, ip, route: "verify-pin" },
                     "PIN verification success",
                 );
                 return { id: emp.id, name: emp.name, role: emp.role };
             }
+        }
+
+        const failure = recordPinFailure(ip);
+        if (failure.blocked) {
+            throw AppError.tooManyRequests(
+                "Too many PIN attempts. Try again later.",
+                { retryAfter: failure.retryAfter },
+            );
         }
 
         logger.warn({ ip, route: "verify-pin" }, "PIN verification failure");

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import bcrypt from "bcrypt";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./index.ts";
 import { clerkClient } from "../lib/clerk.ts";
 import {
@@ -143,6 +143,17 @@ const requireEnv = (name: string): string => {
         process.exit(1);
     }
     return value;
+};
+
+const createRng = (seed: number) => {
+    let s = seed;
+    return () => {
+        s |= 0;
+        s = (s + 0x6d2b79f5) | 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
 };
 
 export const seed = async () => {
@@ -3639,18 +3650,6 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    // Resolve the real (possibly pre-existing) category IDs by name so the
-    // dependent expenses insert references UUIDs that actually exist.
-    const seededExpenseCategories = await db
-        .select({
-            id: expenseCategoriesTable.id,
-            name: expenseCategoriesTable.name,
-        })
-        .from(expenseCategoriesTable);
-    const expenseCategoryIdByName = Object.fromEntries(
-        seededExpenseCategories.map((c) => [c.name, c.id]),
-    );
-
     console.log("  Discounts...");
     await db
         .insert(discountsTable)
@@ -3678,223 +3677,134 @@ export const seed = async () => {
         .onConflictDoNothing();
 
     console.log("  Expenses...");
-    await db
-        .insert(expensesTable)
-        .values([
-            {
-                id: "d1000001-0000-4000-8000-000000000001",
-                description: "Coffee cup restock (12oz, 16oz)",
-                amount: "245.00",
-                expenseCategoryId: expenseCategoryIdByName["Supplies"],
-                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-                recordedAt: new Date(Date.now() - 5 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000002",
-                description: "Napkins & takeaway bags",
-                amount: "89.50",
-                expenseCategoryId: expenseCategoryIdByName["Supplies"],
-                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-                recordedAt: new Date(Date.now() - 12 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000003",
-                description: "Cleaning supplies (sanitizer, degreaser)",
-                amount: "67.00",
-                expenseCategoryId: expenseCategoryIdByName["Supplies"],
-                recordedBy: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
-                recordedAt: new Date(Date.now() - 20 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000004",
-                description: "Straws & cup sleeves",
-                amount: "42.00",
-                expenseCategoryId: expenseCategoryIdByName["Supplies"],
-                recordedBy: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
-                recordedAt: new Date(Date.now() - 30 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000005",
-                description: "Monthly electricity bill",
-                amount: "520.00",
-                expenseCategoryId: expenseCategoryIdByName["Utilities"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 7 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000006",
-                description: "Monthly gas bill",
-                amount: "490.00",
-                expenseCategoryId: expenseCategoryIdByName["Utilities"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 37 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000007",
-                description: "Water & sewer",
-                amount: "185.00",
-                expenseCategoryId: expenseCategoryIdByName["Utilities"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 14 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000008",
-                description: "Internet & phone",
-                amount: "95.00",
-                expenseCategoryId: expenseCategoryIdByName["Utilities"],
-                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-                recordedAt: new Date(Date.now() - 3 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000009",
-                description: "Monthly rent — July",
-                amount: "2500.00",
-                expenseCategoryId: expenseCategoryIdByName["Rent"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 25 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000010",
-                description: "Monthly rent — June",
-                amount: "2500.00",
-                expenseCategoryId: expenseCategoryIdByName["Rent"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 55 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000011",
-                description: "Monthly rent — May",
-                amount: "2500.00",
-                expenseCategoryId: expenseCategoryIdByName["Rent"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 85 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000012",
-                description: "Espresso machine maintenance",
-                amount: "350.00",
-                expenseCategoryId: expenseCategoryIdByName["Maintenance"],
-                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-                recordedAt: new Date(Date.now() - 10 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000013",
-                description: "AC service & filter replacement",
-                amount: "220.00",
-                expenseCategoryId: expenseCategoryIdByName["Maintenance"],
-                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-                recordedAt: new Date(Date.now() - 40 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000014",
-                description: "Plumbing — sink drain repair",
-                amount: "175.00",
-                expenseCategoryId: expenseCategoryIdByName["Maintenance"],
-                recordedBy: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
-                recordedAt: new Date(Date.now() - 60 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000015",
-                description:
-                    "Specialty syrup restock (vanilla, caramel, hazelnut)",
-                amount: "185.00",
-                expenseCategoryId: expenseCategoryIdByName["Ingredients"],
-                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-                recordedAt: new Date(Date.now() - 8 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000016",
-                description:
-                    "Pastry ingredients bulk order (flour, butter, sugar)",
-                amount: "320.00",
-                expenseCategoryId: expenseCategoryIdByName["Ingredients"],
-                recordedBy: "265a9de3-aaf0-4a98-9143-d12ab3b67478",
-                recordedAt: new Date(Date.now() - 18 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000017",
-                description: "Commercial blender replacement",
-                amount: "450.00",
-                expenseCategoryId: expenseCategoryIdByName["Equipment"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 45 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000018",
-                description: "Ice machine condenser fan motor",
-                amount: "175.00",
-                expenseCategoryId: expenseCategoryIdByName["Equipment"],
-                recordedBy: "3a7af35d-daca-4a0f-bc74-e5d3815861e9",
-                recordedAt: new Date(Date.now() - 70 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000019",
-                description: "Instagram & Facebook ads — July",
-                amount: "200.00",
-                expenseCategoryId: expenseCategoryIdByName["Marketing"],
-                recordedBy: "1d04ed7f-e00a-450e-9397-d87ded11c5c6",
-                recordedAt: new Date(Date.now() - 15 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-            {
-                id: "d1000001-0000-4000-8000-000000000020",
-                description: "Local farmers market booth fee",
-                amount: "75.00",
-                expenseCategoryId: expenseCategoryIdByName["Marketing"],
-                recordedBy: "f74bca7b-fbbb-4ad3-b084-dc77eff04d3b",
-                recordedAt: new Date(Date.now() - 50 * 86400000),
-                createdAt: new Date(Date.now() - 50 * 86400000),
-            },
-        ])
-        .onConflictDoNothing();
+    await seedExpenses();
 
     await seedOrders();
 
     console.log("Seed complete.");
 };
 
+const seedExpenses = async () => {
+    const EXPENSE_COUNT = parseInt(process.env.SEED_EXPENSE_COUNT ?? "80", 10);
+
+    const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(expensesTable);
+    const existingCount = Number(count);
+    if (existingCount >= EXPENSE_COUNT) {
+        console.log("  Expenses already seeded, skipping...");
+        return;
+    }
+    const toGenerate = EXPENSE_COUNT - existingCount;
+    console.log(`  Expenses (+${toGenerate} of ${EXPENSE_COUNT})...`);
+
+    const categories = await db
+        .select({
+            id: expenseCategoriesTable.id,
+            name: expenseCategoriesTable.name,
+        })
+        .from(expenseCategoriesTable);
+    const employees = await db
+        .select({ id: employeesTable.id })
+        .from(employeesTable);
+    const employeeIds = employees.map((e) => e.id);
+
+    const descriptionsByCategory: Record<string, string[]> = {
+        Supplies: [
+            "Coffee cup restock (12oz, 16oz)",
+            "Napkins & takeaway bags",
+            "Straws & cup sleeves",
+            "Lid restock",
+            "Stirrers & sugar packets",
+        ],
+        Utilities: [
+            "Monthly electricity bill",
+            "Monthly gas bill",
+            "Water & sewer",
+            "Internet & phone",
+        ],
+        Rent: ["Monthly rent"],
+        Maintenance: [
+            "Espresso machine maintenance",
+            "AC service & filter replacement",
+            "Plumbing — sink drain repair",
+            "Grinder calibration",
+        ],
+        Ingredients: [
+            "Specialty syrup restock",
+            "Pastry ingredients bulk order",
+            "Milk delivery",
+            "Coffee bean restock",
+        ],
+        Equipment: [
+            "Commercial blender replacement",
+            "Ice machine condenser fan motor",
+            "New POS tablet",
+        ],
+        Marketing: [
+            "Instagram & Facebook ads",
+            "Local farmers market booth fee",
+            "Loyalty program printing",
+        ],
+        Other: ["Miscellaneous", "Staff training materials"],
+    };
+
+    const amountRangeByCategory: Record<string, [number, number]> = {
+        Supplies: [40, 260],
+        Utilities: [90, 540],
+        Rent: [2500, 2500],
+        Maintenance: [150, 380],
+        Ingredients: [180, 340],
+        Equipment: [170, 460],
+        Marketing: [70, 220],
+        Other: [20, 120],
+    };
+
+    const rng = createRng(7);
+    const now = Date.now();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const toInsert: (typeof expensesTable.$inferInsert)[] = [];
+
+    for (let i = 0; i < toGenerate; i++) {
+        const cat = categories[Math.floor(rng() * categories.length)];
+        const descs = descriptionsByCategory[cat.name] ?? ["Miscellaneous"];
+        const description = descs[Math.floor(rng() * descs.length)];
+        const [min, max] = amountRangeByCategory[cat.name] ?? [20, 200];
+        const amount = (min + rng() * (max - min)).toFixed(2);
+        const daysAgo = Math.floor(rng() * 90);
+        const recordedAt = new Date(now - daysAgo * msPerDay);
+        const recordedBy = employeeIds[Math.floor(rng() * employeeIds.length)];
+        toInsert.push({
+            id: crypto.randomUUID(),
+            description,
+            amount,
+            expenseCategoryId: cat.id,
+            recordedBy,
+            recordedAt,
+            createdAt: recordedAt,
+        });
+    }
+
+    await db.insert(expensesTable).values(toInsert).onConflictDoNothing();
+    console.log(`    ${toInsert.length} expenses`);
+};
+
 const seedOrders = async () => {
-    // Skip if orders already seeded
-    const existing = await db
-        .select({ id: ordersTable.id })
-        .from(ordersTable)
-        .limit(1);
-    if (existing.length > 0) {
+    const ORDER_COUNT = parseInt(process.env.SEED_ORDER_COUNT ?? "1000", 10);
+
+    const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(ordersTable);
+    const existingCount = Number(count);
+    if (existingCount >= ORDER_COUNT) {
         console.log("  Orders already seeded, skipping...");
         return;
     }
+    const toGenerate = ORDER_COUNT - existingCount;
+    console.log(`  Orders (+${toGenerate} of ${ORDER_COUNT})...`);
 
-    console.log("  Orders (100 demo orders)...");
+    console.log("  Orders (demo orders)...");
 
-    // Deterministic pseudo-random number generator (mulberry32)
-    const createRng = (seed: number) => {
-        let s = seed;
-        return () => {
-            s |= 0;
-            s = (s + 0x6d2b79f5) | 0;
-            let t = Math.imul(s ^ (s >>> 15), 1 | s);
-            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-    };
     const rng = createRng(42);
 
     // Menu items: id, basePrice, category
@@ -4896,7 +4806,6 @@ const seedOrders = async () => {
 
     const now = Date.now();
     const msPerDay = 24 * 60 * 60 * 1000;
-    const ORDER_COUNT = 100;
 
     const ordersToInsert: (typeof ordersTable.$inferInsert)[] = [];
     const orderItemsToInsert: (typeof orderItemsTable.$inferInsert)[] = [];
@@ -4929,10 +4838,23 @@ const seedOrders = async () => {
         return menuItems[0];
     };
 
-    for (let i = 0; i < ORDER_COUNT; i++) {
+    for (let i = 0; i < toGenerate; i++) {
         const orderId = crypto.randomUUID();
-        const daysAgo = Math.floor(rng() * 30);
-        const hoursOffset = Math.floor(rng() * 14) + 7; // 7am-9pm
+        const daysAgo = Math.floor(rng() * 90);
+        const hourBuckets = [
+            7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        ];
+        const hourWeights = [2, 3, 4, 5, 6, 9, 9, 5, 4, 4, 6, 7, 5, 2];
+        const hourTotal = hourWeights.reduce((a, b) => a + b, 0);
+        let hr = rng() * hourTotal;
+        let hoursOffset = hourBuckets[hourBuckets.length - 1];
+        for (let h = 0; h < hourBuckets.length; h++) {
+            hr -= hourWeights[h];
+            if (hr <= 0) {
+                hoursOffset = hourBuckets[h];
+                break;
+            }
+        }
         const minutesOffset = Math.floor(rng() * 60);
         const orderTime = new Date(
             now -
