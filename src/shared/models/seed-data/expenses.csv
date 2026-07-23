@@ -1,0 +1,10 @@
+category,description,type,amount_min,amount_max,frequency,weight
+rent,Monthly rent,fixed,2500,2500,monthly,1
+utilities,Utilities bill,fixed,300,540,monthly,1
+labor,Biweekly payroll,variable,1800,2600,biweekly,1
+ingredients,Ingredient restock,variable,400,900,weekly,3
+supplies,Supplies restock,variable,80,260,weekly,2
+maintenance,Maintenance,variable,150,380,monthly,0.4
+equipment,Equipment,variable,170,460,monthly,0.2
+marketing,Marketing,variable,70,220,monthly,0.5
+other,Miscellaneous,variable,20,120,weekly,1

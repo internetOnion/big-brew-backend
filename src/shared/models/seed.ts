@@ -1,5 +1,8 @@
 import "dotenv/config";
 import bcrypt from "bcrypt";
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./index.ts";
 import { clerkClient } from "../lib/clerk.ts";
@@ -49,6 +52,7 @@ const EXPENSE_CATEGORY_IDS = {
     equipment: "67f634f7-ccd5-47af-8c23-a52abf590e81",
     marketing: "315d376b-bf96-4a4f-a081-6ea53f9ddd74",
     other: "0f4579ab-9047-4f17-a8e2-e6f6db6db05e",
+    labor: "7c2f4b6e-1c3a-4f0d-9b2e-2a1f8c5d4e3b",
 } as const;
 
 const DEV_EMPLOYEES: SeedEmployee[] = [
@@ -156,6 +160,19 @@ const createRng = (seed: number) => {
     };
 };
 
+// ponytail: stdlib CSV read for the committed real-sample seed data
+const SEED_DATA_DIR = join(
+    dirname(fileURLToPath(import.meta.url)),
+    "seed-data",
+);
+
+const readSeedCsv = (name: string): string[][] => {
+    const raw = readFileSync(join(SEED_DATA_DIR, name), "utf8")
+        .trim()
+        .split("\n");
+    return raw.map((line) => line.split(","));
+};
+
 export const seed = async () => {
     requireEnv("NEON_DATABASE_URL");
     requireEnv("SUPABASE_URL");
@@ -257,6 +274,7 @@ export const seed = async () => {
             { id: EXPENSE_CATEGORY_IDS.supplies, name: "Supplies" },
             { id: EXPENSE_CATEGORY_IDS.utilities, name: "Utilities" },
             { id: EXPENSE_CATEGORY_IDS.rent, name: "Rent" },
+            { id: EXPENSE_CATEGORY_IDS.labor, name: "Labor" },
             { id: EXPENSE_CATEGORY_IDS.maintenance, name: "Maintenance" },
             { id: EXPENSE_CATEGORY_IDS.ingredients, name: "Ingredients" },
             { id: EXPENSE_CATEGORY_IDS.equipment, name: "Equipment" },
@@ -3676,136 +3694,203 @@ export const seed = async () => {
         ])
         .onConflictDoNothing();
 
-    console.log("  Expenses...");
-    await seedExpenses();
+    const revenue = await seedOrders();
 
-    await seedOrders();
+    console.log("  Expenses...");
+    await seedExpenses(revenue);
 
     console.log("Seed complete.");
 };
 
-const seedExpenses = async () => {
-    const EXPENSE_COUNT = parseInt(process.env.SEED_EXPENSE_COUNT ?? "80", 10);
+const DAYS = 90;
+
+// Instantiate the committed expense templates across the window, then scale
+// variable expenses so total spend lands at `ratio` of order revenue. Fixed
+// expenses (rent, utilities) keep their real amounts.
+const seedExpenses = async (revenue: number) => {
+    const ratio = parseFloat(process.env.SEED_EXPENSE_RATIO ?? "0.72");
 
     const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(expensesTable);
-    const existingCount = Number(count);
-    if (existingCount >= EXPENSE_COUNT) {
+    if (Number(count) > 0) {
         console.log("  Expenses already seeded, skipping...");
         return;
     }
-    const toGenerate = EXPENSE_COUNT - existingCount;
-    console.log(`  Expenses (+${toGenerate} of ${EXPENSE_COUNT})...`);
 
-    const categories = await db
+    const catRows = await db
         .select({
             id: expenseCategoriesTable.id,
             name: expenseCategoriesTable.name,
         })
         .from(expenseCategoriesTable);
+    const catIdByName: Record<string, string> = {};
+    for (const c of catRows) catIdByName[c.name.toLowerCase()] = c.id;
+
     const employees = await db
         .select({ id: employeesTable.id })
         .from(employeesTable);
     const employeeIds = employees.map((e) => e.id);
 
-    const descriptionsByCategory: Record<string, string[]> = {
-        Supplies: [
-            "Coffee cup restock (12oz, 16oz)",
-            "Napkins & takeaway bags",
-            "Straws & cup sleeves",
-            "Lid restock",
-            "Stirrers & sugar packets",
-        ],
-        Utilities: [
-            "Monthly electricity bill",
-            "Monthly gas bill",
-            "Water & sewer",
-            "Internet & phone",
-        ],
-        Rent: ["Monthly rent"],
-        Maintenance: [
-            "Espresso machine maintenance",
-            "AC service & filter replacement",
-            "Plumbing — sink drain repair",
-            "Grinder calibration",
-        ],
-        Ingredients: [
-            "Specialty syrup restock",
-            "Pastry ingredients bulk order",
-            "Milk delivery",
-            "Coffee bean restock",
-        ],
-        Equipment: [
-            "Commercial blender replacement",
-            "Ice machine condenser fan motor",
-            "New POS tablet",
-        ],
-        Marketing: [
-            "Instagram & Facebook ads",
-            "Local farmers market booth fee",
-            "Loyalty program printing",
-        ],
-        Other: ["Miscellaneous", "Staff training materials"],
+    type Tmpl = {
+        cat: string;
+        desc: string;
+        type: "fixed" | "variable";
+        min: number;
+        max: number;
+        freq: string;
+        weight: number;
     };
-
-    const amountRangeByCategory: Record<string, [number, number]> = {
-        Supplies: [40, 260],
-        Utilities: [90, 540],
-        Rent: [2500, 2500],
-        Maintenance: [150, 380],
-        Ingredients: [180, 340],
-        Equipment: [170, 460],
-        Marketing: [70, 220],
-        Other: [20, 120],
-    };
+    const templates: Tmpl[] = readSeedCsv("expenses.csv")
+        .slice(1)
+        .filter((r) => r[0])
+        .map((r) => ({
+            cat: r[0].trim(),
+            desc: r[1].trim(),
+            type: r[2].trim() === "fixed" ? "fixed" : "variable",
+            min: parseFloat(r[3]),
+            max: parseFloat(r[4]),
+            freq: r[5].trim(),
+            weight: parseFloat(r[6] ?? "1"),
+        }));
 
     const rng = createRng(7);
     const now = Date.now();
     const msPerDay = 24 * 60 * 60 * 1000;
-    const toInsert: (typeof expensesTable.$inferInsert)[] = [];
 
-    for (let i = 0; i < toGenerate; i++) {
-        const cat = categories[Math.floor(rng() * categories.length)];
-        const descs = descriptionsByCategory[cat.name] ?? ["Miscellaneous"];
-        const description = descs[Math.floor(rng() * descs.length)];
-        const [min, max] = amountRangeByCategory[cat.name] ?? [20, 200];
-        const amount = (min + rng() * (max - min)).toFixed(2);
-        const daysAgo = Math.floor(rng() * 90);
-        const recordedAt = new Date(now - daysAgo * msPerDay);
+    type Inst = {
+        cat: string;
+        desc: string;
+        type: "fixed" | "variable";
+        amount: number;
+        recordedAt: Date;
+    };
+    const instances: Inst[] = [];
+
+    for (let d = 0; d < DAYS; d++) {
+        const dayDate = new Date(now - d * msPerDay);
+
+        for (const t of templates) {
+            const periodHit =
+                (t.freq === "monthly" && d % 30 === 0) ||
+                (t.freq === "weekly" && d % 7 === 0) ||
+                (t.freq === "biweekly" && d % 14 === 0) ||
+                (t.freq === "once" && d === 0) ||
+                (t.freq !== "monthly" &&
+                    t.freq !== "weekly" &&
+                    t.freq !== "biweekly" &&
+                    t.freq !== "once");
+            if (!periodHit) continue;
+
+            const reps =
+                t.weight >= 1
+                    ? Math.max(1, Math.round(t.weight))
+                    : rng() < t.weight
+                      ? 1
+                      : 0;
+            for (let k = 0; k < reps; k++) {
+                const amount = t.min + rng() * (t.max - t.min);
+                const recordedAt = new Date(
+                    dayDate.getTime() + Math.floor(rng() * 24 * 60) * 60 * 1000,
+                );
+                instances.push({
+                    cat: t.cat,
+                    desc: t.desc,
+                    type: t.type,
+                    amount: Math.round(amount * 100) / 100,
+                    recordedAt,
+                });
+            }
+        }
+    }
+
+    const fixedSum = instances
+        .filter((i) => i.type === "fixed")
+        .reduce((s, i) => s + i.amount, 0);
+    const variableRaw = instances
+        .filter((i) => i.type === "variable")
+        .reduce((s, i) => s + i.amount, 0);
+    const target = revenue * ratio;
+    const neededVariable = target - fixedSum;
+    const factor =
+        variableRaw > 0 && neededVariable > 0
+            ? neededVariable / variableRaw
+            : 1;
+
+    const toInsert: (typeof expensesTable.$inferInsert)[] = [];
+    for (const inst of instances) {
+        const amount =
+            inst.type === "variable"
+                ? Math.round(inst.amount * factor * 100) / 100
+                : inst.amount;
         const recordedBy = employeeIds[Math.floor(rng() * employeeIds.length)];
         toInsert.push({
             id: crypto.randomUUID(),
-            description,
-            amount,
-            expenseCategoryId: cat.id,
+            description: inst.desc,
+            amount: amount.toFixed(2),
+            expenseCategoryId: catIdByName[inst.cat.toLowerCase()],
             recordedBy,
-            recordedAt,
-            createdAt: recordedAt,
+            recordedAt: inst.recordedAt,
+            createdAt: inst.recordedAt,
         });
     }
 
-    await db.insert(expensesTable).values(toInsert).onConflictDoNothing();
-    console.log(`    ${toInsert.length} expenses`);
+    for (let i = 0; i < toInsert.length; i += 50) {
+        await db
+            .insert(expensesTable)
+            .values(toInsert.slice(i, i + 50))
+            .onConflictDoNothing();
+    }
+    const total = toInsert.reduce((s, e) => s + parseFloat(e.amount), 0);
+    console.log(
+        `    ${toInsert.length} expenses, $${total.toFixed(0)} (${((total / revenue) * 100).toFixed(0)}% of revenue)`,
+    );
 };
 
-const seedOrders = async () => {
-    const ORDER_COUNT = parseInt(process.env.SEED_ORDER_COUNT ?? "1000", 10);
+const seedOrders = async (): Promise<number> => {
+    const avgPerDay = parseFloat(process.env.SEED_AVG_ORDERS_PER_DAY ?? "185");
 
     const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(ordersTable);
     const existingCount = Number(count);
-    if (existingCount >= ORDER_COUNT) {
+    const expectedTotal = Math.max(2000, Math.round(DAYS * avgPerDay));
+    if (existingCount >= expectedTotal) {
         console.log("  Orders already seeded, skipping...");
-        return;
+        const [{ total }] = await db
+            .select({
+                total: sql<number>`coalesce(sum(total::numeric), 0)::float`,
+            })
+            .from(ordersTable);
+        return Number(total);
     }
-    const toGenerate = ORDER_COUNT - existingCount;
-    console.log(`  Orders (+${toGenerate} of ${ORDER_COUNT})...`);
+    console.log(
+        `  Orders (+${expectedTotal - existingCount} of ${expectedTotal})...`,
+    );
+
+    // Real-sample sales mix (category -> weight) drives item popularity
+    const mixRows = readSeedCsv("sales-mix.csv").slice(1);
+    const weights: Record<string, number> = {};
+    for (const [cat, w] of mixRows) {
+        const c = cat?.trim().toLowerCase();
+        if (!c) continue;
+        weights[c] = parseFloat(w);
+    }
+    const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+
+    // Per-day foot traffic: weekday vs weekend skew + small jitter
+    const rng = createRng(42);
+    const dailyCounts: number[] = [];
+    for (let d = 0; d < DAYS; d++) {
+        const date = new Date(Date.now() - d * 24 * 60 * 60 * 1000);
+        const weekend = date.getDay() === 0 || date.getDay() === 6;
+        const jitter = 0.85 + rng() * 0.3;
+        dailyCounts.push(
+            Math.max(1, Math.round(avgPerDay * (weekend ? 1.2 : 1.0) * jitter)),
+        );
+    }
 
     console.log("  Orders (demo orders)...");
-
-    const rng = createRng(42);
 
     // Menu items: id, basePrice, category
     type MenuItemSeed = {
@@ -4815,15 +4900,7 @@ const seedOrders = async () => {
     const stockMovementsToInsert: (typeof stockMovementsTable.$inferInsert)[] =
         [];
 
-    // Weighted random item selection (coffee is more popular)
-    const weights: Record<string, number> = {
-        coffee: 45,
-        tea: 20,
-        pastry: 25,
-        sandwich: 10,
-    };
-    const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-
+    // Weighted random item selection driven by the CSV sales mix
     const pickWeightedItem = () => {
         let r = rng() * totalWeight;
         for (const [cat, w] of Object.entries(weights)) {
@@ -4838,144 +4915,153 @@ const seedOrders = async () => {
         return menuItems[0];
     };
 
-    for (let i = 0; i < toGenerate; i++) {
-        const orderId = crypto.randomUUID();
-        const daysAgo = Math.floor(rng() * 90);
-        const hourBuckets = [
-            7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-        ];
-        const hourWeights = [2, 3, 4, 5, 6, 9, 9, 5, 4, 4, 6, 7, 5, 2];
-        const hourTotal = hourWeights.reduce((a, b) => a + b, 0);
-        let hr = rng() * hourTotal;
-        let hoursOffset = hourBuckets[hourBuckets.length - 1];
-        for (let h = 0; h < hourBuckets.length; h++) {
-            hr -= hourWeights[h];
-            if (hr <= 0) {
-                hoursOffset = hourBuckets[h];
-                break;
-            }
-        }
-        const minutesOffset = Math.floor(rng() * 60);
-        const orderTime = new Date(
-            now -
-                daysAgo * msPerDay +
-                hoursOffset * 3600000 +
-                minutesOffset * 60000,
-        );
-
-        const createdBy = employeeIds[Math.floor(rng() * employeeIds.length)];
-        const diningOption = rng() < 0.6 ? "dine_in" : "take_away";
-
-        // 1-4 items per order
-        const itemCount = Math.floor(rng() * 4) + 1;
-        const selectedItems: { item: MenuItemSeed; quantity: number }[] = [];
-        for (let j = 0; j < itemCount; j++) {
-            const item = pickWeightedItem();
-            const quantity = rng() < 0.15 ? 2 : 1; // 15% chance of 2
-            selectedItems.push({ item, quantity });
-        }
-
-        // Calculate subtotal and build order items
-        let subtotal = 0;
-
-        for (let j = 0; j < selectedItems.length; j++) {
-            const { item, quantity } = selectedItems[j];
-            const orderItemId = crypto.randomUUID();
-            const basePrice = parseFloat(item.basePrice);
-            let itemTotal = basePrice * quantity;
-
-            const mods = menuItemModifiers[item.id] || [];
-            const chosenModifiers: {
-                optionId: string;
-                price: string;
-            }[] = [];
-
-            for (const group of mods) {
-                if (group.required || (!group.required && rng() < 0.5)) {
-                    const option =
-                        group.options[Math.floor(rng() * group.options.length)];
-                    chosenModifiers.push({
-                        optionId: option.id,
-                        price: option.price,
-                    });
-                    itemTotal += parseFloat(option.price) * quantity;
+    let totalRevenue = 0;
+    for (let d = 0; d < DAYS; d++) {
+        const dayBase = now - d * msPerDay;
+        const dayCount = dailyCounts[d];
+        for (let o = 0; o < dayCount; o++) {
+            const orderId = crypto.randomUUID();
+            const hourBuckets = [
+                7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+            ];
+            const hourWeights = [2, 3, 4, 5, 6, 9, 9, 5, 4, 4, 6, 7, 5, 2];
+            const hourTotal = hourWeights.reduce((a, b) => a + b, 0);
+            let hr = rng() * hourTotal;
+            let hoursOffset = hourBuckets[hourBuckets.length - 1];
+            for (let h = 0; h < hourBuckets.length; h++) {
+                hr -= hourWeights[h];
+                if (hr <= 0) {
+                    hoursOffset = hourBuckets[h];
+                    break;
                 }
             }
+            const minutesOffset = Math.floor(rng() * 60);
+            const orderTime = new Date(
+                dayBase + hoursOffset * 3600000 + minutesOffset * 60000,
+            );
 
-            subtotal += itemTotal;
+            const createdBy =
+                employeeIds[Math.floor(rng() * employeeIds.length)];
+            const diningOption = rng() < 0.6 ? "dine_in" : "take_away";
 
-            orderItemsToInsert.push({
-                id: orderItemId,
-                orderId,
-                menuItemId: item.id,
-                unitPrice: item.basePrice,
-                quantity,
+            // ~1.4 items/order: 70% one, 25% two, 5% three
+            const itemRoll = rng();
+            const itemCount = itemRoll < 0.7 ? 1 : itemRoll < 0.95 ? 2 : 3;
+            const selectedItems: { item: MenuItemSeed; quantity: number }[] =
+                [];
+            for (let j = 0; j < itemCount; j++) {
+                const item = pickWeightedItem();
+                const quantity = rng() < 0.15 ? 2 : 1; // 15% chance of 2
+                selectedItems.push({ item, quantity });
+            }
+
+            // Calculate subtotal and build order items
+            let subtotal = 0;
+
+            for (let j = 0; j < selectedItems.length; j++) {
+                const { item, quantity } = selectedItems[j];
+                const orderItemId = crypto.randomUUID();
+                const basePrice = parseFloat(item.basePrice);
+                let itemTotal = basePrice * quantity;
+
+                const mods = menuItemModifiers[item.id] || [];
+                const chosenModifiers: {
+                    optionId: string;
+                    price: string;
+                }[] = [];
+
+                for (const group of mods) {
+                    if (group.required || (!group.required && rng() < 0.5)) {
+                        const option =
+                            group.options[
+                                Math.floor(rng() * group.options.length)
+                            ];
+                        chosenModifiers.push({
+                            optionId: option.id,
+                            price: option.price,
+                        });
+                        itemTotal += parseFloat(option.price) * quantity;
+                    }
+                }
+
+                subtotal += itemTotal;
+
+                orderItemsToInsert.push({
+                    id: orderItemId,
+                    orderId,
+                    menuItemId: item.id,
+                    unitPrice: item.basePrice,
+                    quantity,
+                });
+
+                // Add modifier entries for this order item
+                for (let k = 0; k < chosenModifiers.length; k++) {
+                    const mod = chosenModifiers[k];
+                    orderItemModsToInsert.push({
+                        orderItemId,
+                        modifierOptionId: mod.optionId,
+                        price: mod.price,
+                    });
+                }
+
+                // Stock movements for this item
+                // Food items use item_recipes, drinks use modifier_option_ingredients
+                if (
+                    item.category === "pastry" ||
+                    item.category === "sandwich"
+                ) {
+                    // Food: one stock movement per recipe ingredient
+                    // Use fixed ingredient IDs based on item
+                    const recipeIngredients = getRecipeIngredients(item.id);
+                    for (const ri of recipeIngredients) {
+                        stockMovementsToInsert.push({
+                            ingredientId: ri.ingredientId,
+                            quantityChange: `-${ri.quantity}`,
+                            reason: "order_placed",
+                            referenceOrderId: orderId,
+                        });
+                    }
+                }
+                // Drinks: stock movements from modifier option ingredients
+                // (handled below after all modifiers are chosen)
+            }
+
+            const total = subtotal;
+            totalRevenue += total;
+            ordersToInsert.push({
+                id: orderId,
+                status: "completed",
+                diningOption,
+                subtotal: subtotal.toFixed(2),
+                total: total.toFixed(2),
+                paymentStatus: "paid",
+                createdBy,
+                createdAt: orderTime,
+                updatedAt: orderTime,
             });
 
-            // Add modifier entries for this order item
-            for (let k = 0; k < chosenModifiers.length; k++) {
-                const mod = chosenModifiers[k];
-                orderItemModsToInsert.push({
-                    orderItemId,
-                    modifierOptionId: mod.optionId,
-                    price: mod.price,
-                });
-            }
+            // Payment
+            const isCash = rng() < 0.5;
+            const method = isCash ? "cash" : "qr";
+            const amountReceived = isCash
+                ? (Math.ceil(total * 2) / 2).toFixed(2) // round up to nearest 0.50
+                : undefined;
+            const changeAmount = isCash
+                ? (parseFloat(amountReceived as string) - total).toFixed(2)
+                : undefined;
 
-            // Stock movements for this item
-            // Food items use item_recipes, drinks use modifier_option_ingredients
-            if (item.category === "pastry" || item.category === "sandwich") {
-                // Food: one stock movement per recipe ingredient
-                // Use fixed ingredient IDs based on item
-                const recipeIngredients = getRecipeIngredients(item.id);
-                for (const ri of recipeIngredients) {
-                    stockMovementsToInsert.push({
-                        ingredientId: ri.ingredientId,
-                        quantityChange: `-${ri.quantity}`,
-                        reason: "order_placed",
-                        referenceOrderId: orderId,
-                    });
-                }
-            }
-            // Drinks: stock movements from modifier option ingredients
-            // (handled below after all modifiers are chosen)
+            paymentsToInsert.push({
+                orderId,
+                method,
+                amount: total.toFixed(2),
+                amountReceived,
+                changeAmount,
+                status: "paid",
+                createdBy,
+                createdAt: orderTime,
+                updatedAt: orderTime,
+            });
         }
-
-        const total = subtotal;
-
-        ordersToInsert.push({
-            id: orderId,
-            status: "completed",
-            diningOption,
-            subtotal: subtotal.toFixed(2),
-            total: total.toFixed(2),
-            paymentStatus: "paid",
-            createdBy,
-            createdAt: orderTime,
-            updatedAt: orderTime,
-        });
-
-        // Payment
-        const isCash = rng() < 0.5;
-        const method = isCash ? "cash" : "qr";
-        const amountReceived = isCash
-            ? (Math.ceil(total * 2) / 2).toFixed(2) // round up to nearest 0.50
-            : undefined;
-        const changeAmount = isCash
-            ? (parseFloat(amountReceived as string) - total).toFixed(2)
-            : undefined;
-
-        paymentsToInsert.push({
-            orderId,
-            method,
-            amount: total.toFixed(2),
-            amountReceived,
-            changeAmount,
-            status: "paid",
-            createdBy,
-            createdAt: orderTime,
-            updatedAt: orderTime,
-        });
     }
 
     // Batch insert orders
@@ -5025,6 +5111,7 @@ const seedOrders = async () => {
         .values({ khrRate: 4100 })
         .onConflictDoNothing();
     console.log("    Default settings");
+    return totalRevenue;
 };
 
 const getRecipeIngredients = (
@@ -5095,8 +5182,6 @@ const getRecipeIngredients = (
     };
     return recipes[menuItemId] || [];
 };
-
-import { fileURLToPath } from "url";
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
